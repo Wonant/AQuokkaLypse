@@ -1,2 +1,2 @@
-# GAME_DEV_TEMP_NAME
-CS3152 "GAME STUDIO HERE"
+# AQuokkaLypse
+CS3152 "AQuokkaLypse"
