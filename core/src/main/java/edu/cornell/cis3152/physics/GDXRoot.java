@@ -14,13 +14,13 @@
  package edu.cornell.cis3152.physics;
 
 import com.badlogic.gdx.*;
-import edu.cornell.cis3152.physics.ragdoll.RagdollScene;
+
 import edu.cornell.gdiac.util.*;
 import edu.cornell.gdiac.assets.*;
 import edu.cornell.gdiac.graphics.*;
-import edu.cornell.cis3152.physics.rocket.*;
+
 import edu.cornell.cis3152.physics.platform.*;
-//import edu.cornell.cis3152.physics.ragdoll.*;
+
 
 /**
  * Root class for a LibGDX.
@@ -135,10 +135,10 @@ public class GDXRoot extends Game implements ScreenListener {
 
             // Initialize the three game worlds
             //controllers = new PhysicsScene[3];
-            controllers = new PhysicsScene[3];
-            controllers[0] = new RocketScene(directory);
-            controllers[1] = new PlatformScene(directory);
-            controllers[2] = new RagdollScene(directory);
+            controllers = new PhysicsScene[1];
+            //controllers[0] = new RocketScene(directory);
+            controllers[0] = new PlatformScene(directory);
+            //controllers[2] = new RagdollScene(directory);
 
             for(int ii = 0; ii < controllers.length; ii++) {
                 controllers[ii].setScreenListener(this);
