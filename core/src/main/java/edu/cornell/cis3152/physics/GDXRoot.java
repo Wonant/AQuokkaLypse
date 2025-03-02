@@ -42,7 +42,7 @@ public class GDXRoot extends Game implements ScreenListener {
     /** Player mode for the the game proper (CONTROLLER CLASS) */
     private int current;
     /** List of all WorldControllers */
-    private PhysicsScene[] controllers;
+    private PlatformScene[] controllers;
 
     /**
      * Creates a new game from the configuration settings.
@@ -135,7 +135,7 @@ public class GDXRoot extends Game implements ScreenListener {
 
             // Initialize the three game worlds
             //controllers = new PhysicsScene[3];
-            controllers = new PhysicsScene[1];
+            controllers = new PlatformScene[1];
             //controllers[0] = new RocketScene(directory);
             controllers[0] = new PlatformScene(directory);
             //controllers[2] = new RagdollScene(directory);
