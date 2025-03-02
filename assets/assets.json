@@ -61,6 +61,7 @@
             "magfilter": "linear mipmap linear"
         },
         "platform-traci"    : "platform/traci.png",
+        "platform-playerSprite": "platform/playerSprite.png",
         "platform-rope"     : "platform/ropebridge.png",
         "platform-barrier"  : "platform/barrier.png",
         "platform-bullet"   : "platform/bullet.png",
