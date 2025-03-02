@@ -59,25 +59,42 @@ public class Traci extends ObstacleSprite {
     private float maxspeed;
     /** The impulse for the character jump */
     private float jump_force;
+
     /** Cooldown (in animation frames) for jumping */
     private int jumpLimit;
-    /** Cooldown (in animation frames) for shooting */
-    private int shotLimit;
+    /** How long until we can jump again */
+    private int jumpCooldown;
+    /** Whether we are actively jumping */
+    private boolean isJumping;
+
+    /** Cooldown (in animation frames) for harvesting */
+    private int harvestLimit;
+    /** How long until we can harvest again */
+    private int harvestCooldown;
+    /** Whether we are actively harvesting */
+    private boolean isHarvesting;
+
+    /** Cooldown (in animation frames) for stunning */
+    private int stunLimit;
+    /** How long until we can stun again */
+    private int stunCooldown;
+    /** Whether we are actively stunning */
+    private boolean isStunning;
+
+    /** Cooldown (in animation frames) for teleporting */
+    private int teleportLimit;
+    /** How long until we can teleport again */
+    private int teleportCooldown;
+    /** Whether we are actively teleporting */
+    private boolean isTeleporting;
 
     /** The current horizontal movement of the character */
     private float   movement;
     /** Which direction is the character facing */
     private boolean faceRight;
-    /** How long until we can jump again */
-    private int jumpCooldown;
-    /** Whether we are actively jumping */
-    private boolean isJumping;
-    /** How long until we can shoot again */
-    private int shootCooldown;
     /** Whether our feet are on the ground */
     private boolean isGrounded;
-    /** Whether we are actively shooting */
-    private boolean isShooting;
+
 
     /** The outline of the sensor obstacle */
     private Path2 sensorOutline;
@@ -90,6 +107,14 @@ public class Traci extends ObstacleSprite {
     private final Vector2 forceCache = new Vector2();
     /** Cache for the affine flip */
     private final Affine2 flipCache = new Affine2();
+
+    /** Ability and Health meter for CatDemon**/
+    private int fearMeter;
+    /** MAX Ability and Health meter for CatDemon**/
+    private int maxFearMeter;
+
+
+    private Texture fearMeterTexture;
 
 
     /**
@@ -120,13 +145,48 @@ public class Traci extends ObstacleSprite {
         }
     }
 
-    /**
-     * Returns true if Traci is actively firing.
+    /** Returns current fear meter charge
      *
-     * @return true if Traci is actively firing.
+     * @return current fear meter charge
      */
-    public boolean isShooting() {
-        return isShooting && shootCooldown <= 0;
+    public int getFearMeter() {
+        return fearMeter;
+    }
+
+
+    public int getMaxFearMeter() {
+        return maxFearMeter;
+    }
+
+    /** Set fear meter charge to value. Checks if within bounds.
+     *
+     * @param value value to set fear meter to
+     */
+    public void setFearMeter(int value) {
+        if (value < 0 || value > maxFearMeter)
+        {
+            System.out.println("ERROR: Fear Meter Bounds Exceeded!");
+        } else {
+            fearMeter = value;
+        }
+    }
+
+    /** Sets maxFearMeter to value
+     *
+     * @param value
+     */
+    public void setMaxFearMeter(int value) {
+        maxFearMeter = value;
+    }
+
+
+    /**
+     * Returns true if Traci is actively harvesting.
+     *
+     * @return true if Traci is actively harvesting.
+     */
+    public boolean isHarvesting() {
+        return isHarvesting && harvestCooldown <= 0;
     }
 
     /**
@@ -134,9 +194,48 @@ public class Traci extends ObstacleSprite {
      *
      * @param value whether Traci is actively firing.
      */
-    public void setShooting(boolean value) {
-        isShooting = value;
+    public void setHarvesting(boolean value) {
+        isHarvesting = value;
     }
+
+    /**
+     * Returns true if CatDemon is actively stunning.
+     *
+     * @return true if CatDemon is actively stunning.
+     */
+    public boolean isStunning() {
+        return isStunning && stunCooldown <= 0;
+    }
+
+    /**
+     * Sets whether CatDemon is actively stunning.
+     *
+     * @param value whether CatDemon is actively stunning.
+     */
+    public void setStunning(boolean value) {
+        isStunning = value;
+    }
+
+
+    /**
+     * Returns true if CatDemon is actively harvesting.
+     *
+     * @return true if CatDemon is actively harvesting.
+     */
+    public boolean isTeleporting() {
+        return isTeleporting && teleportCooldown <= 0;
+    }
+
+
+    /**
+     * Sets whether CatDemon is actively harvesting.
+     *
+     * @param value whether CatDemon is actively harvesting.
+     */
+    public void setTeleporting(boolean value) {
+        isTeleporting = value;
+    }
+
 
     /**
      * Returns true if Traci is actively jumping.
@@ -269,16 +368,25 @@ public class Traci extends ObstacleSprite {
         force = data.getFloat("force", 0);
         jump_force = data.getFloat( "jump_force", 0 );
         jumpLimit = data.getInt( "jump_cool", 0 );
-        shotLimit = data.getInt( "shot_cool", 0 );
+        harvestLimit = data.getInt( "shot_cool", 0 );
+        stunLimit = data.getInt( "shot_cool", 0 );
+        teleportLimit = data.getInt( "shot_cool", 0 );
 
         // Gameplay attributes
         isGrounded = false;
-        isShooting = false;
+        isHarvesting = false;
+        isStunning = false;
+        isTeleporting = false;
         isJumping = false;
         faceRight = true;
 
-        shootCooldown = 0;
+        harvestCooldown = 0;
+        stunCooldown = 0;
+        teleportCooldown = 0;
         jumpCooldown = 0;
+
+        fearMeter = 7;
+        maxFearMeter = data.getInt("maxfear", 0);
 
         // Create a rectangular mesh for Traci. This is the same as for door,
         // since Traci is a rectangular image. But note that the capsule is
@@ -379,10 +487,22 @@ public class Traci extends ObstacleSprite {
             jumpCooldown = Math.max(0, jumpCooldown - 1);
         }
 
-        if (isShooting()) {
-            shootCooldown = shotLimit;
+        if (isHarvesting()) {
+            harvestCooldown = harvestLimit;
         } else {
-            shootCooldown = Math.max(0, shootCooldown - 1);
+            harvestCooldown = Math.max(0, harvestCooldown - 1);
+        }
+
+        if (isStunning()) {
+            stunCooldown = stunLimit;
+        } else {
+            stunCooldown = Math.max(0, stunCooldown - 1);
+        }
+
+        if (isTeleporting()) {
+            teleportCooldown = teleportLimit;
+        } else {
+            teleportCooldown = Math.max(0, teleportCooldown - 1);
         }
         super.update(dt);
     }
