@@ -385,7 +385,7 @@ public class Traci extends ObstacleSprite {
         teleportCooldown = 0;
         jumpCooldown = 0;
 
-        fearMeter = 7;
+        fearMeter = 10;
         maxFearMeter = data.getInt("maxfear", 0);
 
         // Create a rectangular mesh for Traci. This is the same as for door,
