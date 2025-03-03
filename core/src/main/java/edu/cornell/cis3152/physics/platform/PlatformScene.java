@@ -734,16 +734,16 @@ public class PlatformScene implements ContactListener, Screen{
         avatar.setMovement(input.getHorizontal() *avatar.getForce());
         avatar.setJumping(input.didPrimary());
 
-        avatar.setShooting(input.didTertiary());
+        avatar.setStunning(input.didTertiary());
 
         avatar.setHarvesting(input.didSecondary());
         //avatar.setTeleporting(input.didTeleport());
 
-        avatar.setTeleporting(input.didTertiary());
+        avatar.setTeleporting(input.didTeleport());
 
 
         // Add a bullet if we fire
-        if (avatar.isHarvesting()) {
+        if (avatar.isStunning()) {
             createBullet();
         }
 
