@@ -734,17 +734,18 @@ public class PlatformScene implements ContactListener, Screen{
         avatar.setMovement(input.getHorizontal() *avatar.getForce());
         avatar.setJumping(input.didPrimary());
 
-        avatar.setShooting(input.didTertiary());
+        avatar.setStunning(input.didStun());
 
         avatar.setHarvesting(input.didSecondary());
         //avatar.setTeleporting(input.didTeleport());
 
-        avatar.setTeleporting(input.didTertiary());
+        avatar.setTeleporting(input.didTeleport());
 
 
         // Add a bullet if we fire
-        if (avatar.isHarvesting()) {
+        if (avatar.isStunning()) {
             createBullet();
+            avatar.setFearMeter(Math.max(0,avatar.getFearMeter() - 1));
         }
 
         if (avatar.isTeleporting())
@@ -839,7 +840,6 @@ public class PlatformScene implements ContactListener, Screen{
         Vector2 shootAngle = mousePosition.sub(traci.getPosition());
         shootAngle.nor();
         Texture texture = directory.getEntry("platform-bullet", Texture.class);
-        System.out.println(shootAngle);
         Bullet bullet = new Bullet(units, bulletjv, traci.getPosition(), shootAngle.nor());
         bullet.setTexture(texture);
         addQueuedObject(bullet);

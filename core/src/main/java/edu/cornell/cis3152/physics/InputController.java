@@ -64,8 +64,9 @@ public class InputController {
     /** Whether the secondary action button was pressed. */
     private boolean secondPressed;
     private boolean secondPrevious;
-    /** Whether the teritiary action button was pressed. */
-    private boolean tertiaryPressed;
+
+
+
     /** Whether the debug toggle was pressed. */
     private boolean debugPressed;
     private boolean debugPrevious;
@@ -73,6 +74,8 @@ public class InputController {
     private boolean exitPressed;
     private boolean exitPrevious;
 
+    /** Whether the stun action button was pressed. */
+    private boolean stunPressed;
     /** Whether the teleport button was pressed */
     private boolean teleportPressed;
     private boolean teleportPrevious;
@@ -152,17 +155,6 @@ public class InputController {
         return secondPressed && !secondPrevious;
     }
 
-    /**
-     * Returns true if the tertiary action button was pressed.
-     *
-     * This is a sustained button. It will returns true as long as the player
-     * holds it down.
-     *
-     * @return true if the secondary action button was pressed.
-     */
-    public boolean didTertiary() {
-        return tertiaryPressed;
-    }
 
     /**
      * Returns true if the reset button was pressed.
@@ -208,7 +200,14 @@ public class InputController {
     public boolean didExit() {
         return exitPressed && !exitPrevious;
     }
-
+    /**
+     * Returns true if the stun button was pressed
+     *
+     * @return true if the stun button was pressed
+     */
+    public boolean didStun() {
+        return stunPressed;
+    }
     /**
      * Returns true if the teleport button was pressed
      *
@@ -293,7 +292,7 @@ public class InputController {
         secondPressed = xbox.getRightTrigger() > 0.6f;
 
         // Move the crosshairs with the right stick.
-        tertiaryPressed = xbox.getA();
+        stunPressed = xbox.getA();
         crosscache.set(xbox.getLeftX(), xbox.getLeftY());
         if (crosscache.len2() > GP_THRESHOLD) {
             momentum += GP_ACCELERATE;
@@ -326,7 +325,7 @@ public class InputController {
         nextPressed = (secondary && nextPressed) || (Gdx.input.isKeyPressed(Input.Keys.N));
         exitPressed  = (secondary && exitPressed) || (Gdx.input.isKeyPressed(Input.Keys.ESCAPE));
 
-        teleportPressed = (secondary && teleportPressed) || (Gdx.input.isKeyPressed(Input.Keys.T));
+        //teleportPressed = (secondary && teleportPressed) || (Gdx.input.isKeyPressed(Input.Buttons.LEFT));
         //Mouse
         //teleportPressed = teleportPressed || Gdx.input.isButtonPressed(Input.Buttons.RIGHT);
 
@@ -349,8 +348,8 @@ public class InputController {
         }
 
         // Mouse results
-
-        tertiaryPressed = Gdx.input.isButtonPressed(Input.Buttons.RIGHT);
+        teleportPressed = Gdx.input.isButtonPressed(Input.Buttons.LEFT);
+        stunPressed = Gdx.input.isButtonPressed(Input.Buttons.RIGHT);
         crosshair.set(Gdx.input.getX(), Gdx.input.getY());
         crosshair.scl(1/scale.x,-1/scale.y);
         crosshair.y += bounds.height;
