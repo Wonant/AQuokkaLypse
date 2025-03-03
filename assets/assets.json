@@ -68,7 +68,7 @@
         "ragdoll-bubble"    : "ragdoll/bubble.png",
         "ragdoll-crosshair" : "ragdoll/crosshair.png",
         "ragdoll-foreground": "ragdoll/foreground.png",
-        "ragdoll-background": "ragdoll/background.png"
+        "ragdoll-background": "ragdoll/background.png",
         "ragdoll-torso" : {
             "file" : "ragdoll/scuba_torso.png",
             "mipmaps"   : true,
@@ -107,9 +107,8 @@
         }
     },
     "jsons"  : {
-        "rocket-constants"  : "rocket/constants.json",
         "platform-constants": "platform/constants.json",
-        "ragdoll-constants" : "ragdoll/constants.json"
+        "platform-constant1": "platform/constant1.json"
     },
     "soundfx" : {
         "rocket-bump"       : "rocket/bump.wav",
