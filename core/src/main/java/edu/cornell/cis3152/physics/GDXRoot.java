@@ -151,6 +151,7 @@ public class GDXRoot extends Game implements ScreenListener {
             current = 0;
             controllers[current].reset();
             setScreen(controllers[current]);
+
         } else if (exitCode == PhysicsScene.EXIT_NEXT) {
             current = (current + 1) % maps.length;
             PlatformScene nextScene = new PlatformScene(directory, maps[current]);
