@@ -60,9 +60,6 @@
             "minfilter": "linear mipmap linear",
             "magfilter": "linear mipmap linear"
         },
-        "vision_cone" : "shared/vision1.png",
-        "player-sprite-proto" : "shared/player.png",
-        "curio-critter-proto" : "shared/curiositycritter.png",
         "platform-traci"    : "platform/traci.png",
         "platform-playerSprite": "platform/playerSprite.png",
         "platform-rope"     : "platform/ropebridge.png",
