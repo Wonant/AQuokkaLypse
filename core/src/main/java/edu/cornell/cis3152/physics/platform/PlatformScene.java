@@ -515,14 +515,17 @@ public class PlatformScene implements ContactListener, Screen{
     public void setScreenListener(ScreenListener listener) {
         this.listener = listener;
     }
+    private String mapkey  = "platform-constants";
+
     /**
      * Creates and initialize a new instance of the platformer game
      *
      * The game has default gravity and other settings
      */
-    public PlatformScene(AssetDirectory directory) {
+    public PlatformScene(AssetDirectory directory,String mapkey) {
         this.directory = directory;
-        constants = directory.getEntry("platform-constants",JsonValue.class);
+        this.mapkey = mapkey;
+        constants = directory.getEntry(mapkey,JsonValue.class);
         JsonValue defaults = constants.get("world");
 
         crosshairTexture  = new TextureRegion(directory.getEntry( "ragdoll-crosshair", Texture.class ));
