@@ -50,6 +50,13 @@
         "sensor" : "#ff0000ff",
         "tolerance" : 0.05
       }
+    "teleporter" : {
+        "pos"       : [4.0, 14.0],
+        "size"      : 3.0,
+        "density"   : 0.0,
+        "friction"  : 0.0,
+        "restitution": 0.0
+  },
     },
     "bridge" : {
         "pos"     : [9.0, 3.8],
@@ -66,7 +73,7 @@
         "high density": 10.0
     },
     "bullet": {
-        "offset" : 0.5,
+        "offset" : 0.75,
         "size"   : 0.25,
         "speed"  : 20.0,
         "density": 10.0
