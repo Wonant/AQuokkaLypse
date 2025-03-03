@@ -44,6 +44,9 @@ public class GDXRoot extends Game implements ScreenListener {
     /** List of all WorldControllers */
     private PlatformScene[] controllers;
 
+    private String[] maps = {"platform-constants", "platform-constant1"};
+    private int currentMapIndex = 0;
+
     /**
      * Creates a new game from the configuration settings.
      *
@@ -137,7 +140,7 @@ public class GDXRoot extends Game implements ScreenListener {
             //controllers = new PhysicsScene[3];
             controllers = new PlatformScene[1];
             //controllers[0] = new RocketScene(directory);
-            controllers[0] = new PlatformScene(directory);
+            controllers[0] = new PlatformScene(directory,maps[currentMapIndex]);
             //controllers[2] = new RagdollScene(directory);
 
             for(int ii = 0; ii < controllers.length; ii++) {
@@ -148,15 +151,20 @@ public class GDXRoot extends Game implements ScreenListener {
             current = 0;
             controllers[current].reset();
             setScreen(controllers[current]);
-        } else if (exitCode == PhysicsScene.EXIT_NEXT) {
-            current = (current+1) % controllers.length;
-            controllers[current].reset();
-            setScreen(controllers[current]);
-        } else if (exitCode == PhysicsScene.EXIT_PREV) {
-            current = (current+controllers.length-1) % controllers.length;
-            controllers[current].reset();
-            setScreen(controllers[current]);
-        } else if (exitCode == PhysicsScene.EXIT_QUIT) {
+
+        } else if (exitCode == PlatformScene.EXIT_NEXT) {
+            current = (current + 1) % maps.length;
+            PlatformScene nextScene = new PlatformScene(directory, maps[current]);
+            nextScene.setScreenListener(this);
+            nextScene.setSpriteBatch(batch);
+            setScreen(nextScene);
+        } else if (exitCode == PlatformScene.EXIT_PREV) {
+            current = (current + maps.length - 1) % maps.length; // 切换到上一关
+            PlatformScene prevScene = new PlatformScene(directory, maps[current]);
+            prevScene.setScreenListener(this);
+            prevScene.setSpriteBatch(batch);
+            setScreen(prevScene);
+        } else if (exitCode == PlatformScene.EXIT_QUIT) {
             // We quit the main application
             Gdx.app.exit();
         }

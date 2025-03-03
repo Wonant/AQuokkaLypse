@@ -37,7 +37,7 @@ import com.badlogic.gdx.physics.box2d.*;
 import edu.cornell.cis3152.physics.InputController;
 //import edu.cornell.cis3152.physics.rocket.Box;
 import edu.cornell.gdiac.assets.AssetDirectory;
-import edu.cornell.cis3152.physics.PhysicsScene;
+//import edu.cornell.cis3152.physics.PhysicsScene;
 import edu.cornell.gdiac.audio.SoundEffect;
 import edu.cornell.gdiac.audio.SoundEffectManager;
 import edu.cornell.gdiac.physics2.*;
@@ -137,6 +137,18 @@ public class PlatformScene implements ContactListener, Screen{
 
     /** Mark set to handle more sophisticated collision callbacks */
     protected ObjectSet<Fixture> sensorFixtures;
+
+    /** Texture for fear meter**/
+    private Texture fearMeterTexture;
+    /** Texture asset for mouse crosshairs */
+    private TextureRegion crosshairTexture;
+
+    private Vector2 queuedTeleportPosition = null;
+
+
+
+
+
     /**
      * Returns true if debug mode is active.
      *
@@ -259,6 +271,7 @@ public class PlatformScene implements ContactListener, Screen{
         scale = null;
         world = null;
         batch = null;
+        fearMeterTexture.dispose();
     }
 
     /**
@@ -377,6 +390,8 @@ public class PlatformScene implements ContactListener, Screen{
             obj.draw(batch);
         }
 
+        drawFearMeter();
+
         if (debug) {
             // Draw the outlines
             for (ObstacleSprite obj : sprites) {
@@ -391,7 +406,42 @@ public class PlatformScene implements ContactListener, Screen{
             batch.drawText(badMessage, width/2, height/2);
         }
 
+        InputController input = InputController.getInstance();
+        float units = height/bounds.height;
+        float x = input.getCrossHair().x*units-units/2;
+        float y = input.getCrossHair().y*units-units/2;
+        batch.draw(crosshairTexture, x, y, units, units);
+
+        //batch.setColor(foregroundColor);
+        //batch.draw(foregroundTexture, 0, 0, width, height);
+
         batch.end();
+    }
+
+    /** Draws Simple fear meter bar
+     *
+     *
+     */
+    private void drawFearMeter() {
+        int fearLevel = avatar.getFearMeter();
+        int maxFear = avatar.getMaxFearMeter();
+        float meterWidth = 150 * ((float) fearLevel / maxFear);
+        float meterHeight = 20;
+
+        float x = 20; // Offset from the left
+        float y = height - meterHeight - 20;
+
+        float outlineThickness = 2;
+
+
+        batch.setColor(Color.BLACK);
+        batch.draw(fearMeterTexture, x - outlineThickness, y - outlineThickness,
+            meterWidth + 2 * outlineThickness, meterHeight + 2 * outlineThickness);
+
+
+        batch.setColor(Color.RED);
+        batch.draw(fearMeterTexture, x, y, meterWidth, meterHeight);
+        batch.setColor(Color.WHITE);
     }
 
     /**
@@ -466,15 +516,20 @@ public class PlatformScene implements ContactListener, Screen{
     public void setScreenListener(ScreenListener listener) {
         this.listener = listener;
     }
+    private String mapkey  = "platform-constants";
+
     /**
      * Creates and initialize a new instance of the platformer game
      *
      * The game has default gravity and other settings
      */
-    public PlatformScene(AssetDirectory directory) {
+    public PlatformScene(AssetDirectory directory,String mapkey) {
         this.directory = directory;
-        constants = directory.getEntry("platform-constants",JsonValue.class);
+        this.mapkey = mapkey;
+        constants = directory.getEntry(mapkey,JsonValue.class);
         JsonValue defaults = constants.get("world");
+
+        crosshairTexture  = new TextureRegion(directory.getEntry( "ragdoll-crosshair", Texture.class ));
 
         scale = new Vector2();
         bounds = new Rectangle(0,0,defaults.get("bounds").getFloat( 0 ), defaults.get("bounds").getFloat( 1 ));
@@ -678,12 +733,31 @@ public class PlatformScene implements ContactListener, Screen{
         // Process actions in object model
         avatar.setMovement(input.getHorizontal() *avatar.getForce());
         avatar.setJumping(input.didPrimary());
+
         avatar.setShooting(input.didTertiary());
 
+        avatar.setHarvesting(input.didSecondary());
+        //avatar.setTeleporting(input.didTeleport());
+
+        avatar.setTeleporting(input.didTertiary());
+
+
         // Add a bullet if we fire
-        if (avatar.isShooting()) {
+        if (avatar.isHarvesting()) {
             createBullet();
         }
+
+        if (avatar.isTeleporting())
+        {
+            createTeleporter();
+        }
+
+        if (queuedTeleportPosition != null) {
+            avatar.getObstacle().setPosition(queuedTeleportPosition);
+            avatar.setFearMeter(Math.max(0,avatar.getFearMeter() - 1));
+            queuedTeleportPosition = null; // Clear after applying
+        }
+
 
         avatar.applyForce();
         if (avatar.isJumping()) {
@@ -691,6 +765,66 @@ public class PlatformScene implements ContactListener, Screen{
             sounds.play("jump", jumpSound, volume);
         }
     }
+
+    private void createTeleporter() {
+        float units = height/bounds.height;
+        InputController input = InputController.getInstance();
+        Vector2 newPosition = new Vector2(input.getCrossHair().x, input.getCrossHair().y);
+        Texture texture = directory.getEntry( "shared-goal", Texture.class );
+
+        JsonValue teleporter = constants.get("teleporter");
+
+        Teleporter originTeleporter = new Teleporter(units, teleporter, avatar.getObstacle().getPosition());
+        originTeleporter.setTexture( texture );
+        // If we have teleporters persist, we might need to change this for unique naming
+        originTeleporter.getObstacle().setName("origin_teleporter");
+
+        Teleporter exitTeleporter = new Teleporter(units, teleporter, newPosition);
+        exitTeleporter.setTexture( texture );
+        exitTeleporter.getObstacle().setName("exit_teleporter");
+
+        originTeleporter.setLinkedTeleporter(exitTeleporter);
+        exitTeleporter.setLinkedTeleporter(originTeleporter);
+
+        addSprite(originTeleporter);
+        addSprite(exitTeleporter);
+
+        avatar.setFearMeter(Math.max(0,avatar.getFearMeter() - 2));
+
+
+    }
+
+    private void takeTeleporter(Teleporter tp)
+    {
+        System.out.println(tp.getLinkedTeleporter().getPosition());
+        //avatar.getObstacle().setPosition(tp.getLinkedTeleporter().getPosition());
+        queuedTeleportPosition = tp.getLinkedTeleporter().getPosition().cpy();
+
+    }
+
+    private void performTeleport() {
+        float teleportDistance = 5.0f;
+        Vector2 newPosition = new Vector2(
+            avatar.getObstacle().getX() + (avatar.isFacingRight() ? teleportDistance : -teleportDistance),
+            avatar.getObstacle().getY()
+        );
+
+        // Ensure the new position is within bounds
+        //newPosition.x = MathUtils.clamp(newPosition.x, 0.0f, bounds.width);
+
+        avatar.getObstacle().setPosition(MathUtils.clamp(newPosition.x, 0.0f, bounds.width), newPosition.y);
+        avatar.setFearMeter(avatar.getFearMeter() - 1);
+    }
+
+    private void performMouseTeleport(){
+        InputController input = InputController.getInstance();
+        Vector2 newPosition = new Vector2(input.getCrossHair().x, input.getCrossHair().y);
+        avatar.getObstacle().setPosition(newPosition);
+        avatar.setFearMeter(avatar.getFearMeter() - 1);
+
+    }
+
+
 
     /**
      * Adds a new bullet to the world and send it in the right direction.
@@ -770,6 +904,26 @@ public class PlatformScene implements ContactListener, Screen{
                 (bd1.getName().equals("goal")  && bd2 == avatar)) {
                 setComplete(true);
             }
+
+            if(bd1 == avatar && bd2.getName().equals("origin_teleporter"))
+            {
+                if (!(bd2 instanceof Teleporter)) {
+                    System.out.println("Error: bd2 is not a Teleporter!");
+                } else {
+                    Teleporter temp = (Teleporter) bd2;
+                    takeTeleporter(temp);
+                    System.out.println("Taking Teleporter 1");
+                }
+            } else if (bd1.getName().equals("origin_teleporter") && bd2 == avatar){
+                if (!(bd1 instanceof Teleporter)) {
+                    System.out.println("Error: bd2 is not a Teleporter!");
+                } else {
+                    Teleporter temp = (Teleporter) bd1;
+                    takeTeleporter(temp);
+                    System.out.println("Taking Teleporter 2");
+                }
+            }
+
         } catch (Exception e) {
             e.printStackTrace();
         }
