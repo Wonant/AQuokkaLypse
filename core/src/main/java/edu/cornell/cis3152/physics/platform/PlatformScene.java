@@ -111,6 +111,7 @@ public class PlatformScene implements ContactListener, Screen{
     /** Countdown active for winning or losing */
     protected int countdown;
 
+
     /** Texture asset for character avatar */
     private TextureRegion avatarTexture;
     /** Texture asset for the spinning barrier */
@@ -677,7 +678,7 @@ public class PlatformScene implements ContactListener, Screen{
         // Process actions in object model
         avatar.setMovement(input.getHorizontal() *avatar.getForce());
         avatar.setJumping(input.didPrimary());
-        avatar.setShooting(input.didSecondary());
+        avatar.setShooting(input.didTertiary());
 
         // Add a bullet if we fire
         if (avatar.isShooting()) {
@@ -695,13 +696,17 @@ public class PlatformScene implements ContactListener, Screen{
      * Adds a new bullet to the world and send it in the right direction.
      */
     private void createBullet() {
-        float units = height/bounds.height;
+        InputController input = InputController.getInstance();
 
+        float units = height/bounds.height;
+        Vector2 mousePosition = input.getCrossHair();
         JsonValue bulletjv = constants.get("bullet");
         Obstacle traci = avatar.getObstacle();
-
+        Vector2 shootAngle = mousePosition.sub(traci.getPosition());
+        shootAngle.nor();
         Texture texture = directory.getEntry("platform-bullet", Texture.class);
-        Bullet bullet = new Bullet(units, bulletjv, traci.getPosition(),avatar.isFacingRight());
+        System.out.println(shootAngle);
+        Bullet bullet = new Bullet(units, bulletjv, traci.getPosition(), shootAngle.nor());
         bullet.setTexture(texture);
         addQueuedObject(bullet);
 
