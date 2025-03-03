@@ -12,6 +12,8 @@
  */
 package edu.cornell.cis3152.physics.platform;
 
+import com.badlogic.gdx.graphics.g2d.Sprite;
+import edu.cornell.cis3152.physics.AIControllerManager;
 import edu.cornell.cis3152.physics.ObstacleGroup;
 import java.util.Iterator;
 import com.badlogic.gdx.*;
@@ -41,6 +43,7 @@ import edu.cornell.cis3152.physics.PhysicsScene;
 import edu.cornell.gdiac.audio.SoundEffect;
 import edu.cornell.gdiac.audio.SoundEffectManager;
 import edu.cornell.gdiac.physics2.*;
+import org.w3c.dom.css.CSSRule;
 
 /**
  * The game scene for the platformer game.
@@ -81,6 +84,7 @@ public class PlatformScene implements ContactListener, Screen{
     /** A layout for drawing a failure message */
     private TextLayout badMessage;
 
+
     /** Number of velocity iterations for the constrain solvers */
     public static final int WORLD_VELOC = 6;
     /** Number of position iterations for the constrain solvers */
@@ -114,11 +118,10 @@ public class PlatformScene implements ContactListener, Screen{
     /** Texture asset for character avatar */
     private TextureRegion avatarTexture;
     /** Texture asset for the spinning barrier */
-    private TextureRegion barrierTexture;
-    /** Texture asset for the bullet */
-    private TextureRegion bulletTexture;
-    /** Texture asset for the bridge plank */
-    private TextureRegion bridgeTexture;
+    private TextureRegion visionConeRegion;
+    private Texture vision;
+    private int prev_debug;
+    private Sprite visionCone;
 
     /** The jump sound. We only want to play once. */
     private SoundEffect jumpSound;
@@ -129,8 +132,9 @@ public class PlatformScene implements ContactListener, Screen{
     /** The default sound volume */
     private float volume;
 
-    /** Reference to the character avatar */
-    private Traci avatar;
+    private Player avatar;
+    private CuriosityCritter critter;
+    private AIControllerManager aiManager;
     /** Reference to the goalDoor (for collision detection) */
     private Door goalDoor;
 
@@ -371,6 +375,8 @@ public class PlatformScene implements ContactListener, Screen{
         // This shows off how powerful our new SpriteBatch is
         batch.begin(camera);
 
+
+
         // Draw the meshes (images)
         for(ObstacleSprite obj : sprites) {
             obj.draw(batch);
@@ -383,12 +389,17 @@ public class PlatformScene implements ContactListener, Screen{
             }
         }
 
-        // Draw a final message
-        if (complete && !failed) {
-            batch.drawText(goodMessage, width/2, height/2);
-        } else if (failed) {
-            batch.drawText(badMessage, width/2, height/2);
-        }
+        float u = critter.getObstacle().getPhysicsUnits();
+
+        Vector2 headPos = critter.getHeadBody().getPosition();
+        float headAngleDeg = critter.getHeadBody().getAngle() * MathUtils.radiansToDegrees;
+
+        visionCone.setPosition(headPos.x * u - visionCone.getOriginX(),
+            headPos.y * u - visionCone.getOriginY());
+
+        visionCone.setRotation(headAngleDeg);
+
+        visionCone.draw(batch);
 
         batch.end();
     }
@@ -429,6 +440,7 @@ public class PlatformScene implements ContactListener, Screen{
                 postUpdate(delta);
             }
             draw(delta);
+            System.out.println("Is aware" + critter.isAwareOfPlayer());
         }
     }
 
@@ -540,20 +552,11 @@ public class PlatformScene implements ContactListener, Screen{
      * Lays out the game geography.
      */
     private void populateLevel() {
+        aiManager = new AIControllerManager();
         float units = height/bounds.height;
-
-        // Add level goal
-        Texture texture = directory.getEntry( "shared-goal", Texture.class );
-
-        JsonValue goal = constants.get("goal");
-        JsonValue goalpos = goal.get("pos");
-        goalDoor = new Door(units, goal);
-        goalDoor.setTexture( texture );
-        goalDoor.getObstacle().setName("goal");
-        addSprite(goalDoor);
-
+        prev_debug = 0;
         // Create ground pieces
-        texture = directory.getEntry( "shared-earth", Texture.class );
+        Texture texture = directory.getEntry( "shared-earth", Texture.class );
 
         Surface wall;
         String wname = "wall";
@@ -577,26 +580,32 @@ public class PlatformScene implements ContactListener, Screen{
             addSprite(platform);
         }
 
-        // Create Traci
-        texture = directory.getEntry( "platform-playerSprite", Texture.class );
-        avatar = new Traci(units, constants.get("traci"));
+        // Create Player
+        texture = directory.getEntry( "player-sprite-proto", Texture.class );
+        avatar = new Player(units, constants.get("player"));
         avatar.setTexture(texture);
         addSprite(avatar);
         // Have to do after body is created
         avatar.createSensor();
 
 
-        // Create rope bridge
-        texture = directory.getEntry( "platform-rope", Texture.class );
-        RopeBridge bridge = new RopeBridge(units, constants.get("bridge"));
-        bridge.setTexture(texture);
-        addSpriteGroup(bridge);
+        texture = directory.getEntry( "curio-critter-proto", Texture.class );
+        critter = new CuriosityCritter(units, constants.get("curiosity-critter"));
+        critter.setTexture(texture);
+        addSprite(critter);
+        // Have to do after body is created
+        critter.createSensor();
+        critter.createVisionSensor();
 
-        // Create spinning platform
-        texture = directory.getEntry( "platform-barrier", Texture.class );
-        Spinner spinPlatform = new Spinner(units,constants.get("spinner"));
-        spinPlatform.setTexture(texture);
-        addSpriteGroup(spinPlatform);
+        aiManager.register(critter);
+
+        texture = directory.getEntry("vision_cone", Texture.class);
+        visionConeRegion = new TextureRegion(texture);
+        visionCone = new Sprite(visionConeRegion.getTexture());
+        visionCone.setRegion(visionConeRegion);
+        visionCone.setSize(200, 150);
+        visionCone.setOrigin(visionCone.getWidth() / 2, 0);
+
     }
 
     /**
@@ -689,6 +698,7 @@ public class PlatformScene implements ContactListener, Screen{
             SoundEffectManager sounds = SoundEffectManager.getInstance();
             sounds.play("jump", jumpSound, volume);
         }
+        aiManager.update(dt);
     }
 
     /**
@@ -744,27 +754,37 @@ public class PlatformScene implements ContactListener, Screen{
             ObstacleSprite bd1 = (ObstacleSprite)body1.getUserData();
             ObstacleSprite bd2 = (ObstacleSprite)body2.getUserData();
 
-            // Test bullet collision with world
-            if (bd1.getName().equals("bullet") && bd2 != avatar && !bd2.getName().equals( "goal" )) {
-                removeBullet(bd1);
+            if ("vision_sensor".equals(fd1) || "vision_sensor".equals(fd2)) {
+                Object bodyDataA = fix1.getBody().getUserData();
+                Object bodyDataB = fix2.getBody().getUserData();
+
+                // Identify the critter and the player from the contact.
+                CuriosityCritter critter = null;
+                Player playerObj = null;
+                if (bodyDataA instanceof CuriosityCritter && bodyDataB instanceof Player) {
+                    critter = (CuriosityCritter) bodyDataA;
+                    playerObj = (Player) bodyDataB;
+                } else if (bodyDataA instanceof Player && bodyDataB instanceof CuriosityCritter) {
+                    critter = (CuriosityCritter) bodyDataB;
+                    playerObj = (Player) bodyDataA;
+                }
+
+                if (critter != null) {
+                    // The vision sensor touched the player.
+                    critter.setAwareOfPlayer(true);
+                    System.out.println("Critter saw player");
+                }
             }
 
-            if (bd2.getName().equals("bullet") && bd1 != avatar && !bd1.getName().equals( "goal" )) {
-                removeBullet(bd2);
-            }
 
             // See if we have landed on the ground.
             if ((avatar.getSensorName().equals(fd2) && avatar != bd1) ||
                 (avatar.getSensorName().equals(fd1) && avatar != bd2)) {
                 avatar.setGrounded(true);
                 sensorFixtures.add(avatar == bd1 ? fix2 : fix1); // Could have more than one ground
+                System.out.println("ground touch player");
             }
 
-            // Check for win condition
-            if ((bd1 == avatar && bd2.getName().equals( "goal" )) ||
-                (bd1.getName().equals("goal")  && bd2 == avatar)) {
-                setComplete(true);
-            }
         } catch (Exception e) {
             e.printStackTrace();
         }
@@ -789,6 +809,26 @@ public class PlatformScene implements ContactListener, Screen{
 
         Object bd1 = body1.getUserData();
         Object bd2 = body2.getUserData();
+
+        if ("vision_sensor".equals(fd1) || "vision_sensor".equals(fd2)) {
+            Object bodyDataA = fix1.getBody().getUserData();
+            Object bodyDataB = fix2.getBody().getUserData();
+
+            CuriosityCritter critter = null;
+            Player playerObj = null;
+            if (bodyDataA instanceof CuriosityCritter && bodyDataB instanceof Player) {
+                critter = (CuriosityCritter) bodyDataA;
+                playerObj = (Player) bodyDataB;
+            } else if (bodyDataA instanceof Player && bodyDataB instanceof CuriosityCritter) {
+                critter = (CuriosityCritter) bodyDataB;
+                playerObj = (Player) bodyDataA;
+            }
+
+            if (critter != null && playerObj != null) {
+                critter.setAwareOfPlayer(false);
+                System.out.println("Critter stopped seeing player");
+            }
+        }
 
         if ((avatar.getSensorName().equals(fd2) && avatar != bd1) ||
             (avatar.getSensorName().equals(fd1) && avatar != bd2)) {
