@@ -152,19 +152,19 @@ public class GDXRoot extends Game implements ScreenListener {
             controllers[current].reset();
             setScreen(controllers[current]);
 
-        } else if (exitCode == PhysicsScene.EXIT_NEXT) {
+        } else if (exitCode == PlatformScene.EXIT_NEXT) {
             current = (current + 1) % maps.length;
             PlatformScene nextScene = new PlatformScene(directory, maps[current]);
             nextScene.setScreenListener(this);
             nextScene.setSpriteBatch(batch);
             setScreen(nextScene);
-        } else if (exitCode == PhysicsScene.EXIT_PREV) {
+        } else if (exitCode == PlatformScene.EXIT_PREV) {
             current = (current + maps.length - 1) % maps.length; // 切换到上一关
             PlatformScene prevScene = new PlatformScene(directory, maps[current]);
             prevScene.setScreenListener(this);
             prevScene.setSpriteBatch(batch);
             setScreen(prevScene);
-        } else if (exitCode == PhysicsScene.EXIT_QUIT) {
+        } else if (exitCode == PlatformScene.EXIT_QUIT) {
             // We quit the main application
             Gdx.app.exit();
         }
