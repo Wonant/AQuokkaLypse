@@ -60,9 +60,10 @@
             "minfilter": "linear mipmap linear",
             "magfilter": "linear mipmap linear"
         },
+        "curio-critter-proto": "shared/curiositycritter.png",
+        "vision_cone" : "shared/vision1.png",
         "platform-traci"    : "platform/traci.png",
         "platform-playerSprite": "platform/playerSprite.png",
-        "platform-rope"     : "platform/ropebridge.png",
         "platform-barrier"  : "platform/barrier.png",
         "platform-bullet"   : "platform/bullet.png",
         "ragdoll-bubble"    : "ragdoll/bubble.png",
