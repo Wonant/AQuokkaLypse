@@ -50,14 +50,14 @@ public class Bullet extends ObstacleSprite {
      * @param pos       Traci's position
      * @param right     Whether to go to the right of Traci
      */
-    public Bullet(float units, JsonValue settings, Vector2 pos, boolean right) {
+    public Bullet(float units, JsonValue settings, Vector2 pos, Vector2 angle) {
         float offset = settings.getFloat( "offset", 0 );
-        offset *= (right ? 1 : -1);
+        Vector2 v_offset = angle.scl(offset);
         float s = settings.getFloat( "size" );
         float radius = s * units / 2.0f;
 
         // Create a circular obstacle
-        obstacle = new WheelObstacle( pos.x + offset, pos.y, s/2 );
+        obstacle = new WheelObstacle( pos.x + v_offset.x, pos.y + v_offset.y, s/2 );
         obstacle.setDensity( settings.getFloat( "density", 0 ) );
         obstacle.setPhysicsUnits( units );
         obstacle.setBullet( true );
@@ -66,9 +66,11 @@ public class Bullet extends ObstacleSprite {
         obstacle.setName( "bullet" );
 
         float speed = settings.getFloat( "speed", 0 );
-        speed *= (right ? 1 : -1);
-        obstacle.setVX( speed );
+        float vx = speed * angle.x;
+        float vy = speed * angle.y;
 
+        obstacle.setVX( vx );
+        obstacle.setVY( vy );
         debug = ParserUtils.parseColor( settings.get( "debug" ), Color.WHITE );
 
         // While the bullet is a circle, we want to create a rectangular mesh.
