@@ -348,8 +348,10 @@ public class InputController {
         }
 
         // Mouse results
+
         teleportPressed = Gdx.input.isButtonPressed(Input.Buttons.LEFT);
         stunPressed = Gdx.input.isButtonPressed(Input.Buttons.RIGHT);
+
         crosshair.set(Gdx.input.getX(), Gdx.input.getY());
         crosshair.scl(1/scale.x,-1/scale.y);
         crosshair.y += bounds.height;

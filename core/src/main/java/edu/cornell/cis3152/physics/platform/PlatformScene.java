@@ -734,7 +734,9 @@ public class PlatformScene implements ContactListener, Screen{
         avatar.setMovement(input.getHorizontal() *avatar.getForce());
         avatar.setJumping(input.didPrimary());
 
+
         avatar.setStunning(input.didStun());
+
 
         avatar.setHarvesting(input.didSecondary());
         //avatar.setTeleporting(input.didTeleport());
