@@ -73,6 +73,10 @@ public class InputController {
     private boolean exitPressed;
     private boolean exitPrevious;
 
+    /** Whether the teleport button was pressed */
+    private boolean teleportPressed;
+    private boolean teleportPrevious;
+
     /** How much did we move horizontally? */
     private float horizontal;
     /** How much did we move vertically? */
@@ -206,6 +210,16 @@ public class InputController {
     }
 
     /**
+     * Returns true if the teleport button was pressed
+     *
+     * @return true if the teleport button was pressed
+     */
+    public boolean didTeleport() {
+        return teleportPressed && !teleportPrevious;
+    }
+
+
+    /**
      * Creates a new input controller
      *
      * The input controller attempts to connect to the X-Box controller at
@@ -244,6 +258,7 @@ public class InputController {
         exitPrevious = exitPressed;
         nextPrevious = nextPressed;
         prevPrevious = prevPressed;
+        teleportPrevious = teleportPressed;
 
         // Check to see if a GamePad is connected
         if (xbox != null && xbox.isConnected()) {
@@ -310,6 +325,11 @@ public class InputController {
         prevPressed = (secondary && prevPressed) || (Gdx.input.isKeyPressed(Input.Keys.P));
         nextPressed = (secondary && nextPressed) || (Gdx.input.isKeyPressed(Input.Keys.N));
         exitPressed  = (secondary && exitPressed) || (Gdx.input.isKeyPressed(Input.Keys.ESCAPE));
+
+        teleportPressed = (secondary && teleportPressed) || (Gdx.input.isKeyPressed(Input.Keys.T));
+        //Mouse
+        //teleportPressed = teleportPressed || Gdx.input.isButtonPressed(Input.Buttons.RIGHT);
+
 
         // Directional controls
         horizontal = (secondary ? horizontal : 0.0f);

@@ -11,6 +11,13 @@
         "friction"  : 0.0,
         "restitution": 0.0
     },
+    "teleporter" : {
+        "pos"       : [4.0, 14.0],
+        "size"      : 3.0,
+        "density"   : 0.0,
+        "friction"  : 0.0,
+        "restitution": 0.0
+  },
     "traci" : {
         "pos"       : [2.5, 5.0],
         "inner"     : [0.7, 0.95],

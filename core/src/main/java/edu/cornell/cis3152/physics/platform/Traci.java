@@ -114,7 +114,7 @@ public class Traci extends ObstacleSprite {
     private int maxFearMeter;
 
 
-    private Texture fearMeterTexture;
+
 
 
     /**
