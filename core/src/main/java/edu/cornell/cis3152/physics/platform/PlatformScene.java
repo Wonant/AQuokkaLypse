@@ -102,6 +102,8 @@ public class PlatformScene implements ContactListener, Screen{
     /** The world scale */
     protected Vector2 scale;
 
+    private Texture background;
+
     /** Whether this is an active controller */
     protected boolean active;
     /** Whether we have completed this level */
@@ -280,6 +282,7 @@ public class PlatformScene implements ContactListener, Screen{
         world = null;
         batch = null;
         fearMeterTexture.dispose();
+        background.dispose();
     }
 
     /**
@@ -392,7 +395,9 @@ public class PlatformScene implements ContactListener, Screen{
 
         // This shows off how powerful our new SpriteBatch is
         batch.begin(camera);
-        batch.draw(new Texture("/Users/jonathan/AQuokkaLypse/assets/platform/dreamBackground.png"), 0, 0);
+        background = directory.getEntry("background-proto", Texture.class);
+        batch.draw(background, 0, 0);
+
         // Draw the meshes (images)
         for(ObstacleSprite obj : sprites) {
             obj.draw(batch);
@@ -620,7 +625,7 @@ public class PlatformScene implements ContactListener, Screen{
 
         // Create ground pieces
 
-        texture = directory.getEntry( "shared-cloud", Texture.class );
+        Texture texture = directory.getEntry( "shared-cloud", Texture.class );
 
 
         aiManager = new AIControllerManager(avatar);
