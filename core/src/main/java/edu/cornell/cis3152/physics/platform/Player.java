@@ -88,6 +88,13 @@ public class Player extends ObstacleSprite {
     /** Whether we are actively teleporting */
     private boolean isTeleporting;
 
+    /** Cooldown (in animation frames) for taking damage */
+    private int takeDamageLimit;
+    /** How long until we can take damage again */
+    private int takeDamageCooldown;
+    /** Whether we are actively taking damage */
+    private boolean isTakingDamage;
+
     /** The current horizontal movement of the character */
     private float   movement;
     /** Which direction is the character facing */
@@ -163,9 +170,11 @@ public class Player extends ObstacleSprite {
      * @param value value to set fear meter to
      */
     public void setFearMeter(int value) {
-        if (value < 0 || value > maxFearMeter)
+        if (value < 0)
         {
-            System.out.println("ERROR: Fear Meter Bounds Exceeded!");
+            fearMeter = 0;
+        } else if (value > maxFearMeter) {
+            fearMeter = maxFearMeter;
         } else {
             fearMeter = value;
         }
@@ -234,6 +243,24 @@ public class Player extends ObstacleSprite {
      */
     public void setTeleporting(boolean value) {
         isTeleporting = value;
+    }
+
+    /**
+     * Returns true if CatDemon is actively taking damage.
+     *
+     * @return true if CatDemon is actively taking damage.
+     */
+    public boolean isTakingDamage() {
+        return isTakingDamage && takeDamageCooldown <= 0;
+    }
+
+    /**
+     * Sets whether CatDemon is actively taking damage.
+     *
+     * @param value whether CatDemon is actively taking damage.
+     */
+    public void setTakingDamage(boolean value) {
+        isTakingDamage = value;
     }
 
 
@@ -371,6 +398,7 @@ public class Player extends ObstacleSprite {
         harvestLimit = data.getInt( "shot_cool", 0 );
         stunLimit = data.getInt( "shot_cool", 0 );
         teleportLimit = data.getInt( "shot_cool", 0 );
+        takeDamageLimit = 120;
 
         // Gameplay attributes
         isGrounded = false;
@@ -384,6 +412,7 @@ public class Player extends ObstacleSprite {
         stunCooldown = 0;
         teleportCooldown = 0;
         jumpCooldown = 0;
+        takeDamageCooldown = 0;
 
         fearMeter = 10;
         maxFearMeter = data.getInt("maxfear", 0);
@@ -503,6 +532,14 @@ public class Player extends ObstacleSprite {
             teleportCooldown = teleportLimit;
         } else {
             teleportCooldown = Math.max(0, teleportCooldown - 1);
+        }
+
+        if (isTakingDamage())
+        {
+            takeDamageCooldown = takeDamageLimit;
+
+        } else {
+            takeDamageCooldown = Math.max(0, takeDamageCooldown - 1);
         }
         super.update(dt);
     }

@@ -58,9 +58,10 @@ public class AIControllerManager {
     private Player player;
     private Random random;
 
-    public AIControllerManager() {
+    public AIControllerManager(Player player) {
         entities = new ArrayList<>();
         random = new Random();
+        this.player = player;
     }
 
     /** we need to make a wrapper class eventually for all ai-controlled enemies */

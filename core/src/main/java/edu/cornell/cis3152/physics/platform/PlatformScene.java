@@ -153,6 +153,8 @@ public class PlatformScene implements ContactListener, Screen{
 
     private Vector2 queuedTeleportPosition = null;
 
+    boolean dealDamage = false;
+
 
 
 
@@ -621,7 +623,7 @@ public class PlatformScene implements ContactListener, Screen{
 
         // Create ground pieces
         Texture texture = directory.getEntry( "shared-earth", Texture.class );
-        aiManager = new AIControllerManager();
+        aiManager = new AIControllerManager(avatar);
         Surface wall;
         String wname = "wall";
         JsonValue walls = constants.get("walls");
@@ -724,7 +726,7 @@ public class PlatformScene implements ContactListener, Screen{
                 return false;
             }
         }
-        if (!isFailure() && avatar.getObstacle().getY() < -1) {
+        if (!isFailure() && (avatar.getObstacle().getY() < -1 || avatar.getFearMeter() == 0)) {
             setFailure(true);
             return false;
         }
@@ -760,6 +762,7 @@ public class PlatformScene implements ContactListener, Screen{
         avatar.setTeleporting(input.didTeleport());
 
 
+
         // Add a bullet if we fire
         if (avatar.isStunning()) {
             createBullet();
@@ -771,11 +774,19 @@ public class PlatformScene implements ContactListener, Screen{
             createTeleporter();
         }
 
+        if(avatar.isTakingDamage())
+        {
+            avatar.setFearMeter(avatar.getFearMeter() - 1);
+            avatar.setTakingDamage(false);
+        }
+
         if (queuedTeleportPosition != null) {
             avatar.getObstacle().setPosition(queuedTeleportPosition);
             avatar.setFearMeter(Math.max(0,avatar.getFearMeter() - 1));
             queuedTeleportPosition = null; // Clear after applying
         }
+
+
 
         aiManager.update(dt);
 
@@ -791,7 +802,7 @@ public class PlatformScene implements ContactListener, Screen{
         float units = height/bounds.height;
         InputController input = InputController.getInstance();
         Vector2 newPosition = new Vector2(input.getCrossHair().x, input.getCrossHair().y);
-        Texture texture = directory.getEntry( "shared-goal", Texture.class );
+        Texture texture = directory.getEntry( "platform-teleporter", Texture.class );
 
         JsonValue teleporter = constants.get("teleporter");
 
@@ -817,33 +828,13 @@ public class PlatformScene implements ContactListener, Screen{
 
     private void takeTeleporter(Teleporter tp)
     {
-        System.out.println(tp.getLinkedTeleporter().getPosition());
+        //System.out.println(tp.getLinkedTeleporter().getPosition());
         //avatar.getObstacle().setPosition(tp.getLinkedTeleporter().getPosition());
         queuedTeleportPosition = tp.getLinkedTeleporter().getPosition().cpy();
 
     }
 
-    private void performTeleport() {
-        float teleportDistance = 5.0f;
-        Vector2 newPosition = new Vector2(
-            avatar.getObstacle().getX() + (avatar.isFacingRight() ? teleportDistance : -teleportDistance),
-            avatar.getObstacle().getY()
-        );
 
-        // Ensure the new position is within bounds
-        //newPosition.x = MathUtils.clamp(newPosition.x, 0.0f, bounds.width);
-
-        avatar.getObstacle().setPosition(MathUtils.clamp(newPosition.x, 0.0f, bounds.width), newPosition.y);
-        avatar.setFearMeter(avatar.getFearMeter() - 1);
-    }
-
-    private void performMouseTeleport(){
-        InputController input = InputController.getInstance();
-        Vector2 newPosition = new Vector2(input.getCrossHair().x, input.getCrossHair().y);
-        avatar.getObstacle().setPosition(newPosition);
-        avatar.setFearMeter(avatar.getFearMeter() - 1);
-
-    }
 
 
 
@@ -899,6 +890,8 @@ public class PlatformScene implements ContactListener, Screen{
         Object fd1 = fix1.getUserData();
         Object fd2 = fix2.getUserData();
 
+
+
         try {
             ObstacleSprite bd1 = (ObstacleSprite)body1.getUserData();
             ObstacleSprite bd2 = (ObstacleSprite)body2.getUserData();
@@ -910,9 +903,11 @@ public class PlatformScene implements ContactListener, Screen{
                 // Identify the critter and the player from the contact.
                 CuriosityCritter critter = null;
                 Player playerObj = null;
+
                 if (bodyDataA instanceof CuriosityCritter && bodyDataB instanceof Player) {
                     critter = (CuriosityCritter) bodyDataA;
                     playerObj = (Player) bodyDataB;
+
                 } else if (bodyDataA instanceof Player && bodyDataB instanceof CuriosityCritter) {
                     critter = (CuriosityCritter) bodyDataB;
                     playerObj = (Player) bodyDataA;
@@ -922,6 +917,7 @@ public class PlatformScene implements ContactListener, Screen{
                     // The vision sensor touched the player.
                     critter.setAwareOfPlayer(true);
                     System.out.println("Critter saw player");
+                    avatar.setTakingDamage(true);
                 }
             }
 
@@ -991,6 +987,28 @@ public class PlatformScene implements ContactListener, Screen{
 
         Object bd1 = body1.getUserData();
         Object bd2 = body2.getUserData();
+
+        if ("vision_sensor".equals(fd1) || "vision_sensor".equals(fd2)) {
+            Object bodyDataA = fix1.getBody().getUserData();
+            Object bodyDataB = fix2.getBody().getUserData();
+
+
+            CuriosityCritter critter = null;
+            Player playerObj = null;
+
+            if (bodyDataA instanceof CuriosityCritter && bodyDataB instanceof Player) {
+                critter = (CuriosityCritter) bodyDataA;
+                playerObj = (Player) bodyDataB;
+            } else if (bodyDataA instanceof Player && bodyDataB instanceof CuriosityCritter) {
+                critter = (CuriosityCritter) bodyDataB;
+                playerObj = (Player) bodyDataA;
+            }
+
+            if (critter != null) {
+                 critter.setAwareOfPlayer(false);
+                 System.out.println("Critter stopped seeing player");
+            }
+        }
 
         if ((avatar.getSensorName().equals(fd2) && avatar != bd1) ||
             (avatar.getSensorName().equals(fd1) && avatar != bd2)) {

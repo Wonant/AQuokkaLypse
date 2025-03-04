@@ -8,6 +8,7 @@ import com.badlogic.gdx.utils.JsonValue;
 import edu.cornell.gdiac.assets.ParserUtils;
 import edu.cornell.gdiac.graphics.SpriteBatch;
 import edu.cornell.gdiac.physics2.BoxObstacle;
+import edu.cornell.gdiac.physics2.CapsuleObstacle;
 import edu.cornell.gdiac.physics2.Obstacle;
 import edu.cornell.gdiac.physics2.ObstacleSprite;
 import edu.cornell.gdiac.physics2.WheelObstacle;
@@ -55,12 +56,14 @@ public class Teleporter extends ObstacleSprite{
 
         this.x = position.x;
         this.y = position.y;
-        float s = 1;
+        float s = 2;
         float size = s*units;
 
         //linkedTeleporter = other;
 
-        obstacle = new BoxObstacle(x, y, s, s);
+        float width = s*settings.get("inner").getFloat(0);
+        float height = s*settings.get("inner").getFloat(1);
+        obstacle = new CapsuleObstacle(x, y, width, height);
 
         obstacle.setDensity( settings.getFloat( "density", 0 ) );
         obstacle.setFriction( settings.getFloat( "friction", 0 ) );
@@ -77,7 +80,7 @@ public class Teleporter extends ObstacleSprite{
         // the physics units. For all meshes attached to a physics body, we
         // want (0,0) to be in the center of the mesh. So the method call below
         // is (x,y,w,h) where x, y is the bottom left.
-        mesh.set(-size/2.0f,-size/2.0f,size,size);
+        mesh.set(-size/2.0f,-size/2.0f,size,size );
 
 
     }
