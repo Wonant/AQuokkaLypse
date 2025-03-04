@@ -99,7 +99,7 @@ public class AIControllerManager {
             // If the critter sees the player, transition to ALERTED
             if (seesPlayer && data.state != CritterFSM.AWARE_STARE && data.state != CritterFSM.AWARE_FEAR) {
                 if (data.state != CritterFSM.ALERTED) {
-                    System.out.println("Critter sees player! Transitioning to ALERTED.");
+                    //System.out.println("Critter sees player! Transitioning to ALERTED.");
                     transitionState(data, CritterFSM.ALERTED);
                     return;
                 }
@@ -161,7 +161,7 @@ public class AIControllerManager {
                 data.critter.applyForce();
             }
         }
-        System.out.println("Critter state = " + data.state);
+        //System.out.println("Critter state = " + data.state);
     }
 
     private void transitionState(CritterAI data, CritterFSM newState) {
