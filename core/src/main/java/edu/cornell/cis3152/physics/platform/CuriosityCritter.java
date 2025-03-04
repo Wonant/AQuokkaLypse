@@ -51,7 +51,9 @@ public class CuriosityCritter extends ObstacleSprite {
     private Body headBody;
     private RevoluteJoint headJoint;
     private Fixture visionSensor;
+    private Fixture followSensor;
     private float headOffset = 2.0f;
+    private Fixture walkSensor;
 
     /** game logic stuff */
 
@@ -68,7 +70,11 @@ public class CuriosityCritter extends ObstacleSprite {
     private float awarenessCooldown;
 
     private Path2 visionSensorOutline;
+    private Path2 visionFollowOutline;
+    private Path2 walkSensorOutline;
 
+    // pathing
+    private boolean seesWall;
 
 
     public float getMovement() {
@@ -127,6 +133,14 @@ public class CuriosityCritter extends ObstacleSprite {
 
     public float getMaxSpeed() {
         return max_speed;
+    }
+
+    public boolean isSeesWall() {
+        return seesWall;
+    }
+
+    public void setSeesWall(boolean b) {
+        seesWall = b;
     }
 
     public String getSensorName() {
@@ -193,7 +207,7 @@ public class CuriosityCritter extends ObstacleSprite {
         visionAngle = 0;
 
 
-        mesh.set(-drawWidth/2.0f, -drawHeight/2.1f, drawWidth, drawHeight);
+        mesh.set(-drawWidth/1.5f, -drawHeight/1.6f, drawWidth*1.5f, drawHeight*1.5f);
     }
 
     /**
@@ -226,6 +240,8 @@ public class CuriosityCritter extends ObstacleSprite {
         PathFactory factory = new PathFactory();
         sensorOutline = new Path2();
         factory.makeRect((sensorCenter.x - w / 2) * u, (sensorCenter.y - h / 2) * u, w * u, h * u, sensorOutline);
+
+
     }
 
     public void createHeadBody() {
@@ -262,7 +278,7 @@ public class CuriosityCritter extends ObstacleSprite {
         attachHead();
         float coneWidth = 3.0f;
         float coneLength = 4.4f;
-        Vector2 vertices[] = new Vector2[3];
+        Vector2[] vertices = new Vector2[3];
         vertices[0] = new Vector2(-coneWidth/2, coneLength);
         vertices[1] = new Vector2(coneWidth/2, coneLength);
         vertices[2] = new Vector2(0, 0);
@@ -272,24 +288,64 @@ public class CuriosityCritter extends ObstacleSprite {
         FixtureDef visionDef = new FixtureDef();
         visionDef.shape = visionShape;
         visionDef.isSensor = true;
-        // Optionally adjust density/friction if needed
 
-        // Attach the sensor to the critter's body.
         visionSensor = headBody.createFixture(visionDef);
         visionSensor.setUserData("vision_sensor");
-
-
-        visionShape.dispose();
 
 
         PathFactory factory = new PathFactory();
         visionSensorOutline = new Path2();
         float u = obstacle.getPhysicsUnits();
         visionSensorOutline = factory.makeTriangle(
-                -coneWidth/2 * u, coneLength * u,
-                coneWidth/2 * u, coneLength * u,
-                0, 0);
+            -coneWidth/2 * u, coneLength * u,
+            coneWidth/2 * u, coneLength * u,
+            0, 0);
 
+        // follow sensor
+        coneWidth *= 1.8f;
+
+
+        //okay idk why this works but it works for having the vision cone follow the player once aggro'd
+        vertices[0] = new Vector2((-coneWidth)/2, coneLength);
+        vertices[1] = new Vector2((coneWidth)/2, coneLength);
+        vertices[2] = new Vector2(0, -3f);
+
+        visionShape.set(vertices);
+        visionDef = new FixtureDef();
+        visionDef.shape = visionShape;
+        visionDef.isSensor = true;
+
+        followSensor = headBody.createFixture(visionDef);
+        followSensor.setUserData("follow_sensor");
+        visionFollowOutline = new Path2();
+        visionFollowOutline = factory.makeTriangle(
+            -coneWidth/2 * u, coneLength * u,
+            coneWidth/2 * u, coneLength * u,
+            0, -3f);
+
+        //walk sensor
+        coneWidth = 0.4f;
+        coneLength = 2.5f;
+        vertices[0] = new Vector2(-coneWidth/2, coneLength);
+        vertices[1] = new Vector2(coneWidth/2, coneLength);
+        vertices[2] = new Vector2(0, 0);
+
+        visionShape.set(vertices);
+
+        FixtureDef walkDef = new FixtureDef();
+        walkDef.shape = visionShape;
+        walkDef.isSensor = true;
+
+        walkSensor = headBody.createFixture(walkDef);
+        walkSensor.setUserData("walk_sensor");
+
+        walkSensorOutline = new Path2();
+        walkSensorOutline = factory.makeTriangle(
+            -coneWidth/2 * u, coneLength * u,
+            coneWidth/2 * u, coneLength * u,
+            0, 0);
+
+        visionShape.dispose();
     }
 
     /**
@@ -307,7 +363,7 @@ public class CuriosityCritter extends ObstacleSprite {
 
         // Apply damping when no horizontal input is provided
         if (getMovement() == 0f) {
-            float slowFactor = 0.8f; // Adjust this to fine-tune slowdown speed
+            float slowFactor = 2.0f; // Adjust this to fine-tune slowdown speed
             forceCache.set(-slowFactor * vx, 0);
             body.applyForce(forceCache, pos, true);
         }
@@ -406,6 +462,34 @@ public class CuriosityCritter extends ObstacleSprite {
             transform.preTranslate(headPos.x * u, headPos.y * u);
 
             batch.outline(visionSensorOutline, transform);
+        }
+        if (visionFollowOutline != null) {
+            batch.setTexture(Texture2D.getBlank());
+            batch.setColor(Color.LIME);
+
+            Vector2 headPos = headBody.getPosition();
+            float headAngleDeg = headBody.getAngle() * MathUtils.radiansToDegrees;
+            float u = obstacle.getPhysicsUnits();
+
+            transform.idt();
+            transform.preRotate(headAngleDeg);
+            transform.preTranslate(headPos.x * u, headPos.y * u);
+
+            batch.outline(visionFollowOutline, transform);
+        }
+        if (walkSensorOutline != null) {
+            batch.setTexture(Texture2D.getBlank());
+            batch.setColor(Color.RED);
+
+            Vector2 headPos = headBody.getPosition();
+            float headAngleDeg = headBody.getAngle() * MathUtils.radiansToDegrees;
+            float u = obstacle.getPhysicsUnits();
+
+            transform.idt();
+            transform.preRotate(headAngleDeg);
+            transform.preTranslate(headPos.x * u, headPos.y * u);
+
+            batch.outline(walkSensorOutline, transform);
         }
     }
 
