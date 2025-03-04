@@ -66,6 +66,7 @@
         "platform-playerSprite": "platform/playerSprite.png",
         "platform-barrier"  : "platform/barrier.png",
         "platform-bullet"   : "platform/bullet.png",
+        "platform-teleporter" : "platform/teleport.png",
         "ragdoll-bubble"    : "ragdoll/bubble.png",
         "ragdoll-crosshair" : "ragdoll/crosshair.png",
         "ragdoll-foreground": "ragdoll/foreground.png",

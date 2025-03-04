@@ -278,6 +278,7 @@ public class CuriosityCritter extends ObstacleSprite {
         visionSensor = headBody.createFixture(visionDef);
         visionSensor.setUserData("vision_sensor");
 
+
         visionShape.dispose();
 
 
