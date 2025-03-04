@@ -11,6 +11,26 @@
     "friction"  : 0.0,
     "restitution": 0.0
   },
+  "curiosity-critter" : {
+    "pos"       : [20.5, 5.0],
+    "inner"     : [0.7, 0.95],
+    "size"      : 0.8,
+    "force"     : 20.0,
+    "damping"   : 10.0,
+    "density"   : 0.5,
+    "friction"  : 0.0,
+    "maxspeed"  : 3.0,
+    "jump_force": 3.0,
+    "sensor": {
+      "shrink" : 0.6,
+      "height" : 0.05
+    },
+    "debug" : {
+      "avatar" : "#ffff00ff",
+      "sensor" : "#ff0000ff",
+      "tolerance" : 0.05
+    }
+  },
   "teleporter" : {
     "pos"       : [4.0, 14.0],
     "size"      : 3.0,
@@ -27,7 +47,7 @@
     "density"   : 0.5,
     "friction"  : 0.0,
     "maxspeed"  : 5.0,
-    "maxfear"   : 7.0,
+    "maxfear"   : 10.0,
     "jump_force": 5.5,
     "jump_cool" : 30,
     "shot_cool" : 40,

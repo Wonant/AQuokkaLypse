@@ -1,10 +1,10 @@
 /*
- * Traci.java
+ * Player.java
  *
- * This is the class for Traci Nathans-Kelly cartoon avatar. WHile it is also
+ * This is the class for Player Nathans-Kelly cartoon avatar. WHile it is also
  * an ObstacleSprite, this class is much more than an organizational tool. This
- * class has all sorts of logic, like the whether Traci can jump or whether
- * Traci can fire a bullet.
+ * class has all sorts of logic, like the whether Player can jump or whether
+ * Player can fire a bullet.
  *
  * You SHOULD NOT need to modify this file. However, you may learn valuable
  * lessons for the rest of the lab by looking at it.
@@ -29,7 +29,7 @@ import edu.cornell.gdiac.math.PathFactory;
 import edu.cornell.gdiac.physics2.*;
 
 /**
- * Traci's avatar for the platform game.
+ * Player's avatar for the platform game.
  *
  * An ObstacleSprite is a sprite (specifically a textured mesh) that is
  * connected to a obstacle. It is designed to be the same size as the
@@ -38,17 +38,17 @@ import edu.cornell.gdiac.physics2.*;
  *
  * Note that unlike a traditional ObstacleSprite, this attaches some additional
  * information to the obstacle. In particular, we add a sensor fixture. This
-  * sensor is used to prevent double-jumping. However, we only have one mesh,
- * the mesh for Traci. The sensor is invisible and only shows up in debug mode.
+ * sensor is used to prevent double-jumping. However, we only have one mesh,
+ * the mesh for Player. The sensor is invisible and only shows up in debug mode.
  * While we could have made the fixture a separate obstacle, we want it to be a
  * simple fixture so that we can attach it to the obstacle WITHOUT using joints.
  */
-public class Traci extends ObstacleSprite {
+public class Player extends ObstacleSprite {
     /** The initializing data (to avoid magic numbers) */
     private final JsonValue data;
-    /** The width of Traci's avatar */
+    /** The width of Player's avatar */
     private float width;
-    /** The height of Traci's avatar */
+    /** The height of Player's avatar */
     private float height;
 
     /** The factor to multiply by the input */
@@ -88,6 +88,13 @@ public class Traci extends ObstacleSprite {
     /** Whether we are actively teleporting */
     private boolean isTeleporting;
 
+    /** Cooldown (in animation frames) for taking damage */
+    private int takeDamageLimit;
+    /** How long until we can take damage again */
+    private int takeDamageCooldown;
+    /** Whether we are actively taking damage */
+    private boolean isTakingDamage;
+
     /** The current horizontal movement of the character */
     private float   movement;
     /** Which direction is the character facing */
@@ -112,6 +119,8 @@ public class Traci extends ObstacleSprite {
     private int fearMeter;
     /** MAX Ability and Health meter for CatDemon**/
     private int maxFearMeter;
+
+    private float teleportRangeRadius;
 
 
 
@@ -145,6 +154,22 @@ public class Traci extends ObstacleSprite {
         }
     }
 
+    /** Returns teleport range radius
+     *
+     * @return teleport range radius
+     */
+    public float getTeleportRangeRadius() {
+        return teleportRangeRadius;
+    }
+
+    /** Sets teleport range radius to value
+     *
+     * @param value value
+     */
+    public void setTeleportRangeRadius(float value) {
+        teleportRangeRadius = value;
+    }
+
     /** Returns current fear meter charge
      *
      * @return current fear meter charge
@@ -163,9 +188,11 @@ public class Traci extends ObstacleSprite {
      * @param value value to set fear meter to
      */
     public void setFearMeter(int value) {
-        if (value < 0 || value > maxFearMeter)
+        if (value < 0)
         {
-            System.out.println("ERROR: Fear Meter Bounds Exceeded!");
+            fearMeter = 0;
+        } else if (value > maxFearMeter) {
+            fearMeter = maxFearMeter;
         } else {
             fearMeter = value;
         }
@@ -181,18 +208,18 @@ public class Traci extends ObstacleSprite {
 
 
     /**
-     * Returns true if Traci is actively harvesting.
+     * Returns true if Player is actively harvesting.
      *
-     * @return true if Traci is actively harvesting.
+     * @return true if Player is actively harvesting.
      */
     public boolean isHarvesting() {
         return isHarvesting && harvestCooldown <= 0;
     }
 
     /**
-     * Sets whether Traci is actively firing.
+     * Sets whether Player is actively firing.
      *
-     * @param value whether Traci is actively firing.
+     * @param value whether Player is actively firing.
      */
     public void setHarvesting(boolean value) {
         isHarvesting = value;
@@ -236,69 +263,87 @@ public class Traci extends ObstacleSprite {
         isTeleporting = value;
     }
 
+    /**
+     * Returns true if CatDemon is actively taking damage.
+     *
+     * @return true if CatDemon is actively taking damage.
+     */
+    public boolean isTakingDamage() {
+        return isTakingDamage && takeDamageCooldown <= 0;
+    }
 
     /**
-     * Returns true if Traci is actively jumping.
+     * Sets whether CatDemon is actively taking damage.
      *
-     * @return true if Traci is actively jumping.
+     * @param value whether CatDemon is actively taking damage.
+     */
+    public void setTakingDamage(boolean value) {
+        isTakingDamage = value;
+    }
+
+
+    /**
+     * Returns true if Player is actively jumping.
+     *
+     * @return true if Player is actively jumping.
      */
     public boolean isJumping() {
         return isJumping && isGrounded && jumpCooldown <= 0;
     }
 
     /**
-     * Sets whether Traci is actively jumping.
+     * Sets whether Player is actively jumping.
      *
-     * @param value whether Traci is actively jumping.
+     * @param value whether Player is actively jumping.
      */
     public void setJumping(boolean value) {
         isJumping = value;
     }
 
     /**
-     * Returns true if Traci is on the ground.
+     * Returns true if Player is on the ground.
      *
-     * @return true if Traci is on the ground.
+     * @return true if Player is on the ground.
      */
     public boolean isGrounded() {
         return isGrounded;
     }
 
     /**
-     * Sets whether Traci is on the ground.
+     * Sets whether Player is on the ground.
      *
-     * @param value whether Traci is on the ground.
+     * @param value whether Player is on the ground.
      */
     public void setGrounded(boolean value) {
         isGrounded = value;
     }
 
     /**
-     * Returns how much force to apply to get Traci moving
+     * Returns how much force to apply to get Player moving
      *
      * Multiply this by the input to get the movement value.
      *
-     * @return how much force to apply to get Traci moving
+     * @return how much force to apply to get Player moving
      */
     public float getForce() {
         return force;
     }
 
     /**
-     * Returns how hard the brakes are applied to stop Traci moving
+     * Returns how hard the brakes are applied to stop Player moving
      *
-     * @return how hard the brakes are applied to stop Traci moving
+     * @return how hard the brakes are applied to stop Player moving
      */
     public float getDamping() {
         return damping;
     }
 
     /**
-     * Returns the upper limit on Traci's left-right movement.
+     * Returns the upper limit on Player's left-right movement.
      *
      * This does NOT apply to vertical movement.
      *
-     * @return the upper limit on Traci's left-right movement.
+     * @return the upper limit on Player's left-right movement.
      */
     public float getMaxSpeed() {
         return maxspeed;
@@ -326,7 +371,7 @@ public class Traci extends ObstacleSprite {
     }
 
     /**
-     * Creates a new Traci avatar with the given physics data
+     * Creates a new Player avatar with the given physics data
      *
      * The physics units are used to size the mesh relative to the physics
      * body. All other attributes are defined by the JSON file. Because of
@@ -334,9 +379,9 @@ public class Traci extends ObstacleSprite {
      * thinner than the mesh in order to give a tighter hitbox.
      *
      * @param units     The physics units
-     * @param data      The physics constants for Traci
+     * @param data      The physics constants for Player
      */
-    public Traci(float units, JsonValue data) {
+    public Player(float units, JsonValue data) {
         this.data = data;
         JsonValue debugInfo = data.get("debug");
 
@@ -358,7 +403,7 @@ public class Traci extends ObstacleSprite {
         obstacle.setFixedRotation(true);
         obstacle.setPhysicsUnits( units );
         obstacle.setUserData( this );
-        obstacle.setName("traci");
+        obstacle.setName("player");
 
         debug = ParserUtils.parseColor( debugInfo.get("avatar"),  Color.WHITE);
         sensorColor = ParserUtils.parseColor( debugInfo.get("sensor"),  Color.WHITE);
@@ -371,6 +416,7 @@ public class Traci extends ObstacleSprite {
         harvestLimit = data.getInt( "shot_cool", 0 );
         stunLimit = data.getInt( "shot_cool", 0 );
         teleportLimit = data.getInt( "shot_cool", 0 );
+        takeDamageLimit = 120;
 
         // Gameplay attributes
         isGrounded = false;
@@ -384,24 +430,27 @@ public class Traci extends ObstacleSprite {
         stunCooldown = 0;
         teleportCooldown = 0;
         jumpCooldown = 0;
+        takeDamageCooldown = 0;
 
         fearMeter = 10;
         maxFearMeter = data.getInt("maxfear", 0);
 
-        // Create a rectangular mesh for Traci. This is the same as for door,
-        // since Traci is a rectangular image. But note that the capsule is
+        teleportRangeRadius = 200;
+
+        // Create a rectangular mesh for Player. This is the same as for door,
+        // since Player is a rectangular image. But note that the capsule is
         // actually smaller than the image, making a tighter hitbox. You can
         // see this when you enable debug mode.
         mesh.set(-size/2.0f,-size/2.0f,size,size);
     }
 
     /**
-     * Creates the sensor for Traci.
+     * Creates the sensor for Player.
      *
-     * We only allow the Traci to jump when she's on the ground. Double jumping
+     * We only allow the Player to jump when she's on the ground. Double jumping
      * is not allowed.
      *
-     * To determine whether Traci is on the ground we create a thin sensor under
+     * To determine whether Player is on the ground we create a thin sensor under
      * her feet, which reports collisions with the world but has no collision
      * response. This sensor is just a FIXTURE, it is not an obstacle. We will
      * talk about the different between these later.
@@ -425,7 +474,7 @@ public class Traci extends ObstacleSprite {
         // Ground sensor to represent our feet
         Body body = obstacle.getBody();
         Fixture sensorFixture = body.createFixture( sensorDef );
-        sensorName = "traci_sensor";
+        sensorName = "player_sensor";
         sensorFixture.setUserData(sensorName);
 
         // Finally, we need a debug outline
@@ -437,7 +486,7 @@ public class Traci extends ObstacleSprite {
 
 
     /**
-     * Applies the force to the body of Traci
+     * Applies the force to the body of Player
      *
      * This method should be called after the force attribute is set.
      */
@@ -504,6 +553,14 @@ public class Traci extends ObstacleSprite {
         } else {
             teleportCooldown = Math.max(0, teleportCooldown - 1);
         }
+
+        if (isTakingDamage())
+        {
+            takeDamageCooldown = takeDamageLimit;
+
+        } else {
+            takeDamageCooldown = Math.max(0, takeDamageCooldown - 1);
+        }
         super.update(dt);
     }
 
@@ -524,6 +581,7 @@ public class Traci extends ObstacleSprite {
             flipCache.setToScaling( -1,1 );
         }
         super.draw(batch,flipCache);
+
     }
 
     /**
@@ -556,5 +614,14 @@ public class Traci extends ObstacleSprite {
             //
             batch.outline( sensorOutline, transform );
         }
+        drawTeleportRadius(batch);
+    }
+
+    public void drawTeleportRadius(SpriteBatch batch)
+    {
+        PathFactory pathTool = new PathFactory();
+        float u = obstacle.getPhysicsUnits();
+        Path2 teleportCircle = pathTool.makeCircle(obstacle.getPosition().x * u , obstacle.getPosition().y * u  , teleportRangeRadius);
+        batch.outline(teleportCircle);
     }
 }
