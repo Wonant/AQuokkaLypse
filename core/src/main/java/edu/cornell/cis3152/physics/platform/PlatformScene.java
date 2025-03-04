@@ -133,7 +133,7 @@ public class PlatformScene implements ContactListener, Screen{
     private float volume;
 
     /** Reference to the character avatar */
-    private Traci avatar;
+    private Player avatar;
     private CuriosityCritter critter;
     private TextureRegion visionConeRegion;
     private Texture vision;
@@ -644,9 +644,9 @@ public class PlatformScene implements ContactListener, Screen{
             addSprite(platform);
         }
 
-        // Create Traci
+        // Create Player
         texture = directory.getEntry( "platform-playerSprite", Texture.class );
-        avatar = new Traci(units, constants.get("traci"));
+        avatar = new Player(units, constants.get("traci"));
         avatar.setTexture(texture);
         addSprite(avatar);
         // Have to do after body is created
@@ -856,11 +856,11 @@ public class PlatformScene implements ContactListener, Screen{
         float units = height/bounds.height;
         Vector2 mousePosition = input.getCrossHair();
         JsonValue bulletjv = constants.get("bullet");
-        Obstacle traci = avatar.getObstacle();
-        Vector2 shootAngle = mousePosition.sub(traci.getPosition());
+        Obstacle player = avatar.getObstacle();
+        Vector2 shootAngle = mousePosition.sub(player.getPosition());
         shootAngle.nor();
         Texture texture = directory.getEntry("platform-bullet", Texture.class);
-        Bullet bullet = new Bullet(units, bulletjv, traci.getPosition(), shootAngle.nor());
+        Bullet bullet = new Bullet(units, bulletjv, player.getPosition(), shootAngle.nor());
         bullet.setTexture(texture);
         addQueuedObject(bullet);
 
