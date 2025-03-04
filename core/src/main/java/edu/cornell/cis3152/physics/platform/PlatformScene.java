@@ -502,7 +502,7 @@ public class PlatformScene implements ContactListener, Screen{
                 postUpdate(delta);
             }
             draw(delta);
-            System.out.println("Is aware" + critter.isAwareOfPlayer());
+            //System.out.println("Is aware" + critter.isAwareOfPlayer());
         }
     }
 
@@ -802,6 +802,17 @@ public class PlatformScene implements ContactListener, Screen{
         float units = height/bounds.height;
         InputController input = InputController.getInstance();
         Vector2 newPosition = new Vector2(input.getCrossHair().x, input.getCrossHair().y);
+
+        float u = avatar.getObstacle().getPhysicsUnits();
+        Vector2 avatarPosition = new Vector2 (avatar.getObstacle().getPosition().x * u, avatar.getObstacle().getPosition().y * u);
+
+        float dist = avatarPosition.dst(newPosition.x * u, newPosition.y * u);
+        System.out.println(dist);
+        if (dist >= avatar.getTeleportRangeRadius())
+        {
+            return;
+        }
+
         Texture texture = directory.getEntry( "platform-teleporter", Texture.class );
 
         JsonValue teleporter = constants.get("teleporter");

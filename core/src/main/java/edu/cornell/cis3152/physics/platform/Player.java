@@ -120,6 +120,8 @@ public class Player extends ObstacleSprite {
     /** MAX Ability and Health meter for CatDemon**/
     private int maxFearMeter;
 
+    private float teleportRangeRadius;
+
 
 
 
@@ -150,6 +152,22 @@ public class Player extends ObstacleSprite {
         } else if (movement > 0) {
             faceRight = true;
         }
+    }
+
+    /** Returns teleport range radius
+     *
+     * @return teleport range radius
+     */
+    public float getTeleportRangeRadius() {
+        return teleportRangeRadius;
+    }
+
+    /** Sets teleport range radius to value
+     *
+     * @param value value
+     */
+    public void setTeleportRangeRadius(float value) {
+        teleportRangeRadius = value;
     }
 
     /** Returns current fear meter charge
@@ -417,6 +435,8 @@ public class Player extends ObstacleSprite {
         fearMeter = 10;
         maxFearMeter = data.getInt("maxfear", 0);
 
+        teleportRangeRadius = 200;
+
         // Create a rectangular mesh for Player. This is the same as for door,
         // since Player is a rectangular image. But note that the capsule is
         // actually smaller than the image, making a tighter hitbox. You can
@@ -561,6 +581,7 @@ public class Player extends ObstacleSprite {
             flipCache.setToScaling( -1,1 );
         }
         super.draw(batch,flipCache);
+
     }
 
     /**
@@ -593,5 +614,14 @@ public class Player extends ObstacleSprite {
             //
             batch.outline( sensorOutline, transform );
         }
+        drawTeleportRadius(batch);
+    }
+
+    public void drawTeleportRadius(SpriteBatch batch)
+    {
+        PathFactory pathTool = new PathFactory();
+        float u = obstacle.getPhysicsUnits();
+        Path2 teleportCircle = pathTool.makeCircle(obstacle.getPosition().x * u , obstacle.getPosition().y * u  , teleportRangeRadius);
+        batch.outline(teleportCircle);
     }
 }
