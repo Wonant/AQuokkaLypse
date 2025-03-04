@@ -384,7 +384,7 @@ public class PlatformScene implements ContactListener, Screen{
 
         // This shows off how powerful our new SpriteBatch is
         batch.begin(camera);
-
+        batch.draw(new Texture("/Users/jonathan/AQuokkaLypse/assets/platform/dreamBackground.png"), 0, 0);
         // Draw the meshes (images)
         for(ObstacleSprite obj : sprites) {
             obj.draw(batch);
@@ -609,7 +609,7 @@ public class PlatformScene implements ContactListener, Screen{
         addSprite(goalDoor);
 
         // Create ground pieces
-        texture = directory.getEntry( "shared-earth", Texture.class );
+        texture = directory.getEntry( "shared-cloud", Texture.class );
 
         Surface wall;
         String wname = "wall";
