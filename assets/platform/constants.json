@@ -63,6 +63,7 @@
     "debug" : {
       "avatar" : "#ffff00ff",
       "sensor" : "#ff0000ff",
+      "scare_sensor" : "#fff00fff",
       "tolerance" : 0.05
     }
   },

@@ -822,7 +822,6 @@ public class PlatformScene implements ContactListener, Screen{
         if (avatar.isHarvesting())
         {
             drawScareEffect = true;
-            avatar.setFearMeter(avatar.getFearMeter() - 1);
             if (queuedHarvestedEnemy != null)
             {
                 if (!queuedHarvestedEnemy.getObstacle().isRemoved()) {

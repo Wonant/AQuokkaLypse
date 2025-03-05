@@ -186,7 +186,7 @@ public class CuriosityCritter extends ObstacleSprite {
         obstacle.setFixedRotation(true);
         obstacle.setPhysicsUnits(units);
         obstacle.setUserData(this);
-        obstacle.setName("player");
+        obstacle.setName("critter");
 
         // Set debugging colors
         debug = ParserUtils.parseColor(debugInfo.get("avatar"), Color.WHITE);
@@ -232,7 +232,7 @@ public class CuriosityCritter extends ObstacleSprite {
         // Create the sensor fixture on the physics body
         Body body = obstacle.getBody();
         Fixture sensorFixture = body.createFixture(sensorDef);
-        sensorName = "player_sensor";
+        sensorName = "critter_sensor";
         sensorFixture.setUserData(sensorName);
 
         // Create a debug outline for the sensor so you can see it in debug mode
