@@ -490,6 +490,7 @@ public class CuriosityCritter extends ObstacleSprite {
             transform.preTranslate(headPos.x * u, headPos.y * u);
 
             batch.outline(walkSensorOutline, transform);
+            batch.setColor(Color.WHITE);
         }
     }
 

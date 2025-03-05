@@ -783,7 +783,7 @@ public class PlatformScene implements ContactListener, Screen{
                 return false;
             }
         }
-        if (!isFailure() && avatar.getObstacle().getY() < -1) {
+        if (!isFailure() && (avatar.getObstacle().getY() < -1 || avatar.getFearMeter() == 0)) {
             setFailure(true);
             return false;
         }
@@ -875,7 +875,17 @@ public class PlatformScene implements ContactListener, Screen{
         float units = height/bounds.height;
         InputController input = InputController.getInstance();
         Vector2 newPosition = new Vector2(input.getCrossHair().x, input.getCrossHair().y);
-        Texture texture = directory.getEntry( "shared-goal", Texture.class );
+        float u = avatar.getObstacle().getPhysicsUnits();
+        Vector2 avatarPosition = new Vector2 (avatar.getObstacle().getPosition().x * u, avatar.getObstacle().getPosition().y * u);
+
+        float dist = avatarPosition.dst(newPosition.x * u, newPosition.y * u);
+        System.out.println(dist);
+        if (dist >= avatar.getTeleportRangeRadius())
+        {
+            return;
+        }
+
+        Texture texture = directory.getEntry( "platform-teleporter", Texture.class );
 
         JsonValue teleporter = constants.get("teleporter");
 
@@ -1014,6 +1024,7 @@ public class PlatformScene implements ContactListener, Screen{
                     // The vision sensor touched the player.
                     critter.setAwareOfPlayer(true);
                     System.out.println("Critter saw player");
+                    avatar.setTakingDamage(true);
                 }
             }
 
@@ -1057,7 +1068,7 @@ public class PlatformScene implements ContactListener, Screen{
                 setComplete(true);
             }
 
-            if(bd1 == avatar && bd2.getName().equals("origin_teleporter"))
+            if( !avatar.getScareSensorName().equals(fd1) && bd1 == avatar && bd2.getName().equals("origin_teleporter"))
             {
                 if (!(bd2 instanceof Teleporter)) {
                     System.out.println("Error: bd2 is not a Teleporter!");

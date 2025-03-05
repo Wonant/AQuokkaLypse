@@ -423,7 +423,7 @@ public class Player extends ObstacleSprite {
 
         debug = ParserUtils.parseColor( debugInfo.get("avatar"),  Color.WHITE);
         sensorColor = ParserUtils.parseColor( debugInfo.get("sensor"),  Color.WHITE);
-        sensorScareColor = ParserUtils.parseColor( debugInfo.get("scare_sensor"),  Color.RED);
+        sensorScareColor = ParserUtils.parseColor( debugInfo.get("scare_sensor"),  Color.GREEN);
 
         maxspeed = data.getFloat("maxspeed", 0);
         damping = data.getFloat("damping", 0);
@@ -452,7 +452,7 @@ public class Player extends ObstacleSprite {
         fearMeter = 10;
         maxFearMeter = data.getInt("maxfear", 0);
 
-        teleportRangeRadius = 200;
+        teleportRangeRadius = 300;
 
         // Create a rectangular mesh for Player. This is the same as for door,
         // since Player is a rectangular image. But note that the capsule is
@@ -675,6 +675,8 @@ public class Player extends ObstacleSprite {
         PathFactory pathTool = new PathFactory();
         float u = obstacle.getPhysicsUnits();
         Path2 teleportCircle = pathTool.makeCircle(obstacle.getPosition().x * u , obstacle.getPosition().y * u  , teleportRangeRadius);
+        batch.setColor(Color.RED);
         batch.outline(teleportCircle);
+        batch.setColor(Color.WHITE);
     }
 }
