@@ -138,6 +138,8 @@ public class AIControllerManager {
                 }
                 if (data.state == CritterFSM.ALERTED) {
                     // change for testing
+                    data.critter.setMovement(0);
+                    data.critter.applyForce();
                     System.out.println(player.getFearMeter());
                     if (player.getFearMeter() < 0.75 * player.getMaxFearMeter()) {
 
