@@ -182,7 +182,7 @@ public class AIControllerManager {
                     data.critter.applyForce();
                 }
 
-                if (data.stateTimer > 3.0f) {
+                if (data.stateTimer > data.stateDuration) {
                     transitionState(data, CritterFSM.IDLE_LOOK);
                 }
                 //System.out.println("Scared!");
@@ -220,8 +220,7 @@ public class AIControllerManager {
                 data.critter.applyForce();
                 transitionState(data, CritterFSM.IDLE_LOOK);
             } else {
-                // Walk in a direction, will ahve already known if wall is infront
-
+                // Walk in a direction, will have already known if wall is in front
                 data.critter.setVisionAngle(data.movingRight ? 270 : 90);
                 data.critter.setMovement(data.horizontal);
                 data.critter.applyForce();
@@ -237,12 +236,12 @@ public class AIControllerManager {
 
         switch (newState) {
             case IDLE_LOOK:
-                data.stateDuration = random.nextFloat() * 3.0f + 2.0f; // 2-5 seconds
+                data.stateDuration = random.nextFloat() * 2.0f + 1.0f; // 1-3 seconds
                 data.horizontal = 0;
                 break;
 
             case IDLE_WALK:
-                data.stateDuration = random.nextFloat() * 2.0f + 1.0f;
+                data.stateDuration = random.nextFloat() + 1.0f; // 1-2 seconds
                 if (data.critter.isSeesWall()) {
                     data.movingRight = !data.movingRight;
                     data.critter.setSeesWall(false);

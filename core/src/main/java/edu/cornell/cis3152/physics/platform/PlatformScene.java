@@ -674,7 +674,7 @@ public class PlatformScene implements ContactListener, Screen{
         visionConeRegion = new TextureRegion(texture);
         visionCone = new Sprite(visionConeRegion.getTexture());
         visionCone.setRegion(visionConeRegion);
-        visionCone.setSize(200, 150);
+        visionCone.setSize(240, 200);
         visionCone.setOrigin(visionCone.getWidth() / 2, 0);
 
     }

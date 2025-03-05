@@ -12,7 +12,7 @@
     "restitution": 0.0
   },
   "curiosity-critter" : {
-    "pos"       : [20.5, 5.0],
+    "pos"       : [26.5, 5.0],
     "inner"     : [0.7, 0.95],
     "size"      : 0.8,
     "force"     : 20.0,
