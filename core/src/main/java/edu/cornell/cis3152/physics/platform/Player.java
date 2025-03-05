@@ -122,6 +122,13 @@ public class Player extends ObstacleSprite {
 
     private float teleportRangeRadius;
 
+    /** The outline of the sensor obstacle */
+    private Path2 sensorScareOutline;
+    /** The debug color for the sensor */
+    private Color sensorScareColor;
+    /** The name of the sensor fixture */
+    private String sensorScareName;
+
 
 
 
@@ -361,6 +368,14 @@ public class Player extends ObstacleSprite {
         return sensorName;
     }
 
+    /** Returns name of scare sensor
+     *
+     * @return
+     */
+    public String getScareSensorName() {
+        return sensorScareName;
+    }
+
     /**
      * Returns true if this character is facing right
      *
@@ -385,6 +400,7 @@ public class Player extends ObstacleSprite {
         this.data = data;
         JsonValue debugInfo = data.get("debug");
 
+
         float x = data.get("pos").getFloat(0);
         float y = data.get("pos").getFloat(1);
         float s = data.getFloat( "size" );
@@ -407,13 +423,14 @@ public class Player extends ObstacleSprite {
 
         debug = ParserUtils.parseColor( debugInfo.get("avatar"),  Color.WHITE);
         sensorColor = ParserUtils.parseColor( debugInfo.get("sensor"),  Color.WHITE);
+        sensorScareColor = ParserUtils.parseColor( debugInfo.get("scare_sensor"),  Color.RED);
 
         maxspeed = data.getFloat("maxspeed", 0);
         damping = data.getFloat("damping", 0);
         force = data.getFloat("force", 0);
         jump_force = data.getFloat( "jump_force", 0 );
         jumpLimit = data.getInt( "jump_cool", 0 );
-        harvestLimit = data.getInt( "shot_cool", 0 );
+        harvestLimit = 60;
         stunLimit = data.getInt( "shot_cool", 0 );
         teleportLimit = data.getInt( "shot_cool", 0 );
         takeDamageLimit = 120;
@@ -482,6 +499,32 @@ public class Player extends ObstacleSprite {
         PathFactory factory = new PathFactory();
         sensorOutline = new Path2();
         factory.makeRect( (sensorCenter.x-w/2)*u,(sensorCenter.y-h/2)*u, w*u, h*u,  sensorOutline);
+    }
+
+    public void createScareSensor(){
+
+        Vector2 sensorScareCenter = new Vector2(0, 0);
+        FixtureDef scareSensorDef = new FixtureDef();
+        scareSensorDef.density = 0;
+        scareSensorDef.isSensor = true;
+
+
+        float w = width * 1.5f; // Cover full width
+        float h = height / 2.0f; // Cover full height
+        PolygonShape sensorScareShape = new PolygonShape();
+        sensorScareShape.setAsBox(w, h, sensorScareCenter, 0.0f);
+        scareSensorDef.shape = sensorScareShape;
+
+        Body body = obstacle.getBody();
+        Fixture ScareSensorFixture = body.createFixture( scareSensorDef );
+        sensorScareName = "scare_sensor";
+        ScareSensorFixture.setUserData(sensorScareName);
+
+        float u = obstacle.getPhysicsUnits();
+        PathFactory factory = new PathFactory();
+        sensorScareOutline = new Path2();
+        factory.makeRect((sensorScareCenter.x - w) * u, (sensorScareCenter.y - h) * u, w * 2 * u, h * 2 * u, sensorScareOutline);
+
     }
 
 
@@ -554,14 +597,18 @@ public class Player extends ObstacleSprite {
             teleportCooldown = Math.max(0, teleportCooldown - 1);
         }
 
+
+
         if (isTakingDamage())
         {
+            setFearMeter(fearMeter - 1);
             takeDamageCooldown = takeDamageLimit;
 
         } else {
             takeDamageCooldown = Math.max(0, takeDamageCooldown - 1);
         }
         super.update(dt);
+
     }
 
     /**
@@ -598,9 +645,16 @@ public class Player extends ObstacleSprite {
     public void drawDebug(SpriteBatch batch) {
         super.drawDebug( batch );
 
-        if (sensorOutline != null) {
+        drawSensorDebug(batch, sensorOutline, sensorColor);
+        drawSensorDebug(batch, sensorScareOutline, sensorScareColor);
+        drawTeleportRadius(batch);
+    }
+
+    public void drawSensorDebug (SpriteBatch batch, Path2 outline, Color color)
+    {
+        if (outline!= null) {
             batch.setTexture( Texture2D.getBlank() );
-            batch.setColor( sensorColor );
+            batch.setColor( color );
 
             Vector2 p = obstacle.getPosition();
             float a = obstacle.getAngle();
@@ -612,9 +666,8 @@ public class Player extends ObstacleSprite {
             transform.preTranslate( p.x * u, p.y * u );
 
             //
-            batch.outline( sensorOutline, transform );
+            batch.outline( outline, transform );
         }
-        drawTeleportRadius(batch);
     }
 
     public void drawTeleportRadius(SpriteBatch batch)

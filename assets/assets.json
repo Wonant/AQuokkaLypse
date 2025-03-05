@@ -5,7 +5,7 @@
             "wrapU": "repeated",
             "wrapV": "repeated"
         },
-        "shared-goal":   "shared/goaldoor.png",
+        "shared-goal":   "shared/shard.png",
         "rocket-rocket": {
             "file": "rocket/rocket.png",
             "mipmaps": true,
@@ -67,6 +67,7 @@
         "platform-barrier"  : "platform/barrier.png",
         "platform-bullet"   : "platform/bullet.png",
         "platform-teleporter" : "platform/teleport.png",
+        "platform-scare-effect" : "platform/scare_effct.png",
         "ragdoll-bubble"    : "ragdoll/bubble.png",
         "ragdoll-crosshair" : "ragdoll/crosshair.png",
         "ragdoll-foreground": "ragdoll/foreground.png",

@@ -151,9 +151,16 @@ public class PlatformScene implements ContactListener, Screen{
     /** Texture asset for mouse crosshairs */
     private TextureRegion crosshairTexture;
 
+    private TextureRegion scareEffectTexture;
+    private int drawScareLimit;
+    private int drawScareCooldown;
+    private boolean drawScareEffect = false;
+
     private Vector2 queuedTeleportPosition = null;
 
     boolean dealDamage = false;
+
+    private CuriosityCritter queuedHarvestedEnemy = null;
 
 
 
@@ -395,12 +402,25 @@ public class PlatformScene implements ContactListener, Screen{
         // This shows off how powerful our new SpriteBatch is
         batch.begin(camera);
 
+        if (drawScareEffect)
+        {
+            if(drawScareCooldown <= drawScareLimit)
+            {
+                drawScareEffect();
+                drawScareCooldown++;
+            } else {
+                drawScareCooldown = 0;
+                drawScareEffect = false;
+            }
+        }
+
         // Draw the meshes (images)
         for(ObstacleSprite obj : sprites) {
             obj.draw(batch);
         }
 
         drawFearMeter();
+
 
         if (debug) {
             // Draw the outlines
@@ -464,6 +484,15 @@ public class PlatformScene implements ContactListener, Screen{
         batch.setColor(Color.RED);
         batch.draw(fearMeterTexture, x, y, meterWidth, meterHeight);
         batch.setColor(Color.WHITE);
+    }
+
+    private void drawScareEffect(){
+        float u = avatar.getObstacle().getPhysicsUnits();
+        float size = scareEffectTexture.getRegionWidth() * 0.5f;
+        float size2 = scareEffectTexture.getRegionHeight() * 0.5f;
+
+
+        batch.draw(scareEffectTexture, avatar.getObstacle().getX() * u - size * 0.42f, avatar.getObstacle().getY() * u - size2 *0.57f, size, size2);
     }
 
     /**
@@ -553,6 +582,7 @@ public class PlatformScene implements ContactListener, Screen{
         JsonValue defaults = constants.get("world");
 
         crosshairTexture  = new TextureRegion(directory.getEntry( "ragdoll-crosshair", Texture.class ));
+        scareEffectTexture = new TextureRegion(directory.getEntry("platform-scare-effect", Texture.class));
 
         scale = new Vector2();
         bounds = new Rectangle(0,0,defaults.get("bounds").getFloat( 0 ), defaults.get("bounds").getFloat( 1 ));
@@ -587,6 +617,9 @@ public class PlatformScene implements ContactListener, Screen{
         fireSound = directory.getEntry( "platform-pew", SoundEffect.class );
         plopSound = directory.getEntry( "platform-plop", SoundEffect.class );
         volume = constants.getFloat("volume", 1.0f);
+
+        drawScareLimit = 60;
+        drawScareCooldown = 0;
     }
 
     /**
@@ -621,8 +654,18 @@ public class PlatformScene implements ContactListener, Screen{
     private void populateLevel() {
         float units = height/bounds.height;
 
+        // Add level goal
+        Texture texture = directory.getEntry( "shared-goal", Texture.class );
+
+        JsonValue goal = constants.get("goal");
+        JsonValue goalpos = goal.get("pos");
+        goalDoor = new Door(units, goal);
+        goalDoor.setTexture( texture );
+        goalDoor.getObstacle().setName("goal");
+        addSprite(goalDoor);
+
         // Create ground pieces
-        Texture texture = directory.getEntry( "shared-earth", Texture.class );
+        texture = directory.getEntry( "shared-earth", Texture.class );
         aiManager = new AIControllerManager(avatar);
         Surface wall;
         String wname = "wall";
@@ -653,6 +696,7 @@ public class PlatformScene implements ContactListener, Screen{
         addSprite(avatar);
         // Have to do after body is created
         avatar.createSensor();
+        avatar.createScareSensor();
 
         texture = directory.getEntry( "curio-critter-proto", Texture.class );
         critter = new CuriosityCritter(units, constants.get("curiosity-critter"));
@@ -751,17 +795,24 @@ public class PlatformScene implements ContactListener, Screen{
         // Process actions in object model
         avatar.setMovement(input.getHorizontal() *avatar.getForce());
         avatar.setJumping(input.didPrimary());
-
-
         avatar.setStunning(input.didStun());
-
-
         avatar.setHarvesting(input.didSecondary());
         //avatar.setTeleporting(input.didTeleport());
-
         avatar.setTeleporting(input.didTeleport());
 
-
+        if (avatar.isHarvesting())
+        {
+            drawScareEffect = true;
+            avatar.setFearMeter(avatar.getFearMeter() - 1);
+            if (queuedHarvestedEnemy != null)
+            {
+                if (!queuedHarvestedEnemy.getObstacle().isRemoved()) {
+                    queuedHarvestedEnemy.getObstacle().markRemoved(true);
+                    queuedHarvestedEnemy = null;
+                    avatar.setFearMeter(avatar.getFearMeter() + 3);
+                }
+            }
+        }
 
         // Add a bullet if we fire
         if (avatar.isStunning()) {
@@ -774,11 +825,11 @@ public class PlatformScene implements ContactListener, Screen{
             createTeleporter();
         }
 
-        if(avatar.isTakingDamage())
+        /*if(avatar.isTakingDamage())
         {
             avatar.setFearMeter(avatar.getFearMeter() - 1);
             avatar.setTakingDamage(false);
-        }
+        }*/
 
         if (queuedTeleportPosition != null) {
             avatar.getObstacle().setPosition(queuedTeleportPosition);
@@ -845,6 +896,10 @@ public class PlatformScene implements ContactListener, Screen{
 
     }
 
+    private void performHarvest(CuriosityCritter enemy)
+    {
+        queuedHarvestedEnemy = enemy;
+    }
 
 
 
@@ -911,6 +966,7 @@ public class PlatformScene implements ContactListener, Screen{
                 Object bodyDataA = fix1.getBody().getUserData();
                 Object bodyDataB = fix2.getBody().getUserData();
 
+
                 // Identify the critter and the player from the contact.
                 CuriosityCritter critter = null;
                 Player playerObj = null;
@@ -947,6 +1003,23 @@ public class PlatformScene implements ContactListener, Screen{
                 (avatar.getSensorName().equals(fd1) && avatar != bd2)) {
                 avatar.setGrounded(true);
                 sensorFixtures.add(avatar == bd1 ? fix2 : fix1); // Could have more than one ground
+            }
+
+            if((avatar.getScareSensorName().equals(fd1) && (bd2 instanceof CuriosityCritter)) ||
+                (avatar.getScareSensorName().equals(fd2) && (bd1 instanceof CuriosityCritter)))
+            {
+                CuriosityCritter harvestedCC;
+                if (avatar.getScareSensorName().equals(fd1))
+                {
+                    harvestedCC = (CuriosityCritter) bd2;
+                    performHarvest(harvestedCC);
+                } else if (avatar.getScareSensorName().equals(fd2))
+                {
+                    harvestedCC = (CuriosityCritter) bd1;
+                    performHarvest(harvestedCC);
+                }
+                avatar.setHarvesting(true);
+
             }
 
             // Check for win condition
@@ -1017,8 +1090,17 @@ public class PlatformScene implements ContactListener, Screen{
 
             if (critter != null) {
                  critter.setAwareOfPlayer(false);
+                 avatar.setTakingDamage(false);
                  System.out.println("Critter stopped seeing player");
             }
+        }
+
+        if((avatar.getScareSensorName().equals(fd1) && (bd2 instanceof CuriosityCritter)) ||
+            (avatar.getScareSensorName().equals(fd2) && (bd1 instanceof CuriosityCritter)))
+        {
+            queuedHarvestedEnemy = null;
+            avatar.setHarvesting(false);
+
         }
 
         if ((avatar.getSensorName().equals(fd2) && avatar != bd1) ||
