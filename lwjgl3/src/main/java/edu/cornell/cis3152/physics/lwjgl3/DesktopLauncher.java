@@ -58,8 +58,8 @@ public class DesktopLauncher {
         // Use windowed mode
         config.fullscreen = false;
         config.resizable = false;
-        config.width = 1024;
-        config.height = 576;
+        config.width = 1420;
+        config.height = 799;
         config.rawHDPI = false;
 
         // Use OpenGLES 2.0

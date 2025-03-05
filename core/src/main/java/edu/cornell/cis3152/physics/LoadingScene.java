@@ -219,15 +219,16 @@ public class LoadingScene implements Screen, InputProcessor {
      * We will talk about why we prefer this in lecture.
      */
     private void draw() {
-        // Cornell colors
-        ScreenUtils.clear( 0.702f, 0.1255f, 0.145f,1.0f );
+        // Side loading screen colors
+
+        ScreenUtils.clear( 0.1411764706f, 0.1803921569f, 0.2117647059f,1.0f );
 
         batch.begin(camera);
         batch.setColor( Color.WHITE );
 
         // Height lock the logo
         Texture texture = internal.getEntry( "splash", Texture.class );
-        batch.draw(texture,(width-height)/2, 0, height, height);
+        batch.draw(texture,0, 0, width, height);
 
         if (progress < 1.0f) {
             drawProgress();

@@ -1,7 +1,7 @@
 {
 	"textures": {
-        "shared-earth" : {
-            "file":  "shared/earthtile.png",
+        "shared-cloud" : {
+            "file":  "shared/cloud.png",
             "wrapU": "repeated",
             "wrapV": "repeated"
         },
@@ -60,6 +60,7 @@
             "minfilter": "linear mipmap linear",
             "magfilter": "linear mipmap linear"
         },
+        "background-proto" : "platform/dreamBackground.png",
         "curio-critter-proto": "shared/curiositycritter.png",
         "vision_cone" : "shared/vision1.png",
         "platform-traci"    : "platform/traci.png",
