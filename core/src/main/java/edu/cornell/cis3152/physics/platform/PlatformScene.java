@@ -15,6 +15,8 @@ package edu.cornell.cis3152.physics.platform;
 import com.badlogic.gdx.graphics.g2d.Sprite;
 import edu.cornell.cis3152.physics.AIControllerManager;
 import edu.cornell.cis3152.physics.ObstacleGroup;
+
+import java.util.HashMap;
 import java.util.Iterator;
 import com.badlogic.gdx.*;
 import com.badlogic.gdx.graphics.*;
@@ -141,6 +143,8 @@ public class PlatformScene implements ContactListener, Screen{
     private Texture vision;
     private int prev_debug;
     private Sprite visionCone;
+
+    private HashMap<CuriosityCritter, Sprite> visionCones;
     private AIControllerManager aiManager;
     /** Reference to the goalDoor (for collision detection) */
     private Door goalDoor;
@@ -452,15 +456,16 @@ public class PlatformScene implements ContactListener, Screen{
 
         float u = critter.getObstacle().getPhysicsUnits();
 
-        Vector2 headPos = critter.getHeadBody().getPosition();
-        float headAngleDeg = critter.getHeadBody().getAngle() * MathUtils.radiansToDegrees;
+        for (CuriosityCritter critter : visionCones.keySet()) {
+            Vector2 headPos = critter.getHeadBody().getPosition();
+            float headAngleDeg = critter.getHeadBody().getAngle() * MathUtils.radiansToDegrees;
 
-        visionCone.setPosition(headPos.x * u - visionCone.getOriginX(),
-            headPos.y * u - visionCone.getOriginY());
-
-        visionCone.setRotation(headAngleDeg);
-
-        visionCone.draw(batch);
+            Sprite visionCone = visionCones.get(critter);
+            visionCone.setPosition(headPos.x * u - visionCone.getOriginX(),
+                headPos.y * u - visionCone.getOriginY());
+            visionCone.setRotation(headAngleDeg);
+            visionCone.draw(batch);
+        }
 
         batch.end();
     }
@@ -711,22 +716,36 @@ public class PlatformScene implements ContactListener, Screen{
         aiManager.setPlayer(avatar);
 
 
-        texture = directory.getEntry( "curio-critter-proto", Texture.class );
-        critter = new CuriosityCritter(units, constants.get("curiosity-critter"));
-        critter.setTexture(texture);
-        addSprite(critter);
-        // Have to do after body is created
-        critter.createSensor();
-        critter.createVisionSensor();
 
-        aiManager.register(critter);
+        JsonValue critters = constants.get("curiosity-critter");
+        JsonValue critterspos = critters.get("pos");
+        visionCones = new HashMap<>();
 
-        texture = directory.getEntry("vision_cone", Texture.class);
-        visionConeRegion = new TextureRegion(texture);
-        visionCone = new Sprite(visionConeRegion.getTexture());
-        visionCone.setRegion(visionConeRegion);
-        visionCone.setSize(240, 200);
-        visionCone.setOrigin(visionCone.getWidth() / 2, 0);
+        for (int i = 0; i < critterspos.size; i++) {
+            texture = directory.getEntry( "curio-critter-proto", Texture.class );
+            critter = new CuriosityCritter(units, constants.get("curiosity-critter"), critterspos.get(i).asFloatArray());
+            critter.setTexture(texture);
+            addSprite(critter);
+            // Have to do after body is created
+            critter.createSensor();
+            critter.createVisionSensor();
+
+            aiManager.register(critter);
+            texture = directory.getEntry("vision_cone", Texture.class);
+            visionConeRegion = new TextureRegion(texture);
+            visionCone = new Sprite(visionConeRegion.getTexture());
+            visionCone.setRegion(visionConeRegion);
+            visionCone.setSize(240, 200);
+            visionCone.setOrigin(visionCone.getWidth() / 2, 0);
+
+            visionCones.put(critter, visionCone);
+        }
+
+
+
+
+
+
 
     }
 
@@ -984,8 +1003,8 @@ public class PlatformScene implements ContactListener, Screen{
             ObstacleSprite bd1 = (ObstacleSprite)body1.getUserData();
             ObstacleSprite bd2 = (ObstacleSprite)body2.getUserData();
 
-            if (("walk_sensor".equals(fd1) && bd2 instanceof Surface) ||
-                ("walk_sensor".equals(fd2) && bd1 instanceof Surface)) {
+            if (("walk_sensor".equals(fd1) && (bd2 instanceof Surface || bd2 instanceof CuriosityCritter)) ||
+                ("walk_sensor".equals(fd2) && (bd2 instanceof Surface || bd2 instanceof CuriosityCritter))) {
                 System.out.println("walk_sensor collision detected with: " + bd1 + " and " + bd2);
 
 

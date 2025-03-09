@@ -159,11 +159,11 @@ public class CuriosityCritter extends ObstacleSprite {
         return awareOfPlayer;
     }
 
-    public CuriosityCritter(float units, JsonValue data) {
+    public CuriosityCritter(float units, JsonValue data, float[] points) {
         this.data = data;
         // Read initial position and overall size from JSON.
-        float x = data.get("pos").getFloat(0);
-        float y = data.get("pos").getFloat(1);
+        float x = points[0];
+        float y = points[1];
         float s = data.getFloat("size");
 
         float size = s * units;
