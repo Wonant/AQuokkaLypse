@@ -53,7 +53,7 @@
     "friction"  : 0.0,
     "maxspeed"  : 5.0,
     "maxfear"   : 10.0,
-    "jump_force": 3.5,
+    "jump_force": 5.5,
     "jump_cool" : 30,
     "shot_cool" : 40,
     "sensor": {
