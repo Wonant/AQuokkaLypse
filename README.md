@@ -5,7 +5,7 @@ Game Name: "Dreamwalker"
 
 Gameplay Prototype:
 
-Upon launching the game, the goal is for the player to reach the red "dream shard" without depleting their "fear meter" which serves as both a health bar and player action resource bar. If the player's fear meter is completely depleted or if the player falls off the map, the player will lose the level. 
+Upon launching the game, the goal is for the player to reach the red "dream shard" without depleting their "fear meter," which serves as both a health bar and player action resource bar. If the player's fear meter is completely depleted or if the player falls off the map, the player will lose the level. 
 
 Controls:
 
