@@ -89,7 +89,7 @@
   },
   "mind-maintenance" : {
     "pos"       : [[18.5, 3.0]],
-    "inner"     : [0.7, 3.5],
+    "inner"     : [0.8, 3.5],
     "size"      : 0.8,
     "force"     : 20.0,
     "damping"   : 5.0,

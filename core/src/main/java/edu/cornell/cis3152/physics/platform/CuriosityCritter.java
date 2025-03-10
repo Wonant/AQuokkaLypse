@@ -38,6 +38,7 @@ public class CuriosityCritter extends Enemy {
     private int shootCooldown;
     private boolean isGrounded;
     private boolean isShooting;
+    private boolean stunned;
 
     // Sensor for ground detection
     private Path2 sensorOutline;
@@ -106,7 +107,12 @@ public class CuriosityCritter extends Enemy {
     public void setShooting(boolean value) {
         isShooting = value;
     }
-
+    public void setStunned(boolean value) {
+        stunned = value;
+    }
+    public boolean isStunned() {
+        return stunned;
+    }
     public boolean isJumping() {
         return isJumping && isGrounded && jumpCooldown <= 0;
     }
