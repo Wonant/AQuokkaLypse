@@ -62,6 +62,8 @@
         },
         "background-proto" : "platform/dreamBackground.png",
         "curio-critter-proto": "shared/curiositycritter.png",
+        "mind-maintenance-active": "shared/MindMaintenanceActive.png" ,
+        "mind-maintenance-inactive": "shared/MindMaintenanceInactive.png",
         "vision_cone" : "shared/vision1.png",
         "platform-traci"    : "platform/traci.png",
         "platform-playerSprite": "platform/playerSprite.png",

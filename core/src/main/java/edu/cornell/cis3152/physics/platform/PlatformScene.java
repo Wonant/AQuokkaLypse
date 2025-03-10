@@ -139,6 +139,7 @@ public class PlatformScene implements ContactListener, Screen{
     /** Reference to the character avatar */
     private Player avatar;
     private CuriosityCritter critter;
+    private MindMaintenance maintenance;
     private TextureRegion visionConeRegion;
     private Texture vision;
     private int prev_debug;
@@ -739,6 +740,25 @@ public class PlatformScene implements ContactListener, Screen{
             visionCone.setOrigin(visionCone.getWidth() / 2, 0);
 
             visionCones.put(critter, visionCone);
+        }
+
+        JsonValue maintainers = constants.get("mind-maintenance");
+        JsonValue maintenancePos = maintainers.get("pos");
+        visionCones = new HashMap<>();
+
+        for (int i = 0; i < maintenancePos.size; i++) {
+            texture = directory.getEntry( "mind-maintenance-active", Texture.class );
+            System.out.println(texture.getWidth());
+            System.out.println(texture.getHeight());
+
+            maintenance = new MindMaintenance(units, constants.get("mind-maintenance"), maintenancePos.get(i).asFloatArray());
+            maintenance.setTexture(texture);
+            addSprite(maintenance);
+            // Have to do after body is created
+            maintenance.createSensor();
+            maintenance.createVisionSensor();
+
+            aiManager.register(maintenance);
         }
 
 
