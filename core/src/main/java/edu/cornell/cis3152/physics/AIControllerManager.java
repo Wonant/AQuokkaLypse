@@ -177,53 +177,81 @@ public class AIControllerManager {
         Vector2 critterPos = getCritterPosition(data.critter);
         Vector2 visionRef = new Vector2(critterPos.x, critterPos.y + 10.0f);
         boolean seesPlayer = data.critter.isAwareOfPlayer();
+        boolean isStunned = data.critter.isStunned();
 
-        if (player != null) {
-            Vector2 playerPos = getPlayerPosition(player);
-            float distanceToPlayer = critterPos.dst(playerPos); // maybe needing for how long the critter should flee
-//            System.out.println(playerPos.x + " " + critterPos.x);
-            //d If the critter sees the player, transition to ALERTED
-            if (seesPlayer) {
-                data.stateTimer = 0; //reset for all states
-                if (data.state == CritterFSM.AWARE_STARE) {
+        // if the enemy is stunned, transition to the stunned state
+        if (isStunned) {
+            transitionCritterState(data, CritterFSM.STUNNED);
+        }
+        else{
+            if (player != null) {
+                Vector2 playerPos = getPlayerPosition(player);
+                float distanceToPlayer = critterPos.dst(
+                    playerPos); // maybe needing for how long the critter should flee
+                //            System.out.println(playerPos.x + " " + critterPos.x);
+                //d If the critter sees the player, transition to ALERTED
+                if (seesPlayer) {
+                    data.stateTimer = 0; //reset for all states
+                    if (data.state == CritterFSM.AWARE_STARE) {
 
-                    // ig we stay in it for now
-                    // this might not work
-                    data.critter.setMovement(0);
-                    data.critter.applyForce();
+                        // ig we stay in it for now
+                        // this might not work
+                        data.critter.setMovement(0);
+                        data.critter.applyForce();
 
+                        // math - with critter as center
+                        // arctan point 1 - center normalized - arctan point 2 - center normalized = angle in radians
+                        visionRef.sub(critterPos).nor();
+                        playerPos.sub(critterPos).nor();
 
-                    // math - with critter as center
-                    // arctan point 1 - center normalized - arctan point 2 - center normalized = angle in radians
-                    visionRef.sub(critterPos).nor();
-                    playerPos.sub(critterPos).nor();
+                        float angleToPlayer =
+                            MathUtils.atan2(playerPos.y, playerPos.x) - MathUtils.atan2(visionRef.y,
+                                visionRef.x);
+                        angleToPlayer *= MathUtils.radiansToDegrees;
 
-                    float angleToPlayer = MathUtils.atan2(playerPos.y, playerPos.x) - MathUtils.atan2(visionRef.y, visionRef.x);
-                    angleToPlayer *= MathUtils.radiansToDegrees;
-
-                    System.out.println("in stare mode, angle:" + angleToPlayer);
-                    data.critter.setVisionAngle(angleToPlayer);
-                    return;
-                }
-
-                if (data.state == CritterFSM.IDLE_LOOK || data.state == CritterFSM.IDLE_WALK) {
-                    System.out.println("Critter sees player, alerted");
-                    transitionCritterState(data, CritterFSM.ALERTED);
-                    return;
-                }
-                if (data.state == CritterFSM.ALERTED) {
-                    // change for testing
-                    data.critter.setMovement(0);
-                    data.critter.applyForce();
-                    System.out.println(player.getFearMeter());
-                    if (player.getFearMeter() < 0.75 * player.getMaxFearMeter()) {
-
-                        transitionCritterState(data, CritterFSM.AWARE_STARE);
-                    } else {
-                        transitionCritterState(data, CritterFSM.AWARE_FEAR);
+                        //System.out.println("in stare mode, angle:" + angleToPlayer);
+                        data.critter.setVisionAngle(angleToPlayer);
+                        return;
                     }
-                    return;
+
+                    if (data.state == CritterFSM.IDLE_LOOK || data.state == CritterFSM.IDLE_WALK) {
+                        //System.out.println("Critter sees player, alerted");
+                        transitionCritterState(data, CritterFSM.ALERTED);
+                        return;
+                    }
+                    if (data.state == CritterFSM.ALERTED) {
+                        // change for testing
+                        data.critter.setMovement(0);
+                        data.critter.applyForce();
+                        //System.out.println(player.getFearMeter());
+                        if (player.getFearMeter() < 0.75 * player.getMaxFearMeter()) {
+
+                            transitionCritterState(data, CritterFSM.AWARE_STARE);
+                        } else {
+                            transitionCritterState(data, CritterFSM.AWARE_FEAR);
+                        }
+                        return;
+                    }
+                    if (data.state == CritterFSM.AWARE_FEAR) {
+
+                        float fleeSpeed = 1.5f;
+                        if (playerPos.x < critterPos.x) {
+                            data.horizontal = fleeSpeed;
+                            data.movingRight = !data.movingRight;
+                            data.critter.setMovement(data.horizontal);
+                            data.critter.applyForce();
+                        } else {
+                            data.horizontal = -fleeSpeed;
+                            data.movingRight = !data.movingRight;
+                            data.critter.setMovement(data.horizontal);
+                            data.critter.applyForce();
+                        }
+                        //System.out.println("Scared!");
+                        return;
+                    }
+
                 }
+
                 if (data.state == CritterFSM.AWARE_FEAR) {
 
                     float fleeSpeed = 1.5f;
@@ -238,32 +266,13 @@ public class AIControllerManager {
                         data.critter.setMovement(data.horizontal);
                         data.critter.applyForce();
                     }
+
+                    if (data.stateTimer > data.stateDuration) {
+                        transitionCritterState(data, CritterFSM.IDLE_LOOK);
+                    }
                     //System.out.println("Scared!");
                     return;
                 }
-
-            }
-
-            if (data.state == CritterFSM.AWARE_FEAR) {
-
-                float fleeSpeed = 1.5f;
-                if (playerPos.x < critterPos.x) {
-                    data.horizontal = fleeSpeed;
-                    data.movingRight = !data.movingRight;
-                    data.critter.setMovement(data.horizontal);
-                    data.critter.applyForce();
-                } else {
-                    data.horizontal = -fleeSpeed;
-                    data.movingRight = !data.movingRight;
-                    data.critter.setMovement(data.horizontal);
-                    data.critter.applyForce();
-                }
-
-                if (data.stateTimer > data.stateDuration) {
-                    transitionCritterState(data, CritterFSM.IDLE_LOOK);
-                }
-                //System.out.println("Scared!");
-                return;
             }
         }
 
@@ -278,7 +287,7 @@ public class AIControllerManager {
         }
 
         if (data.state == CritterFSM.IDLE_LOOK) {
-            System.out.println("in idle");
+            //System.out.println("in idle");
             if (data.stateTimer > data.stateDuration) {
                 transitionCritterState(data, CritterFSM.IDLE_WALK);
             } else {
@@ -303,7 +312,7 @@ public class AIControllerManager {
                 data.critter.applyForce();
             }
         }
-        System.out.println(data.state);
+        //System.out.println(data.state);
 
     }
 
@@ -342,6 +351,10 @@ public class AIControllerManager {
                 data.stateDuration = 1.8f;
                 data.horizontal = 0;
                 break;
+
+            case STUNNED:
+                data.stateDuration = 10.0f;
+                data.horizontal = 0;
         }
     }
     private void updateMaintenance(MaintenanceAI data, float dt) {

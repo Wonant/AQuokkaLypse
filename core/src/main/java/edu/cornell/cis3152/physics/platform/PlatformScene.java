@@ -744,7 +744,6 @@ public class PlatformScene implements ContactListener, Screen{
 
         JsonValue maintainers = constants.get("mind-maintenance");
         JsonValue maintenancePos = maintainers.get("pos");
-        visionCones = new HashMap<>();
 
         for (int i = 0; i < maintenancePos.size; i++) {
             texture = directory.getEntry( "mind-maintenance-active", Texture.class );
@@ -759,6 +758,14 @@ public class PlatformScene implements ContactListener, Screen{
             maintenance.createVisionSensor();
 
             aiManager.register(maintenance);
+            texture = directory.getEntry("vision_cone", Texture.class);
+            visionConeRegion = new TextureRegion(texture);
+            visionCone = new Sprite(visionConeRegion.getTexture());
+            visionCone.setRegion(visionConeRegion);
+            visionCone.setSize(240, 200);
+            visionCone.setOrigin(visionCone.getWidth() / 2, 0);
+
+            visionCones.put(critter, visionCone);
         }
 
 
@@ -1070,11 +1077,34 @@ public class PlatformScene implements ContactListener, Screen{
             // Test bullet collision with world
             if (bd1.getName().equals("bullet") && bd2 != avatar && !bd2.getName().equals( "goal" )) {
                 removeBullet(bd1);
+                if (bd2 instanceof CuriosityCritter){
+                    CuriosityCritter critter = (bd1 instanceof CuriosityCritter) ? (CuriosityCritter) bd1
+                        : (bd2 instanceof CuriosityCritter) ? (CuriosityCritter) bd2
+                            : null;
+                    if (critter != null) {
+                        critter.setStunned(true);
+                        System.out.println("Critter is stunned");
+                    } else {
+                        System.out.println("WARNING: Bullet stun collision detected but Critter reference is null.");
+                    }
+                }
             }
 
             if (bd2.getName().equals("bullet") && bd1 != avatar && !bd1.getName().equals( "goal" )) {
                 removeBullet(bd2);
+                if (bd1 instanceof CuriosityCritter){
+                    CuriosityCritter critter = (bd1 instanceof CuriosityCritter) ? (CuriosityCritter) bd1
+                        : (bd1 instanceof CuriosityCritter) ? (CuriosityCritter) bd1
+                            : null;
+                    if (critter != null) {
+                        critter.setStunned(true);
+                        System.out.println("Critter is stunned");
+                    } else {
+                        System.out.println("WARNING: Bullet stun collision detected but Critter reference is null.");
+                    }
+                }
             }
+
 
             // See if we have landed on the ground.
             if ((avatar.getSensorName().equals(fd2) && bd1 instanceof Surface) ||
