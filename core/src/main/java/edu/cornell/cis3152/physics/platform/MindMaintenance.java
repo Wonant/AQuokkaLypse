@@ -16,7 +16,7 @@ import edu.cornell.gdiac.physics2.*;
 
 import javax.swing.*;
 
-public class MindMaintenance extends ObstacleSprite {
+public class MindMaintenance extends Enemy {
     /** Json constants for parameters */
     private final JsonValue data;
 
@@ -172,7 +172,7 @@ public class MindMaintenance extends ObstacleSprite {
         height = s * data.get("inner").getFloat(1);
 
         float drawWidth  = size;
-        float drawHeight = size;
+        float drawHeight = size*2;
 
         // may want to change what kind of physical obstacle this is
         obstacle = new CapsuleObstacle(x, y, width, height);

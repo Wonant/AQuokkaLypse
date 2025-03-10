@@ -2,12 +2,38 @@ package edu.cornell.cis3152.physics;
 
 import com.badlogic.gdx.math.MathUtils;
 import com.badlogic.gdx.math.Vector2;
+import com.sun.tools.javac.Main;
 import edu.cornell.cis3152.physics.platform.CuriosityCritter;
+import edu.cornell.cis3152.physics.platform.Enemy;
+import edu.cornell.cis3152.physics.platform.MindMaintenance;
 import edu.cornell.cis3152.physics.platform.Player;
 
 import java.util.*;
 
 public class AIControllerManager {
+
+
+    // unless we have a very large amount of enemies on screen, O(n) for checks is fine. but if its slow change (don't use List).
+    private List<EnemyAI> entities;
+    private Player player;
+    private Random random;
+
+    public AIControllerManager(Player player) {
+        entities = new ArrayList<>();
+        random = new Random();
+        this.player = player;
+    }
+
+    public void setPlayer(Player player) {
+        this.player = player;
+    }
+
+    private Vector2 getPlayerPosition(Player player) {
+        return new Vector2(player.getObstacle().getX(), player.getObstacle().getY());
+    }
+
+
+    /**  Enemy FSM states */
     private enum CritterFSM {
         // yes these are my comments -_- - andrew
         // here for convenience understanding critter behavior
@@ -30,10 +56,48 @@ public class AIControllerManager {
          * the player's fear meter is high so critter will flee in terror
          */
         AWARE_FEAR,
+        /** curiosity critter is stunned, cannot move or see (do damage to player) */
+        STUNNED
+    }
+    private enum MaintenanceFSM {
+        /**mind maintenance just spawned - will often immediately go to next state*/
+        START,
+        /**mind maintenance is idly looking around, but not moving*/
+        IDLE_LOOK,
+        /**mind maintenance is moving to a short location nearby idly, distance randomly from set interval*/
+        IDLE_WALK,
+        /**mind maintenance is now alerted to player's presence, will follow and stare at them*/
+        ALERTED,
+        /** mind maintenance is stunned, cannot move or see (do damage to player) */
+        STUNNED
     }
 
-    // internal data for each critter state - may need to refactor this when adding otehr enemies
-    private class CritterAI {
+
+    private class EnemyAI {
+        float stateTimer;
+        float stateDuration;
+        float horizontal;
+        // critters should only jump if their pathing requires it
+        boolean jump;
+        Vector2 targetPosition;
+        boolean movingRight;
+        Enemy enemy;
+
+        public EnemyAI(Enemy enemy) {
+            this.stateDuration = 0;
+            this.stateTimer = 0;
+            this.horizontal = 0;
+            this.jump = false;
+            this.targetPosition = null;
+            this.movingRight = true;
+            this.enemy = enemy;
+        }
+    }
+
+
+
+    // internal data for each critter state
+    private class CritterAI extends EnemyAI{
         CuriosityCritter critter;
         CritterFSM state;
         float stateTimer;
@@ -45,50 +109,61 @@ public class AIControllerManager {
         boolean movingRight;
 
         public CritterAI(CuriosityCritter critter) {
+            super(critter);
             this.critter = critter;
             this.state = CritterFSM.START;
-            this.stateDuration = 0;
-            this.stateTimer = 0;
-            this.horizontal = 0;
-            this.jump = false;
-            this.targetPosition = null;
-            this.movingRight = true;
+        }
+    }
+    // internal data for each maintenance state
+    private class MaintenanceAI extends EnemyAI{
+        MindMaintenance maintenance;
+        MaintenanceFSM state;
+        float stateTimer;
+        float stateDuration;
+        float horizontal;
+        // critters should only jump if their pathing requires it
+        boolean jump;
+        Vector2 targetPosition;
+        boolean movingRight;
+
+        public MaintenanceAI(MindMaintenance maintenance) {
+            super(maintenance);
+            this.maintenance = maintenance;
+            this.state = MaintenanceFSM.START;
         }
     }
 
-    // unless we have a very large amount of enemies on screen, O(n) for checks is fine. but if its slow change (don't use List).
-    private List<CritterAI> entities;
-    private Player player;
-    private Random random;
-
-    public AIControllerManager(Player player) {
-        entities = new ArrayList<>();
-        random = new Random();
-        this.player = player;
-    }
 
     /** we need to make a wrapper class eventually for all ai-controlled enemies */
     public void register(CuriosityCritter entity) {
         entities.add(new CritterAI(entity));
     }
-
-    public void unregister(CuriosityCritter entity) {
-        entities.removeIf(data -> data.critter == entity);
+    public void register(MindMaintenance entity) {
+        entities.add(new MaintenanceAI(entity));
     }
 
+    public void unregister(CuriosityCritter entity) {
+        entities.removeIf(data -> data.enemy == entity);
+    }
+
+    /**
+     * update every enemy in entities according to their type
+     * @param dt: the time step
+     * */
     public void update(float dt) {
-        for (CritterAI data : entities) {
-            updateCritter(data, dt);
+        // iterate through the enemies
+        for (EnemyAI enemy : entities) {
+            if (enemy.enemy.getClass() == CuriosityCritter.class){
+                CritterAI critter = (CritterAI) enemy;
+                updateCritter(critter, dt);
+
+            }
+            else if (enemy.enemy.getClass() == MindMaintenance.class){
+
+            }
         }
     }
 
-    public void setPlayer(Player player) {
-        this.player = player;
-    }
-
-    private Vector2 getPlayerPosition(Player player) {
-        return new Vector2(player.getObstacle().getX(), player.getObstacle().getY());
-    }
 
     private Vector2 getCritterPosition(CuriosityCritter critter) {
         return new Vector2(critter.getObstacle().getX(), critter.getObstacle().getY());
@@ -133,7 +208,7 @@ public class AIControllerManager {
 
                 if (data.state == CritterFSM.IDLE_LOOK || data.state == CritterFSM.IDLE_WALK) {
                     System.out.println("Critter sees player, alerted");
-                    transitionState(data, CritterFSM.ALERTED);
+                    transitionCritterState(data, CritterFSM.ALERTED);
                     return;
                 }
                 if (data.state == CritterFSM.ALERTED) {
@@ -143,9 +218,9 @@ public class AIControllerManager {
                     System.out.println(player.getFearMeter());
                     if (player.getFearMeter() < 0.75 * player.getMaxFearMeter()) {
 
-                        transitionState(data, CritterFSM.AWARE_STARE);
+                        transitionCritterState(data, CritterFSM.AWARE_STARE);
                     } else {
-                        transitionState(data, CritterFSM.AWARE_FEAR);
+                        transitionCritterState(data, CritterFSM.AWARE_FEAR);
                     }
                     return;
                 }
@@ -185,7 +260,7 @@ public class AIControllerManager {
                 }
 
                 if (data.stateTimer > data.stateDuration) {
-                    transitionState(data, CritterFSM.IDLE_LOOK);
+                    transitionCritterState(data, CritterFSM.IDLE_LOOK);
                 }
                 //System.out.println("Scared!");
                 return;
@@ -194,18 +269,18 @@ public class AIControllerManager {
 
         if (data.state == CritterFSM.AWARE_STARE) {
             if (data.stateTimer > data.stateDuration) {
-                transitionState(data, CritterFSM.IDLE_LOOK);
+                transitionCritterState(data, CritterFSM.IDLE_LOOK);
             }
         }
 
         if (data.state == CritterFSM.START) {
-            transitionState(data, random.nextBoolean() ? CritterFSM.IDLE_LOOK : CritterFSM.IDLE_WALK);
+            transitionCritterState(data, random.nextBoolean() ? CritterFSM.IDLE_LOOK : CritterFSM.IDLE_WALK);
         }
 
         if (data.state == CritterFSM.IDLE_LOOK) {
             System.out.println("in idle");
             if (data.stateTimer > data.stateDuration) {
-                transitionState(data, CritterFSM.IDLE_WALK);
+                transitionCritterState(data, CritterFSM.IDLE_WALK);
             } else {
                 // Look straight for now
                 data.critter.setVisionAngle(data.movingRight ? 270 : 90);
@@ -216,11 +291,11 @@ public class AIControllerManager {
 
         if (data.state == CritterFSM.IDLE_WALK) {
             if (data.stateTimer > data.stateDuration) {
-                transitionState(data, CritterFSM.IDLE_LOOK);
+                transitionCritterState(data, CritterFSM.IDLE_LOOK);
             } else if (data.critter.isSeesWall()) {
                 data.critter.setMovement(0);
                 data.critter.applyForce();
-                transitionState(data, CritterFSM.IDLE_LOOK);
+                transitionCritterState(data, CritterFSM.IDLE_LOOK);
             } else {
                 // Walk in a direction, will have already known if wall is in front
                 data.critter.setVisionAngle(data.movingRight ? 270 : 90);
@@ -232,7 +307,7 @@ public class AIControllerManager {
 
     }
 
-    private void transitionState(CritterAI data, CritterFSM newState) {
+    private void transitionCritterState(CritterAI data, CritterFSM newState) {
         data.state = newState;
         data.stateTimer = 0;
 
@@ -269,4 +344,14 @@ public class AIControllerManager {
                 break;
         }
     }
+    private void updateMaintenance(MaintenanceAI data, float dt) {
+
+    }
+
+    private void transitionMaintenanceState(MaintenanceAI data, MaintenanceFSM newState) {
+
+    }
+
+
+
 }

@@ -16,7 +16,7 @@ import edu.cornell.gdiac.physics2.*;
 
 import javax.swing.*;
 
-public class CuriosityCritter extends ObstacleSprite {
+public class CuriosityCritter extends Enemy {
     /** Json constants for parameters */
     private final JsonValue data;
 
