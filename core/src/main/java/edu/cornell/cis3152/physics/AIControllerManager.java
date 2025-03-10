@@ -56,7 +56,7 @@ public class AIControllerManager {
         }
     }
 
-    // unless we have a shit ton of enemies on screen, O(n) for checks is fine. but if its slow change(dont use List).
+    // unless we have a very large amount of enemies on screen, O(n) for checks is fine. but if its slow change (don't use List).
     private List<CritterAI> entities;
     private Player player;
     private Random random;

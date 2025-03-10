@@ -53,7 +53,7 @@ public class DesktopLauncher {
      */
     private static GDXAppSettings configureApplication() {
         GDXAppSettings config = new GDXAppSettings();
-        config.title = "Optimization";
+        config.title = "Dreamwalker";
 
         // Use windowed mode
         config.fullscreen = false;
