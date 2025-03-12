@@ -681,7 +681,7 @@ public class PlatformScene implements ContactListener, Screen{
 
 
 
-        aiManager = new AIControllerManager(avatar);
+        aiManager = new AIControllerManager(avatar, directory);
         Surface wall;
         String wname = "wall";
         JsonValue walls = constants.get("walls");
@@ -723,7 +723,7 @@ public class PlatformScene implements ContactListener, Screen{
         visionCones = new HashMap<>();
 
         for (int i = 0; i < critterspos.size; i++) {
-            texture = directory.getEntry( "curio-critter-proto", Texture.class );
+            texture = directory.getEntry( "curiosity-critter-active", Texture.class );
             critter = new CuriosityCritter(units, constants.get("curiosity-critter"), critterspos.get(i).asFloatArray());
             critter.setTexture(texture);
             addSprite(critter);
@@ -747,8 +747,6 @@ public class PlatformScene implements ContactListener, Screen{
 
         for (int i = 0; i < maintenancePos.size; i++) {
             texture = directory.getEntry( "mind-maintenance-active", Texture.class );
-            System.out.println(texture.getWidth());
-            System.out.println(texture.getHeight());
 
             maintenance = new MindMaintenance(units, constants.get("mind-maintenance"), maintenancePos.get(i).asFloatArray());
             maintenance.setTexture(texture);
@@ -877,6 +875,7 @@ public class PlatformScene implements ContactListener, Screen{
                 }
             }
         }
+
 
 
         // Add a bullet if we fire
@@ -1016,8 +1015,6 @@ public class PlatformScene implements ContactListener, Screen{
     public void beginContact(Contact contact) {
         Fixture fix1 = contact.getFixtureA();
         Fixture fix2 = contact.getFixtureB();
-        System.out.println("Contact detected between " + fix1.getUserData() + " and " + fix2.getUserData());
-
 
         Body body1 = fix1.getBody();
         Body body2 = fix2.getBody();
@@ -1076,33 +1073,61 @@ public class PlatformScene implements ContactListener, Screen{
 
             // Test bullet collision with world
             if (bd1.getName().equals("bullet") && bd2 != avatar && !bd2.getName().equals( "goal" )) {
-                removeBullet(bd1);
+                // if it hits a curiosity critter
                 if (bd2 instanceof CuriosityCritter){
-                    CuriosityCritter critter = (bd1 instanceof CuriosityCritter) ? (CuriosityCritter) bd1
-                        : (bd2 instanceof CuriosityCritter) ? (CuriosityCritter) bd2
-                            : null;
-                    if (critter != null) {
-                        critter.setStunned(true);
-                        System.out.println("Critter is stunned");
-                    } else {
-                        System.out.println("WARNING: Bullet stun collision detected but Critter reference is null.");
+                    // make sure it hits the body of the critter
+                    if(fd2 != "walk_sensor" && fd2 != "vision_sensor" && fd2 != "follow_sensor") {
+                        removeBullet(bd1);
+                        CuriosityCritter critter =
+                            (bd1 instanceof CuriosityCritter) ? (CuriosityCritter) bd1
+                                : (bd2 instanceof CuriosityCritter) ? (CuriosityCritter) bd2
+                                    : null;
+                        System.out.println("Obstacle type: " + critter.getObstacle().getName());
+                        if (critter != null) {
+                            critter.setStunned(true);
+                            Texture texture = directory.getEntry( "curiosity-critter-inactive", Texture.class );
+                            critter.setTexture(texture);
+                            System.out.println("Critter is stunned");
+                        } else {
+                            System.out.println(
+                                "WARNING: Bullet stun collision detected but Critter reference is null.");
+                        }
                     }
                 }
+                //otherwise the bullet hits a non-enemy and should be removed
+                else {
+                    removeBullet(bd1);
+                }
+
             }
 
             if (bd2.getName().equals("bullet") && bd1 != avatar && !bd1.getName().equals( "goal" )) {
-                removeBullet(bd2);
+                // if it hits a curiosity critter
                 if (bd1 instanceof CuriosityCritter){
-                    CuriosityCritter critter = (bd1 instanceof CuriosityCritter) ? (CuriosityCritter) bd1
-                        : (bd1 instanceof CuriosityCritter) ? (CuriosityCritter) bd1
-                            : null;
-                    if (critter != null) {
-                        critter.setStunned(true);
-                        System.out.println("Critter is stunned");
-                    } else {
-                        System.out.println("WARNING: Bullet stun collision detected but Critter reference is null.");
+                    // make sure it hits the body of the critter
+                    if(fd1 != "walk_sensor" && fd1 != "vision_sensor" && fd1 != "follow_sensor") {
+                        removeBullet(bd2);
+                        CuriosityCritter critter =
+                            (bd2 instanceof CuriosityCritter) ? (CuriosityCritter) bd2
+                                : (bd1 instanceof CuriosityCritter) ? (CuriosityCritter) bd1
+                                    : null;
+                        System.out.println("Obstacle type: " + critter.getObstacle().getName());
+                        if (critter != null) {
+                            critter.setStunned(true);
+                            Texture texture = directory.getEntry( "curiosity-critter-inactive", Texture.class );
+                            critter.setTexture(texture);
+                            System.out.println("Critter is stunned");
+                        } else {
+                            System.out.println(
+                                "WARNING: Bullet stun collision detected but Critter reference is null.");
+                        }
                     }
                 }
+                //otherwise the bullet hits a non-enemy and should be removed
+                else {
+                    removeBullet(bd2);
+                }
+
             }
 
 
@@ -1158,6 +1183,7 @@ public class PlatformScene implements ContactListener, Screen{
         } catch (Exception e) {
             e.printStackTrace();
         }
+
     }
 
     /**

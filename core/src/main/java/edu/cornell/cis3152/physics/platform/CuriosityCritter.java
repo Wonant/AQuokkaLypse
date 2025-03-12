@@ -177,7 +177,7 @@ public class CuriosityCritter extends Enemy {
         width  = s * data.get("inner").getFloat(0);
         height = s * data.get("inner").getFloat(1);
 
-        float drawWidth  = size;
+        float drawWidth  = size/2;
         float drawHeight = size;
 
         // may want to change what kind of physical obstacle this is
@@ -246,8 +246,7 @@ public class CuriosityCritter extends Enemy {
         PathFactory factory = new PathFactory();
         sensorOutline = new Path2();
         factory.makeRect((sensorCenter.x - w / 2) * u, (sensorCenter.y - h / 2) * u, w * u, h * u, sensorOutline);
-
-
+        sensorShape.dispose();
     }
 
     public void createHeadBody() {

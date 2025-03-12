@@ -69,7 +69,7 @@
   },
   "curiosity-critter" : {
     "pos"       : [[20.5, 5.0]],
-    "inner"     : [0.7, 0.95],
+    "inner"     : [0.7, 1.9],
     "size"      : 0.8,
     "force"     : 20.0,
     "damping"   : 5.0,

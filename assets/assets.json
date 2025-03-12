@@ -61,7 +61,8 @@
             "magfilter": "linear mipmap linear"
         },
         "background-proto" : "platform/dreamBackground.png",
-        "curio-critter-proto": "shared/curiositycritter.png",
+        "curiosity-critter-active": "shared/CuriosityCritterActive.png",
+        "curiosity-critter-inactive": "shared/CuriosityCritterInactive.png",
         "mind-maintenance-active": "shared/MindMaintenanceActive.png" ,
         "mind-maintenance-inactive": "shared/MindMaintenanceInactive.png",
         "vision_cone" : "shared/vision1.png",
