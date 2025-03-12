@@ -34,7 +34,7 @@ public class DesktopLauncher {
      * This method simply exists to start a new GDXApp. For desktop games,
      * LibGDX is built on top of LWJGL (this is not the case for Android).
      *
-     * @param arg Command line arguments
+     * @param args Command line arguments
      */
     public static void main(String[] args) {
         // This handles macOS support and helps on Windows.

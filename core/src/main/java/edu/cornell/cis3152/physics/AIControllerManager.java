@@ -1,5 +1,6 @@
 package edu.cornell.cis3152.physics;
 
+import com.badlogic.gdx.graphics.Texture;
 import com.badlogic.gdx.math.MathUtils;
 import com.badlogic.gdx.math.Vector2;
 import com.sun.tools.javac.Main;
@@ -8,19 +9,22 @@ import edu.cornell.cis3152.physics.platform.Enemy;
 import edu.cornell.cis3152.physics.platform.MindMaintenance;
 import edu.cornell.cis3152.physics.platform.Player;
 
+import edu.cornell.gdiac.assets.AssetDirectory;
+import edu.cornell.gdiac.graphics.SpriteBatch;
 import java.util.*;
 
 public class AIControllerManager {
-
 
     // unless we have a very large amount of enemies on screen, O(n) for checks is fine. but if its slow change (don't use List).
     private List<EnemyAI> entities;
     private Player player;
     private Random random;
+    private AssetDirectory asset_directory;
 
-    public AIControllerManager(Player player) {
+    public AIControllerManager(Player player, AssetDirectory directory) {
         entities = new ArrayList<>();
         random = new Random();
+        asset_directory = directory;
         this.player = player;
     }
 
@@ -181,7 +185,19 @@ public class AIControllerManager {
 
         // if the enemy is stunned, transition to the stunned state
         if (isStunned) {
-            transitionCritterState(data, CritterFSM.STUNNED);
+            if (data.state != CritterFSM.STUNNED) {
+                transitionCritterState(data, CritterFSM.STUNNED);
+            }
+            data.critter.getObstacle().setVX(0);
+
+            if (data.stateTimer > data.stateDuration) {
+                System.out.println("Critter stun wears off");
+
+                Texture texture = asset_directory.getEntry( "curiosity-critter-active", Texture.class );
+                data.critter.setTexture(texture);
+                data.critter.setStunned(false);
+                transitionCritterState(data, CritterFSM.IDLE_LOOK);
+            }
         }
         else{
             if (player != null) {
@@ -353,8 +369,9 @@ public class AIControllerManager {
                 break;
 
             case STUNNED:
-                data.stateDuration = 10.0f;
+                data.stateDuration = 3.0f;
                 data.horizontal = 0;
+                break;
         }
     }
     private void updateMaintenance(MaintenanceAI data, float dt) {
