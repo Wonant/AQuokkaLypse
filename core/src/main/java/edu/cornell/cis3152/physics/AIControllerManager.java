@@ -8,6 +8,7 @@ import edu.cornell.cis3152.physics.platform.CuriosityCritter;
 import edu.cornell.cis3152.physics.platform.Enemy;
 import edu.cornell.cis3152.physics.platform.MindMaintenance;
 import edu.cornell.cis3152.physics.platform.Player;
+import edu.cornell.cis3152.physics.platform.DreamDweller;
 
 import edu.cornell.gdiac.assets.AssetDirectory;
 import edu.cornell.gdiac.graphics.SpriteBatch;
@@ -76,6 +77,21 @@ public class AIControllerManager {
         STUNNED
     }
 
+    private enum DwellerFSM{
+        /**dream dweller just spawned - will often immediately go to next state*/
+        START,
+        /**dream dweller is idly looking around, but not moving*/
+        IDLE_LOOK,
+        /**dream dweller is moving to a short location nearby idly, distance randomly from set interval*/
+        IDLE_WALK,
+        /**dream dweller is now alerted to player's presence and will flee*/
+        FLEEING,
+        /**dream dweller is under the light source and will alert mind maintenance*/
+        SAFE,        // Reached the light, calling for help
+        /** dream dweller is stunned, cannot move or see (do damage to player) */
+        STUNNED      // Temporarily immobilized by player's stun
+    }
+
 
     private class EnemyAI {
         float stateTimer;
@@ -137,6 +153,22 @@ public class AIControllerManager {
         }
     }
 
+    private class DwellerAI extends EnemyAI {
+        DreamDweller dweller;
+        DwellerFSM state;
+        float stateTimer;
+        float stateDuration;
+        boolean movingRight;
+        Vector2 targetPosition;
+        boolean jump;
+
+        public DwellerAI(DreamDweller dweller) {
+            super(dweller);
+            this.dweller = dweller;
+            this.state = DwellerFSM.START;
+        }
+    }
+
 
     /** we need to make a wrapper class eventually for all ai-controlled enemies */
     public void register(CuriosityCritter entity) {
@@ -145,6 +177,8 @@ public class AIControllerManager {
     public void register(MindMaintenance entity) {
         entities.add(new MaintenanceAI(entity));
     }
+    public void register(DreamDweller entity) {entities.add(new DwellerAI(entity));}
+
 
     public void unregister(CuriosityCritter entity) {
         entities.removeIf(data -> data.enemy == entity);
@@ -164,6 +198,10 @@ public class AIControllerManager {
             }
             else if (enemy.enemy.getClass() == MindMaintenance.class){
 
+            }
+            else if (enemy.enemy.getClass() == DreamDweller.class) {
+                DwellerAI dweller = (DwellerAI) enemy;
+                updateDweller(dweller, dt);
             }
         }
     }
@@ -382,6 +420,14 @@ public class AIControllerManager {
 
     }
 
+    private Vector2 getDwellerPosition(DreamDweller dweller) {
+        return new Vector2(dweller.getObstacle().getX(), dweller.getObstacle().getY());
+    }
 
+    private void updateDweller(DwellerAI data, float dt) {
 
+    }
+    private void transitionDwellerState (DwellerAI data, DwellerFSM newState){
+
+    }
 }

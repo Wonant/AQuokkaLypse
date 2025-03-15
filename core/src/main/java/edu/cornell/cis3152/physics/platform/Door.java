@@ -47,24 +47,22 @@ public class Door extends ObstacleSprite {
      * @param units     The physics units
      * @param settings  The door physics constants
      */
-    public Door(float units, JsonValue settings) {
+    public Door(float units, JsonValue settings,float x, float y) {
         super();
 
-        float x = settings.get("pos").getFloat(0);
-        float y = settings.get("pos").getFloat(1);
         float s = settings.getFloat( "size" );
         float size = s*units;
 
         obstacle = new BoxObstacle(x, y, s, s);
-
-        obstacle.setDensity( settings.getFloat( "density", 0 ) );
-        obstacle.setFriction( settings.getFloat( "friction", 0 ) );
-        obstacle.setRestitution( settings.getFloat( "restitution", 0 ) );
-        obstacle.setPhysicsUnits( units );
-        obstacle.setBodyType( BodyDef.BodyType.StaticBody);
+        obstacle.setDensity(settings.getFloat("density", 0));
+        obstacle.setFriction(settings.getFloat("friction", 0));
+        obstacle.setRestitution(settings.getFloat("restitution", 0));
+        obstacle.setPhysicsUnits(units);
+        obstacle.setBodyType(BodyDef.BodyType.StaticBody);
         obstacle.setSensor(true);
-        obstacle.setUserData( this );
+        obstacle.setUserData(this);
         obstacle.setName("goal");
+
 
         debug = ParserUtils.parseColor( settings.get("debug"),  Color.WHITE);
 

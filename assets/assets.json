@@ -65,6 +65,8 @@
         "curiosity-critter-inactive": "shared/CuriosityCritterInactive.png",
         "mind-maintenance-active": "shared/MindMaintenanceActive.png" ,
         "mind-maintenance-inactive": "shared/MindMaintenanceInactive.png",
+        "dream-dweller-active": "shared/DreamDwellerActive.png",
+        "dream-dweller-inactive": "shared/DreamDwellerInactive.png",
         "vision_cone" : "shared/vision1.png",
         "platform-traci"    : "platform/traci.png",
         "platform-playerSprite": "platform/playerSprite.png",

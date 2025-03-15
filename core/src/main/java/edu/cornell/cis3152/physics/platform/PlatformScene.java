@@ -140,8 +140,10 @@ public class PlatformScene implements ContactListener, Screen{
     private Player avatar;
     private CuriosityCritter critter;
     private MindMaintenance maintenance;
+    private DreamDweller dreamDweller;
     private TextureRegion visionConeRegion;
     private Texture vision;
+    private Texture light;
     private int prev_debug;
     private Sprite visionCone;
 
@@ -149,6 +151,8 @@ public class PlatformScene implements ContactListener, Screen{
     private AIControllerManager aiManager;
     /** Reference to the goalDoor (for collision detection) */
     private Door goalDoor;
+    private int totalGoals;
+    private int collectedGoals;
 
     /** Mark set to handle more sophisticated collision callbacks */
     protected ObjectSet<Fixture> sensorFixtures;
@@ -167,6 +171,7 @@ public class PlatformScene implements ContactListener, Screen{
 
 
     private CuriosityCritter queuedHarvestedEnemy = null;
+
 
 
 
@@ -669,10 +674,22 @@ public class PlatformScene implements ContactListener, Screen{
 
         JsonValue goal = constants.get("goal");
         JsonValue goalpos = goal.get("pos");
-        goalDoor = new Door(units, goal);
+        totalGoals = goalpos.size;
+        collectedGoals = 0;
+        /*goalDoor = new Door(units, goal);
         goalDoor.setTexture( texture );
         goalDoor.getObstacle().setName("goal");
         addSprite(goalDoor);
+         */
+        for (int i = 0; i < goalpos.size; i++) {
+            float x = goalpos.get(i).getFloat(0);
+            float y = goalpos.get(i).getFloat(1);
+
+            Door goalDoor = new Door(units, goal, x, y);
+            goalDoor.setTexture(texture);
+            goalDoor.getObstacle().setName("goal_" + i);
+            addSprite(goalDoor);
+        }
 
         // Create ground pieces
 
@@ -765,6 +782,19 @@ public class PlatformScene implements ContactListener, Screen{
 
             visionCones.put(critter, visionCone);
         }
+
+        JsonValue dreamdwllers = constants.get("dream-dweller");
+        JsonValue dwellersPos = dreamdwllers.get("pos");
+
+        for (int i = 0; i < dwellersPos.size; i++) {
+            texture = directory.getEntry("dream-dweller-active", Texture.class);
+            dreamDweller = new DreamDweller(units, dreamdwllers, dwellersPos.get(i).asFloatArray());
+            dreamDweller.setTexture(texture);
+            addSprite(dreamDweller);
+            dreamDweller.createSensor();
+            aiManager.register(dreamDweller);
+        }
+
 
 
 
@@ -1026,6 +1056,20 @@ public class PlatformScene implements ContactListener, Screen{
         try {
             ObstacleSprite bd1 = (ObstacleSprite)body1.getUserData();
             ObstacleSprite bd2 = (ObstacleSprite)body2.getUserData();
+            // Check for win condition
+            if ((bd1 == avatar && bd2 instanceof Door) || (bd2 == avatar && bd1 instanceof Door)) {
+                Door collectedDoor = (bd1 instanceof Door) ? (Door) bd1 : (Door) bd2;
+
+                if (!collectedDoor.getObstacle().isRemoved()) {
+                    collectedDoor.getObstacle().markRemoved(true);
+                    collectedGoals++;
+
+
+                    if (collectedGoals == totalGoals) {
+                        setComplete(true);
+                    }
+                }
+            }
 
             if (("walk_sensor".equals(fd1) && (bd2 instanceof Surface || bd2 instanceof CuriosityCritter)) ||
                 ("walk_sensor".equals(fd2) && (bd2 instanceof Surface || bd2 instanceof CuriosityCritter))) {
@@ -1155,12 +1199,6 @@ public class PlatformScene implements ContactListener, Screen{
 
             }
 
-            // Check for win condition
-            if ((bd1 == avatar && bd2.getName().equals( "goal" )) ||
-                (bd1.getName().equals("goal")  && bd2 == avatar)) {
-                setComplete(true);
-            }
-
             if( !avatar.getScareSensorName().equals(fd1) && bd1 == avatar && bd2.getName().equals("origin_teleporter"))
             {
                 if (!(bd2 instanceof Teleporter)) {
@@ -1179,6 +1217,7 @@ public class PlatformScene implements ContactListener, Screen{
                     System.out.println("Taking Teleporter 2");
                 }
             }
+
 
         } catch (Exception e) {
             e.printStackTrace();
