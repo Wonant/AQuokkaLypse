@@ -65,6 +65,10 @@ public class PlatformScene implements ContactListener, Screen{
     /** How many frames after winning/losing do we continue? */
     public static final int EXIT_COUNT = 180;
 
+    public static final int STUN_COST = 1;
+    public static final int CREATE_TELEPORTER_COST = 2;
+    public static final int TAKE_TELEPORTER_COST = 1;
+
     /** The asset directory for retrieving textures, atlases */
     protected AssetDirectory directory;
     /** The drawing camera for this scene */
@@ -156,6 +160,7 @@ public class PlatformScene implements ContactListener, Screen{
 
     /** Mark set to handle more sophisticated collision callbacks */
     protected ObjectSet<Fixture> sensorFixtures;
+    protected ObjectSet<Fixture> shadowSensorFixtures;
 
     /** Texture for fear meter**/
     private Texture fearMeterTexture;
@@ -171,11 +176,9 @@ public class PlatformScene implements ContactListener, Screen{
 
 
     private CuriosityCritter queuedHarvestedEnemy = null;
+    private Teleporter currentTeleporter = null;
 
-
-
-
-
+    protected PooledList<Surface> shadowPlatformQueue = new PooledList<Surface>();
 
 
     /**
@@ -626,6 +629,7 @@ public class PlatformScene implements ContactListener, Screen{
 
         world.setContactListener(this);
         sensorFixtures = new ObjectSet<Fixture>();
+        shadowSensorFixtures = new ObjectSet<Fixture>();
 
         // Pull out sounds
         jumpSound = directory.getEntry( "platform-jump", SoundEffect.class );
@@ -681,9 +685,14 @@ public class PlatformScene implements ContactListener, Screen{
         goalDoor.getObstacle().setName("goal");
         addSprite(goalDoor);
          */
+        System.out.println(goalpos);
+        System.out.println(goalpos.size);
         for (int i = 0; i < goalpos.size; i++) {
+            System.out.println("Fetching Goal Positions.");
             float x = goalpos.get(i).getFloat(0);
+            System.out.println("X.");
             float y = goalpos.get(i).getFloat(1);
+            System.out.println("Y.");
 
             Door goalDoor = new Door(units, goal, x, y);
             goalDoor.setTexture(texture);
@@ -695,6 +704,7 @@ public class PlatformScene implements ContactListener, Screen{
 
 
         texture = directory.getEntry( "shared-cloud", Texture.class );
+        Texture shadowedTexture = directory.getEntry("shared-shadow-cloud", Texture.class);
 
 
 
@@ -704,7 +714,7 @@ public class PlatformScene implements ContactListener, Screen{
         JsonValue walls = constants.get("walls");
         JsonValue walljv = walls.get("positions");
         for (int ii = 0; ii < walljv.size; ii++) {
-            wall = new Surface(walljv.get(ii).asFloatArray(), units, walls);
+            wall = new Surface(walljv.get(ii).asFloatArray(), units, walls, false);
             wall.getObstacle().setName(wname+ii);
             wall.setTexture( texture );
             addSprite(wall);
@@ -714,10 +724,16 @@ public class PlatformScene implements ContactListener, Screen{
         String pname = "platform";
         JsonValue plats = constants.get("platforms");
         JsonValue platjv = plats.get("positions");
+        JsonValue platShadow = plats.get("shadowed");
         for (int ii = 0; ii < platjv.size; ii++) {
-            platform = new Surface(platjv.get(ii).asFloatArray(), units, walls);
+            platform = new Surface(platjv.get(ii).asFloatArray(), units, walls, platShadow.getBoolean(ii) );
             platform.getObstacle().setName(pname+ii);
-            platform.setTexture( texture );
+            if (platform.isShadowed()) {
+                platform.setTexture(shadowedTexture);
+                shadowPlatformQueue.add(platform);
+            } else {
+                platform.setTexture(texture);
+            }
             addSprite(platform);
         }
 
@@ -794,14 +810,6 @@ public class PlatformScene implements ContactListener, Screen{
             dreamDweller.createSensor();
             aiManager.register(dreamDweller);
         }
-
-
-
-
-
-
-
-
     }
 
     /**
@@ -879,19 +887,14 @@ public class PlatformScene implements ContactListener, Screen{
     public void update(float dt) {
         InputController input = InputController.getInstance();
 
+        avatar.setStunning(input.didStun());
+        avatar.setHarvesting(input.didSecondary());
+        avatar.setTeleporting(input.didCreateTeleport());
+
         // Process actions in object model
         avatar.setMovement(input.getHorizontal() *avatar.getForce());
 
-
         if (avatar.isGrounded()) avatar.setJumping(input.didPrimary());
-
-
-
-        avatar.setStunning(input.didStun());
-        avatar.setHarvesting(input.didSecondary());
-        //avatar.setTeleporting(input.didTeleport());
-        avatar.setTeleporting(input.didTeleport());
-
 
         if (avatar.isHarvesting())
         {
@@ -906,17 +909,19 @@ public class PlatformScene implements ContactListener, Screen{
             }
         }
 
-
-
-        // Add a bullet if we fire
-        if (avatar.isStunning()) {
+        if (avatar.isStunning() && avatar.getFearMeter() > STUN_COST) {
             createBullet();
-            avatar.setFearMeter(Math.max(0,avatar.getFearMeter() - 1));
+            avatar.setFearMeter(avatar.getFearMeter() - STUN_COST);
         }
 
-        if (avatar.isTeleporting())
+        if (avatar.isTeleporting() && avatar.getFearMeter() > CREATE_TELEPORTER_COST && avatar.isInShadow())
         {
             createTeleporter();
+        }
+
+        if (input.didTakeTeleport() && currentTeleporter != null && avatar.getFearMeter() > TAKE_TELEPORTER_COST) {
+            takeTeleporter(currentTeleporter);
+            currentTeleporter = null;
         }
 
 
@@ -948,28 +953,69 @@ public class PlatformScene implements ContactListener, Screen{
     private void createTeleporter() {
         float units = height/bounds.height;
         InputController input = InputController.getInstance();
-        Vector2 newPosition = new Vector2(input.getCrossHair().x, input.getCrossHair().y);
-        float u = avatar.getObstacle().getPhysicsUnits();
-        Vector2 avatarPosition = new Vector2 (avatar.getObstacle().getPosition().x * u, avatar.getObstacle().getPosition().y * u);
+        Vector2 mousePosition = input.getCrossHair();
+        float cursorX = mousePosition.x;
+        float cursorY = mousePosition.y;
 
-        float dist = avatarPosition.dst(newPosition.x * u, newPosition.y * u);
-        System.out.println(dist);
-        if (dist >= avatar.getTeleportRangeRadius())
-        {
+        // Necessary if using Anonymous Function
+        final boolean[] isOnSurface = {false};
+
+        // Use QueryAABB with a small box around the mouse point
+        world.QueryAABB(new QueryCallback() {
+            @Override
+            public boolean reportFixture(Fixture fixture) {
+                Object userData = fixture.getBody().getUserData();
+                if (userData instanceof Surface) {
+                    if (fixture.testPoint(mousePosition)) {
+                        isOnSurface[0] = true;
+                        return false; // Stop the query
+                    }
+                }
+                return true; // Continue the query
+            }
+        }, cursorX - 0.1f, cursorY - 0.1f, cursorX + 0.1f, cursorY + 0.1f);
+
+        if (isOnSurface[0]) {
+            System.out.println("Cannot place teleporter: Mouse is directly on a surface!");
             return;
         }
 
-        Texture texture = directory.getEntry( "platform-teleporter", Texture.class );
 
+        Vector2 rayStart = new Vector2(cursorX, cursorY);
+        Vector2 rayEnd = new Vector2(cursorX, 0);
+
+        // Use the PlatformRayCast class
+        PlatformRayCast callback = new PlatformRayCast();
+
+        // Perform the raycast
+        world.rayCast(callback, rayStart, rayEnd);
+
+        if (callback.getPlatformFixture() == null) {
+            System.out.println("Platform not found");
+            return;
+        }
+
+        Surface platform = (Surface)callback.getPlatformFixture().getBody().getUserData();
+        Vector2 hitPoint = callback.getHitPoint();
+
+        Vector2 teleporterPosition = new Vector2(cursorX, hitPoint.y + 0.75f);
+
+        Vector2 avatarPosition = avatar.getObstacle().getPosition();
+        float dist = avatarPosition.dst(teleporterPosition);
+
+        if (dist >= avatar.getTeleportRangeRadius() / units) {
+            return;
+        }
+
+        Texture texture = directory.getEntry("platform-teleporter", Texture.class);
         JsonValue teleporter = constants.get("teleporter");
 
         Teleporter originTeleporter = new Teleporter(units, teleporter, avatar.getObstacle().getPosition());
-        originTeleporter.setTexture( texture );
-        // If we have teleporters persist, we might need to change this for unique naming
+        originTeleporter.setTexture(texture);
         originTeleporter.getObstacle().setName("origin_teleporter");
 
-        Teleporter exitTeleporter = new Teleporter(units, teleporter, newPosition);
-        exitTeleporter.setTexture( texture );
+        Teleporter exitTeleporter = new Teleporter(units, teleporter, teleporterPosition);
+        exitTeleporter.setTexture(texture);
         exitTeleporter.getObstacle().setName("exit_teleporter");
 
         originTeleporter.setLinkedTeleporter(exitTeleporter);
@@ -978,9 +1024,7 @@ public class PlatformScene implements ContactListener, Screen{
         addSprite(originTeleporter);
         addSprite(exitTeleporter);
 
-        avatar.setFearMeter(Math.max(0,avatar.getFearMeter() - 2));
-
-
+        avatar.setFearMeter(Math.max(0, avatar.getFearMeter() - CREATE_TELEPORTER_COST));
     }
 
     private void takeTeleporter(Teleporter tp)
@@ -1180,6 +1224,20 @@ public class PlatformScene implements ContactListener, Screen{
                 (avatar.getSensorName().equals(fd1) && bd2 instanceof Surface)) {
                 avatar.setGrounded(true);
                 sensorFixtures.add(avatar == bd1 ? fix2 : fix1); // Could have more than one ground
+
+                Surface currentSurface;
+                if (bd1 instanceof Surface)
+                {
+                    currentSurface = (Surface) bd1;
+                } else {
+                    currentSurface = (Surface) bd2;
+                }
+
+               if (currentSurface.isShadowed())
+               {
+                   avatar.setIsShadow(true);
+                   shadowSensorFixtures.add(avatar == bd1 ? fix2 : fix1);
+               }
             }
 
             if((avatar.getScareSensorName().equals(fd1) && (bd2 instanceof CuriosityCritter)) ||
@@ -1204,17 +1262,13 @@ public class PlatformScene implements ContactListener, Screen{
                 if (!(bd2 instanceof Teleporter)) {
                     System.out.println("Error: bd2 is not a Teleporter!");
                 } else {
-                    Teleporter temp = (Teleporter) bd2;
-                    takeTeleporter(temp);
-                    System.out.println("Taking Teleporter 1");
+                    currentTeleporter = (Teleporter) bd2;
                 }
             } else if (bd1.getName().equals("origin_teleporter") && bd2 == avatar){
                 if (!(bd1 instanceof Teleporter)) {
                     System.out.println("Error: bd2 is not a Teleporter!");
                 } else {
-                    Teleporter temp = (Teleporter) bd1;
-                    takeTeleporter(temp);
-                    System.out.println("Taking Teleporter 2");
+                    currentTeleporter = (Teleporter) bd1;
                 }
             }
 
@@ -1291,13 +1345,20 @@ public class PlatformScene implements ContactListener, Screen{
 
         }
 
-
+        if ((bd1 instanceof Teleporter && bd2 == avatar) || (bd1 == avatar && bd2 instanceof Teleporter)) {
+            currentTeleporter = null;
+            System.out.println("Player moved away from teleporter");
+        }
 
         if ((avatar.getSensorName().equals(fd2) && bd1 instanceof Surface) ||
             (avatar.getSensorName().equals(fd1) && bd2 instanceof Surface)) {
             sensorFixtures.remove(avatar == bd1 ? fix2 : fix1);
             if (sensorFixtures.size == 0) {
                 avatar.setGrounded(false);
+            }
+            shadowSensorFixtures.remove(avatar == bd1? fix2 : fix1);
+            if (shadowSensorFixtures.size == 0){
+                avatar.setIsShadow(false);
             }
         }
     }

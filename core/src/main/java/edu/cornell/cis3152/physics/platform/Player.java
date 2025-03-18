@@ -101,6 +101,8 @@ public class Player extends ObstacleSprite {
     private boolean faceRight;
     /** Whether our feet are on the ground */
     private boolean isGrounded;
+    /** Whether our feet are on a shadowed tile*/
+    private boolean isInShadow;
 
 
     /** The outline of the sensor obstacle */
@@ -325,6 +327,23 @@ public class Player extends ObstacleSprite {
         isGrounded = value;
     }
 
+
+    /**
+     * Returns true if Player is in shadow
+     *
+     * @return true if Player is in shadow
+     */
+    public boolean isInShadow() { return isInShadow;}
+
+    /**
+     * Sets whether Player is in a shadow.
+     *
+     * @param value whether Player is in a shadow.
+     */
+    public void setIsShadow(boolean value) {
+        isInShadow = value;
+    }
+
     /**
      * Returns how much force to apply to get Player moving
      *
@@ -442,6 +461,7 @@ public class Player extends ObstacleSprite {
         isTeleporting = false;
         isJumping = false;
         faceRight = true;
+        isInShadow = false;
 
         harvestCooldown = 0;
         stunCooldown = 0;
