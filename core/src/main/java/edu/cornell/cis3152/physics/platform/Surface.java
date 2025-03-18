@@ -43,6 +43,22 @@ import edu.cornell.gdiac.physics2.PolygonObstacle;
  */
 public class Surface extends ObstacleSprite {
 
+    private boolean shadowed;
+
+    private float width;
+
+    public boolean isShadowed() {
+        return shadowed;
+    }
+
+    public void setShadowed(boolean value) {
+        shadowed = value;
+    }
+
+    public float getWidth(){
+        return width;
+    }
+
     /**
      * Creates a surface from the given set of points and physics units
      *
@@ -55,7 +71,7 @@ public class Surface extends ObstacleSprite {
      * @param units     The physics units
      * @param data      The physics constants for this rope bridge
      */
-    public Surface(float[] points, float units, JsonValue settings) {
+    public Surface(float[] points, float units, JsonValue settings, boolean shadowed) {
         super();
 
         float tile = settings.getFloat( "tile" );
@@ -76,6 +92,9 @@ public class Surface extends ObstacleSprite {
         obstacle.setUserData( this );
 
         debug = ParserUtils.parseColor( settings.get("debug"),  Color.WHITE);
+
+        this.shadowed = shadowed;
+        width = points[1] - points[0];
 
         // Create a polygon mesh matching the physics body, adjusted by the
         // physics units. We take the save polygon we used to create the

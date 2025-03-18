@@ -5,6 +5,11 @@
             "wrapU": "repeated",
             "wrapV": "repeated"
         },
+        "shared-shadow-cloud" : {
+            "file":  "shared/earthtile.png",
+            "wrapU": "repeated",
+            "wrapV": "repeated"
+        },
         "shared-goal":   "shared/shard.png",
         "rocket-rocket": {
             "file": "rocket/rocket.png",

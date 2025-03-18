@@ -77,8 +77,12 @@ public class InputController {
     /** Whether the stun action button was pressed. */
     private boolean stunPressed;
     /** Whether the teleport button was pressed */
-    private boolean teleportPressed;
-    private boolean teleportPrevious;
+    private boolean createTeleportPressed;
+    private boolean createTeleportPrevious;
+
+    /** Whether the teleport button was pressed */
+    private boolean takeTeleportPressed;
+    private boolean takeTeleportPrevious;
 
     /** How much did we move horizontally? */
     private float horizontal;
@@ -209,13 +213,20 @@ public class InputController {
         return stunPressed;
     }
     /**
-     * Returns true if the teleport button was pressed
+     * Returns true if the create teleport button was pressed
      *
-     * @return true if the teleport button was pressed
+     * @return true if the create teleport button was pressed
      */
-    public boolean didTeleport() {
-        return teleportPressed && !teleportPrevious;
+    public boolean didCreateTeleport() {
+        return createTeleportPressed && !createTeleportPrevious;
     }
+
+    /**
+     * Returns true if the take teleport button was pressed
+     *
+     * @return true if the take teleport button was pressed
+     */
+    public boolean didTakeTeleport() { return takeTeleportPressed && !takeTeleportPrevious;}
 
 
     /**
@@ -257,7 +268,8 @@ public class InputController {
         exitPrevious = exitPressed;
         nextPrevious = nextPressed;
         prevPrevious = prevPressed;
-        teleportPrevious = teleportPressed;
+        createTeleportPrevious = createTeleportPressed;
+        takeTeleportPrevious = takeTeleportPressed;
 
         // Check to see if a GamePad is connected
         if (xbox != null && xbox.isConnected()) {
@@ -324,6 +336,7 @@ public class InputController {
         prevPressed = (secondary && prevPressed) || (Gdx.input.isKeyPressed(Input.Keys.P));
         nextPressed = (secondary && nextPressed) || (Gdx.input.isKeyPressed(Input.Keys.N));
         exitPressed  = (secondary && exitPressed) || (Gdx.input.isKeyPressed(Input.Keys.ESCAPE));
+        takeTeleportPressed = (secondary && takeTeleportPressed) || (Gdx.input.isKeyPressed(Input.Keys.T));
 
         //teleportPressed = (secondary && teleportPressed) || (Gdx.input.isKeyPressed(Input.Buttons.LEFT));
         //Mouse
@@ -349,7 +362,7 @@ public class InputController {
 
         // Mouse results
 
-        teleportPressed = Gdx.input.isButtonPressed(Input.Buttons.LEFT);
+        createTeleportPressed = Gdx.input.isButtonPressed(Input.Buttons.LEFT);
         stunPressed = Gdx.input.isButtonPressed(Input.Buttons.RIGHT);
 
         crosshair.set(Gdx.input.getX(), Gdx.input.getY());
