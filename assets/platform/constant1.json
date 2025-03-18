@@ -142,7 +142,7 @@
     "density"     : 0.0,
     "restitution" : 0.1,
     "debug"      : "#ffffff",
-    "shadowed"   : [true, true, true, true, true, true, true],
+    "shadowed"   : [true, false, false, true, true, true, true],
     "positions" : [
       [ 6.0, 5.5, 9.0, 5.5, 9.0, 8.0, 6.0, 8.0],
       [ 0.0, 7.0, 6.0, 7.0, 6.0, 8.0, 0.0, 8.0],
