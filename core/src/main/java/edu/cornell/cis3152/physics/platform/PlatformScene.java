@@ -470,16 +470,18 @@ public class PlatformScene implements ContactListener, Screen{
         float u = critter.getObstacle().getPhysicsUnits();
 
         for (Enemy e : visionCones.keySet()) {
-            Vector2 headPos = e.getHeadBody().getPosition();
-            float headAngleDeg = e.getHeadBody().getAngle() * MathUtils.radiansToDegrees;
+            if (!e.isStunned()) {
+                Vector2 headPos = e.getHeadBody().getPosition();
+                float headAngleDeg = e.getHeadBody().getAngle() * MathUtils.radiansToDegrees;
 
-            // Get the correct vision cone for the current enemy `e`
-            Sprite visionCone = visionCones.get(e);
+                // Get the correct vision cone for the current enemy `e`
+                Sprite visionCone = visionCones.get(e);
 
-            visionCone.setPosition(headPos.x * u - visionCone.getOriginX(),
-                headPos.y * u - visionCone.getOriginY());
-            visionCone.setRotation(headAngleDeg);
-            visionCone.draw(batch);
+                visionCone.setPosition(headPos.x * u - visionCone.getOriginX(),
+                    headPos.y * u - visionCone.getOriginY());
+                visionCone.setRotation(headAngleDeg);
+                visionCone.draw(batch);
+            }
         }
 
         for (DreamDweller dweller : visionCones3.keySet()) {
