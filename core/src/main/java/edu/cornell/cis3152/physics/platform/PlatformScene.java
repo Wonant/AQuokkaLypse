@@ -1424,8 +1424,8 @@ public class PlatformScene implements ContactListener, Screen{
 
             }
 
-            if((avatar.getScareSensorName().equals(fd1) && (bd2 instanceof DreamDweller)) ||
-                (avatar.getScareSensorName().equals(fd2) && (bd1 instanceof DreamDweller)))
+            if((avatar.getScareSensorName().equals(fd1) && (bd2 instanceof DreamDweller) && fd2 != "dweller_vision_sensor" && fd2 != "dweller_alert_sensor") ||
+                (avatar.getScareSensorName().equals(fd2) && (bd1 instanceof DreamDweller) && fd1 != "dweller_vision_sensor" && fd1 != "dweller_alert_sensor"))
             {
                DreamDweller harvested;
                 if (avatar.getScareSensorName().equals(fd1))
