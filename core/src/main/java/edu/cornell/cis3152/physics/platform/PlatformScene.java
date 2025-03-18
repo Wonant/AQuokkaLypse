@@ -147,7 +147,7 @@ public class PlatformScene implements ContactListener, Screen{
     private int prev_debug;
     private Sprite visionCone;
 
-    private HashMap<CuriosityCritter, Sprite> visionCones;
+    private HashMap<Enemy, Sprite> visionCones;
     private AIControllerManager aiManager;
     /** Reference to the goalDoor (for collision detection) */
     private Door goalDoor;
@@ -462,17 +462,18 @@ public class PlatformScene implements ContactListener, Screen{
 
         float u = critter.getObstacle().getPhysicsUnits();
 
-        for (CuriosityCritter critter : visionCones.keySet()) {
-            Vector2 headPos = critter.getHeadBody().getPosition();
-            float headAngleDeg = critter.getHeadBody().getAngle() * MathUtils.radiansToDegrees;
+        for (Enemy e : visionCones.keySet()) {
+            Vector2 headPos = e.getHeadBody().getPosition();
+            float headAngleDeg = e.getHeadBody().getAngle() * MathUtils.radiansToDegrees;
 
-            Sprite visionCone = visionCones.get(critter);
+            // Get the correct vision cone for the current enemy `e`
+            Sprite visionCone = visionCones.get(e);
+
             visionCone.setPosition(headPos.x * u - visionCone.getOriginX(),
                 headPos.y * u - visionCone.getOriginY());
             visionCone.setRotation(headAngleDeg);
             visionCone.draw(batch);
         }
-
         batch.end();
     }
 
@@ -723,7 +724,7 @@ public class PlatformScene implements ContactListener, Screen{
 
         // Create Player
         texture = directory.getEntry( "platform-playerSprite", Texture.class );
-        avatar = new Player(units, constants.get("traci"));
+        avatar = new Player(units, constants.get("player"));
         avatar.setTexture(texture);
         addSprite(avatar);
         // Have to do after body is created
@@ -780,7 +781,7 @@ public class PlatformScene implements ContactListener, Screen{
             visionCone.setSize(240, 200);
             visionCone.setOrigin(visionCone.getWidth() / 2, 0);
 
-            visionCones.put(critter, visionCone);
+            visionCones.put(maintenance, visionCone);
         }
 
         JsonValue dreamdwllers = constants.get("dream-dweller");
@@ -940,8 +941,10 @@ public class PlatformScene implements ContactListener, Screen{
 
         avatar.applyForce();
         if (avatar.isJumping()) {
+            /* This jump sound is annoying
             SoundEffectManager sounds = SoundEffectManager.getInstance();
             sounds.play("jump", jumpSound, volume);
+             */
         }
     }
 
@@ -1052,6 +1055,8 @@ public class PlatformScene implements ContactListener, Screen{
         Object fd1 = fix1.getUserData();
         Object fd2 = fix2.getUserData();
 
+        Object bodyDataA = fix1.getBody().getUserData();
+        Object bodyDataB = fix2.getBody().getUserData();
 
         try {
             ObstacleSprite bd1 = (ObstacleSprite)body1.getUserData();
@@ -1071,52 +1076,54 @@ public class PlatformScene implements ContactListener, Screen{
                 }
             }
 
-            if (("walk_sensor".equals(fd1) && (bd2 instanceof Surface || bd2 instanceof CuriosityCritter)) ||
-                ("walk_sensor".equals(fd2) && (bd2 instanceof Surface || bd2 instanceof CuriosityCritter))) {
+            // Check if an enemy's walk sensor detects a wall or another enemy
+            if (("walk_sensor".equals(fd1) && (bd2 instanceof Surface || bd2 instanceof Enemy)) ||
+                ("walk_sensor".equals(fd2) && (bd2 instanceof Surface || bd2 instanceof Enemy))) {
                 System.out.println("walk_sensor collision detected with: " + bd1 + " and " + bd2);
 
 
-                // Ensure the critter reference is correctly retrieved
-                CuriosityCritter critter = (bd1 instanceof CuriosityCritter) ? (CuriosityCritter) bd1
-                    : (bd2 instanceof CuriosityCritter) ? (CuriosityCritter) bd2
+                // Ensure the Enemy reference is correctly retrieved
+                Enemy e = (bd1 instanceof Enemy) ? (Enemy) bd1
+                    : (bd2 instanceof Enemy) ? (Enemy) bd2
                     : null;
 
-                if (critter != null) {
-                    critter.setSeesWall(true);
-                    System.out.println("Critter sees wall");
+                if (e != null) {
+                    e.setSeesWall(true);
+                    System.out.println("Enemy sees wall");
                 } else {
-                    System.out.println("WARNING: Walk sensor collision detected but Critter reference is null.");
+                    System.out.println("WARNING: Walk sensor collision detected but Enemy reference is null.");
                 }
             }
 
+            // If there is a collision between a vision sensor and the player
+            if ( ("vision_sensor".equals(fd1) || "vision_sensor".equals(fd2))
+                && (bodyDataA instanceof Player || bodyDataB instanceof Player) ) {
 
-            if ("vision_sensor".equals(fd1) || "vision_sensor".equals(fd2)) {
-                Object bodyDataA = fix1.getBody().getUserData();
-                Object bodyDataB = fix2.getBody().getUserData();
-
-
-                // Identify the critter and the player from the contact.
-                CuriosityCritter critter = null;
-                Player playerObj = null;
-                if (bodyDataA instanceof CuriosityCritter && bodyDataB instanceof Player) {
-                    critter = (CuriosityCritter) bodyDataA;
-                    playerObj = (Player) bodyDataB;
-                } else if (bodyDataA instanceof Player && bodyDataB instanceof CuriosityCritter) {
-                    critter = (CuriosityCritter) bodyDataB;
-                    playerObj = (Player) bodyDataA;
-                }
-
-                if (critter != null) {
-                    // The vision sensor touched the player.
-                    critter.setAwareOfPlayer(true);
-                    System.out.println("Critter saw player");
+                // Check if the vision sensor belongs to an "un-stunned" enemy, and if
+                // so update the enemy's awareness and apply damage to player
+                if (bodyDataA instanceof Enemy && !((Enemy) bodyDataA).isStunned() ) {
+                    ((Enemy) bodyDataA).setAwareOfPlayer(true);
+                    System.out.println(bodyDataA.getClass() + " saw player!");
+                    avatar.setTakingDamage(true);
+                } else if ( bodyDataB instanceof Enemy && !((Enemy) bodyDataB).isStunned() )  {
+                    System.out.println(bodyDataB.getClass() + " saw player!");
+                    ((Enemy) bodyDataB).setAwareOfPlayer(true);
                     avatar.setTakingDamage(true);
                 }
+                // The player should always take damage when they are detected by a vision sensor
+                // not associated with an enemy (e.g. lamp)
+                else{
+                    avatar.setTakingDamage(true);
+
+                }
+
+
+
             }
 
 
             // Test bullet collision with world
-            if (bd1.getName().equals("bullet") && bd2 != avatar && !bd2.getName().equals( "goal" )) {
+            if (bd1.getName().equals("bullet") && bd2 != avatar && !(bd2 instanceof Door)) {
                 // if it hits a curiosity critter
                 if (bd2 instanceof CuriosityCritter){
                     // make sure it hits the body of the critter
@@ -1137,6 +1144,27 @@ public class PlatformScene implements ContactListener, Screen{
                                 "WARNING: Bullet stun collision detected but Critter reference is null.");
                         }
                     }
+                    else if (bd2 instanceof MindMaintenance) {
+                        // make sure it hits the body of the critter
+                        if (fd2 != "walk_sensor" && fd2 != "vision_sensor"
+                            && fd2 != "follow_sensor") {
+                            removeBullet(bd1);
+                            MindMaintenance maintenance =
+                                (bd1 instanceof MindMaintenance) ? (MindMaintenance) bd1
+                                    : (bd2 instanceof MindMaintenance) ? (MindMaintenance) bd2
+                                        : null;
+                            if (maintenance != null) {
+                                maintenance.setStunned(true);
+                                Texture texture = directory.getEntry("mind-maintenance-inactive",
+                                    Texture.class);
+                                maintenance.setTexture(texture);
+                                System.out.println("Maintenance is stunned");
+                            } else {
+                                System.out.println(
+                                    "WARNING: Bullet stun collision detected but Maintenance reference is null.");
+                            }
+                        }
+                    }
                 }
                 //otherwise the bullet hits a non-enemy and should be removed
                 else {
@@ -1145,7 +1173,7 @@ public class PlatformScene implements ContactListener, Screen{
 
             }
 
-            if (bd2.getName().equals("bullet") && bd1 != avatar && !bd1.getName().equals( "goal" )) {
+            if (bd2.getName().equals("bullet") && bd1 != avatar && !(bd1 instanceof Door)) {
                 // if it hits a curiosity critter
                 if (bd1 instanceof CuriosityCritter){
                     // make sure it hits the body of the critter
@@ -1164,6 +1192,27 @@ public class PlatformScene implements ContactListener, Screen{
                         } else {
                             System.out.println(
                                 "WARNING: Bullet stun collision detected but Critter reference is null.");
+                        }
+                    }
+                }
+                else if (bd1 instanceof MindMaintenance) {
+                    // make sure it hits the body of the critter
+                    if (fd1 != "walk_sensor" && fd1 != "vision_sensor"
+                        && fd1 != "follow_sensor") {
+                        removeBullet(bd2);
+                        MindMaintenance maintenance =
+                            (bd2 instanceof MindMaintenance) ? (MindMaintenance) bd2
+                                : (bd1 instanceof MindMaintenance) ? (MindMaintenance) bd1
+                                    : null;
+                        if (maintenance != null) {
+                            maintenance.setStunned(true);
+                            Texture texture = directory.getEntry("mind-maintenance-inactive",
+                                Texture.class);
+                            maintenance.setTexture(texture);
+                            System.out.println("Maintenance is stunned");
+                        } else {
+                            System.out.println(
+                                "WARNING: Bullet stun collision detected but Maintenance reference is null.");
                         }
                     }
                 }
@@ -1245,6 +1294,9 @@ public class PlatformScene implements ContactListener, Screen{
         Object bd1 = body1.getUserData();
         Object bd2 = body2.getUserData();
 
+        Object bodyDataA = fix1.getBody().getUserData();
+        Object bodyDataB = fix2.getBody().getUserData();
+
         if (("walk_sensor".equals(fd1) && bd2 instanceof Surface) ||
             ("walk_sensor".equals(fd2) && bd1 instanceof Surface)) {
 
@@ -1262,9 +1314,19 @@ public class PlatformScene implements ContactListener, Screen{
         }
 
 
-        if ("follow_sensor".equals(fd1) || "follow_sensor".equals(fd2)) {
-            Object bodyDataA = fix1.getBody().getUserData();
-            Object bodyDataB = fix2.getBody().getUserData();
+        if (("follow_sensor".equals(fd1) || "follow_sensor".equals(fd2)) && (bodyDataA instanceof Player || bodyDataB instanceof Player)) {
+
+
+            if (bodyDataA instanceof Enemy) {
+                ((Enemy) bodyDataA).setAwareOfPlayer(false);
+            } else if (bodyDataA instanceof Player && bodyDataB instanceof CuriosityCritter) {
+                ((Enemy) bodyDataB).setAwareOfPlayer(false);
+            }
+            avatar.setTakingDamage(false);
+            System.out.println("Enemy stopped seeing player");
+        }
+        /*
+        if (("follow_sensor".equals(fd1) || "follow_sensor".equals(fd2))) {
 
             CuriosityCritter critter = null;
             Player playerObj = null;
@@ -1281,7 +1343,7 @@ public class PlatformScene implements ContactListener, Screen{
                  avatar.setTakingDamage(false);
                  System.out.println("Critter stopped seeing player");
             }
-        }
+        }*/
 
         if((avatar.getScareSensorName().equals(fd1) && (bd2 instanceof CuriosityCritter)) ||
             (avatar.getScareSensorName().equals(fd2) && (bd1 instanceof CuriosityCritter)))

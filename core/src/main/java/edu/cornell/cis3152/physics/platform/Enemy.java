@@ -17,7 +17,38 @@ import edu.cornell.gdiac.physics2.*;
 import javax.swing.*;
 
 public class Enemy extends ObstacleSprite {
-   public Enemy(){
+    private boolean awareOfPlayer;
+    private boolean stunned;
+    private boolean seesWall;
+    protected Body headBody;
 
-   }
+    public Enemy(){
+        this.awareOfPlayer = false;
+        this.stunned = false;
+        this.seesWall = false;
+    }
+    public boolean isAwareOfPlayer(){
+        return awareOfPlayer;
+    }
+    public void setAwareOfPlayer(boolean awareness){
+        this.awareOfPlayer = awareness;
+    }
+    public void setStunned(boolean value) {
+        stunned = value;
+    }
+    public boolean isStunned() {
+        return stunned;
+    }
+    public boolean isSeesWall() {
+        return seesWall;
+    }
+    public void setSeesWall(boolean b) {
+        seesWall = b;
+    }
+
+
+
+    public Body getHeadBody() {
+        return headBody;
+    }
 }

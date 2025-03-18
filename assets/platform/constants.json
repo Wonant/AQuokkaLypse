@@ -24,14 +24,17 @@
   },
   "player" : {
     "pos"       : [2.5, 5.0],
-    "inner"     : [0.7, 0.95],
-    "size"      : 3,
+    "inner"     : [0.7, 1.45],
+    "size"      : 1.5,
     "force"     : 20.0,
     "damping"   : 10.0,
     "density"   : 0.5,
-    "friction"  : 1.0,
-    "maxspeed"  : 3.0,
-    "jump_force": 6.0,
+    "friction"  : 0.0,
+    "maxspeed"  : 5.0,
+    "maxfear"   : 10.0,
+    "jump_force": 8.0,
+    "jump_cool" : 30,
+    "shot_cool" : 40,
     "sensor": {
       "shrink" : 0.6,
       "height" : 0.05
@@ -41,25 +44,15 @@
       "sensor" : "#ff0000ff",
       "scare_sensor" : "#fff00fff",
       "tolerance" : 0.05
-    }
-  },
-  "traci" : {
-    "pos"       : [2.5, 5.0],
-    "inner"     : [0.7, 0.95],
-    "size"      : 1.5,
-    "force"     : 20.0,
-    "damping"   : 10.0,
-    "density"   : 0.5,
-    "friction"  : 0.0,
-    "maxspeed"  : 5.0,
-    "maxfear"   : 10.0,
-    "jump_force": 5.5,
-    "jump_cool" : 30,
-    "shot_cool" : 40,
-    "sensor": {
-      "shrink" : 0.6,
-      "height" : 0.05
+
     },
+    "debug" : {
+      "avatar" : "#ffff00ff",
+      "sensor" : "#ff0000ff",
+      "scare_sensor" : "#fff00fff",
+      "tolerance" : 0.05
+    }
+  ,
     "debug" : {
       "avatar" : "#ffff00ff",
       "sensor" : "#ff0000ff",
@@ -76,7 +69,7 @@
     "density"   : 0.5,
     "friction"  : 0.0,
     "maxspeed"  : 3.0,
-    "jump_force": 3.0,
+    "jump_force": 10.0,
     "sensor": {
       "shrink" : 0.6,
       "height" : 0.05
@@ -95,7 +88,7 @@
     "damping"   : 5.0,
     "density"   : 0.5,
     "friction"  : 0.0,
-    "maxspeed"  : 3.0,
+    "maxspeed"  : 10.0,
     "jump_force": 3.0,
     "sensor": {
       "shrink" : 0.6,
@@ -142,7 +135,7 @@
     "high density": 10.0
   },
   "bullet": {
-    "offset" : 0.5,
+    "offset" : 0.75,
     "size"   : 0.25,
     "speed"  : 20.0,
     "density": 10.0

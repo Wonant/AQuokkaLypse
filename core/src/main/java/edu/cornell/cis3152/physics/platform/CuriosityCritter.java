@@ -38,7 +38,6 @@ public class CuriosityCritter extends Enemy {
     private int shootCooldown;
     private boolean isGrounded;
     private boolean isShooting;
-    private boolean stunned;
 
     // Sensor for ground detection
     private Path2 sensorOutline;
@@ -49,7 +48,6 @@ public class CuriosityCritter extends Enemy {
     private final Vector2 forceCache = new Vector2();
     private final Affine2 flipCache = new Affine2();
 
-    private Body headBody;
     private RevoluteJoint headJoint;
     private Fixture visionSensor;
     private Fixture followSensor;
@@ -64,8 +62,6 @@ public class CuriosityCritter extends Enemy {
     private boolean active;
     // where the critter is looking, 0 is relative down of the critter's central location, iterates clockwise
     private float visionAngle;
-    // True when player has caught this critter's attention
-    private boolean awareOfPlayer;
 
     // should be seconds in how long it takes for the critter to reset from aware of player to idle
     private float awarenessCooldown;
@@ -73,10 +69,6 @@ public class CuriosityCritter extends Enemy {
     private Path2 visionSensorOutline;
     private Path2 visionFollowOutline;
     private Path2 walkSensorOutline;
-
-    // pathing
-    private boolean seesWall;
-
 
     public float getMovement() {
         return movement;
@@ -107,12 +99,7 @@ public class CuriosityCritter extends Enemy {
     public void setShooting(boolean value) {
         isShooting = value;
     }
-    public void setStunned(boolean value) {
-        stunned = value;
-    }
-    public boolean isStunned() {
-        return stunned;
-    }
+
     public boolean isJumping() {
         return isJumping && isGrounded && jumpCooldown <= 0;
     }
@@ -141,13 +128,6 @@ public class CuriosityCritter extends Enemy {
         return max_speed;
     }
 
-    public boolean isSeesWall() {
-        return seesWall;
-    }
-
-    public void setSeesWall(boolean b) {
-        seesWall = b;
-    }
 
     public String getSensorName() {
         return sensorName;
@@ -157,13 +137,6 @@ public class CuriosityCritter extends Enemy {
         return facingRight;
     }
 
-    public void setAwareOfPlayer(boolean awareOfPlayer) {
-        this.awareOfPlayer = awareOfPlayer;
-    }
-
-    public boolean isAwareOfPlayer() {
-        return awareOfPlayer;
-    }
 
     public CuriosityCritter(float units, JsonValue data, float[] points) {
         this.data = data;
