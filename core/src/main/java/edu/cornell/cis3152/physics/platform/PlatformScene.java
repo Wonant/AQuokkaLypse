@@ -148,6 +148,7 @@ public class PlatformScene implements ContactListener, Screen{
     private Sprite visionCone;
 
     private HashMap<Enemy, Sprite> visionCones;
+
     private AIControllerManager aiManager;
     /** Reference to the goalDoor (for collision detection) */
     private Door goalDoor;
@@ -171,7 +172,8 @@ public class PlatformScene implements ContactListener, Screen{
 
 
     private CuriosityCritter queuedHarvestedEnemy = null;
-
+    private DreamDweller queuedHarvestedEnemyD = null;
+    private HashMap<DreamDweller, Sprite> visionCones3;
 
 
 
@@ -474,6 +476,26 @@ public class PlatformScene implements ContactListener, Screen{
             visionCone.setRotation(headAngleDeg);
             visionCone.draw(batch);
         }
+
+        for (DreamDweller dweller : visionCones3.keySet()) {
+            Vector2 headPos = dweller.getHeadBody().getPosition();
+            float headAngleDeg = dweller.getHeadBody().getAngle() * MathUtils.radiansToDegrees;
+            float d = dweller.getObstacle().getPhysicsUnits();
+
+            Sprite visionCone = visionCones3.get(dweller);
+            visionCone.setPosition(headPos.x * d - visionCone.getOriginX(),
+                headPos.y * d - visionCone.getOriginY());
+            visionCone.setRotation(headAngleDeg);
+
+            if (dweller.isAwareOfPlayer()) {
+                visionCone.setColor(Color.RED);
+            } else {
+                visionCone.setColor(new Color(0.8f, 0.2f, 0.8f, 0.5f));
+            }
+
+            visionCone.draw(batch);
+        }
+
         batch.end();
     }
 
@@ -784,22 +806,29 @@ public class PlatformScene implements ContactListener, Screen{
             visionCones.put(maintenance, visionCone);
         }
 
-        JsonValue dreamdwllers = constants.get("dream-dweller");
-        JsonValue dwellersPos = dreamdwllers.get("pos");
-
+        JsonValue dreamdwellers = constants.get("dream-dweller");
+        JsonValue dwellersPos = dreamdwellers.get("pos");
+        visionCones3 = new HashMap<>();
         for (int i = 0; i < dwellersPos.size; i++) {
             texture = directory.getEntry("dream-dweller-active", Texture.class);
-            dreamDweller = new DreamDweller(units, dreamdwllers, dwellersPos.get(i).asFloatArray());
+            dreamDweller = new DreamDweller(units, constants.get("dream-dweller"), dwellersPos.get(i).asFloatArray());
             dreamDweller.setTexture(texture);
             addSprite(dreamDweller);
+            // Have to do after body is created
             dreamDweller.createSensor();
+            dreamDweller.createVisionSensor();
+
             aiManager.register(dreamDweller);
+            texture = directory.getEntry("vision_cone", Texture.class);
+            visionConeRegion = new TextureRegion(texture);
+            visionCone = new Sprite(visionConeRegion.getTexture());
+            visionCone.setRegion(visionConeRegion);
+            visionCone.setSize(240, 200);
+            visionCone.setOrigin(visionCone.getWidth() / 2, 0);
+            visionCone.setColor(new Color(0.8f, 0.2f, 0.8f, 0.5f));
+
+            visionCones.put(dreamDweller, visionCone);
         }
-
-
-
-
-
 
 
 
@@ -904,6 +933,12 @@ public class PlatformScene implements ContactListener, Screen{
                     queuedHarvestedEnemy = null;
                     avatar.setFearMeter(avatar.getFearMeter() + 3);
                 }
+            } else if (queuedHarvestedEnemyD != null) {
+                if (!queuedHarvestedEnemyD.getObstacle().isRemoved()) {
+                    queuedHarvestedEnemyD.getObstacle().markRemoved(true);
+                    queuedHarvestedEnemyD = null;
+                    avatar.setFearMeter(avatar.getFearMeter() + 5);
+                }
             }
         }
 
@@ -998,6 +1033,11 @@ public class PlatformScene implements ContactListener, Screen{
     private void performHarvest(CuriosityCritter enemy)
     {
         queuedHarvestedEnemy = enemy;
+    }
+
+    private void performHarvestD(DreamDweller enemy)
+    {
+        queuedHarvestedEnemyD = enemy;
     }
 
 
@@ -1109,10 +1149,34 @@ public class PlatformScene implements ContactListener, Screen{
                     System.out.println(bodyDataB.getClass() + " saw player!");
                     ((Enemy) bodyDataB).setAwareOfPlayer(true);
                     avatar.setTakingDamage(true);
+
                 }
                 // The player should always take damage when they are detected by a vision sensor
                 // not associated with an enemy (e.g. lamp)
                 else{
+                    avatar.setTakingDamage(true);
+
+                }
+
+            }
+            if ("dweller_vision_sensor".equals(fd1) || "dweller_vision_sensor".equals(fd2)) {
+                 bodyDataA = fix1.getBody().getUserData();
+                 bodyDataB = fix2.getBody().getUserData();
+
+                DreamDweller dweller = null;
+                Player playerObj = null;
+
+                if (bodyDataA instanceof DreamDweller && bodyDataB instanceof Player) {
+                    dweller = (DreamDweller) bodyDataA;
+                    playerObj = (Player) bodyDataB;
+                } else if (bodyDataA instanceof Player && bodyDataB instanceof DreamDweller) {
+                    dweller = (DreamDweller) bodyDataB;
+                    playerObj = (Player) bodyDataA;
+                }
+
+                if (dweller != null) {
+                    dweller.setAwareOfPlayer(true);
+                    System.out.println("Dream Dweller saw player");
                     avatar.setTakingDamage(true);
 
                 }
@@ -1132,7 +1196,7 @@ public class PlatformScene implements ContactListener, Screen{
                         CuriosityCritter critter =
                             (bd1 instanceof CuriosityCritter) ? (CuriosityCritter) bd1
                                 : (bd2 instanceof CuriosityCritter) ? (CuriosityCritter) bd2
-                                    : null;
+                                : null;
                         System.out.println("Obstacle type: " + critter.getObstacle().getName());
                         if (critter != null) {
                             critter.setStunned(true);
@@ -1152,7 +1216,8 @@ public class PlatformScene implements ContactListener, Screen{
                             MindMaintenance maintenance =
                                 (bd1 instanceof MindMaintenance) ? (MindMaintenance) bd1
                                     : (bd2 instanceof MindMaintenance) ? (MindMaintenance) bd2
-                                        : null;
+                                    : null;
+
                             if (maintenance != null) {
                                 maintenance.setStunned(true);
                                 Texture texture = directory.getEntry("mind-maintenance-inactive",
@@ -1165,6 +1230,28 @@ public class PlatformScene implements ContactListener, Screen{
                             }
                         }
                     }
+                }
+                else if (bd2 instanceof DreamDweller) {
+                    // make sure it hits the body of the critter
+                    if (fd2 != "walk_sensor" && fd2 != "vision_sensor"
+                        && fd2 != "follow_sensor") {
+                        removeBullet(bd1);
+                        DreamDweller dweller =
+                            (bd1 instanceof DreamDweller) ? (DreamDweller) bd1
+                                : (bd2 instanceof DreamDweller) ? (DreamDweller) bd2
+                                : null;
+                        if (dreamDweller != null) {
+                            dreamDweller.setStunned(true);
+                            Texture texture = directory.getEntry("dream-dweller-inactive",
+                                Texture.class);
+                            maintenance.setTexture(texture);
+                            System.out.println("Dreamdweller is stunned");
+                        } else {
+                            System.out.println(
+                                "WARNING: Bullet stun collision detected but Dweller reference is null.");
+                        }
+                    }
+
                 }
                 //otherwise the bullet hits a non-enemy and should be removed
                 else {
@@ -1182,7 +1269,7 @@ public class PlatformScene implements ContactListener, Screen{
                         CuriosityCritter critter =
                             (bd2 instanceof CuriosityCritter) ? (CuriosityCritter) bd2
                                 : (bd1 instanceof CuriosityCritter) ? (CuriosityCritter) bd1
-                                    : null;
+                                : null;
                         System.out.println("Obstacle type: " + critter.getObstacle().getName());
                         if (critter != null) {
                             critter.setStunned(true);
@@ -1203,7 +1290,7 @@ public class PlatformScene implements ContactListener, Screen{
                         MindMaintenance maintenance =
                             (bd2 instanceof MindMaintenance) ? (MindMaintenance) bd2
                                 : (bd1 instanceof MindMaintenance) ? (MindMaintenance) bd1
-                                    : null;
+                                : null;
                         if (maintenance != null) {
                             maintenance.setStunned(true);
                             Texture texture = directory.getEntry("mind-maintenance-inactive",
@@ -1216,6 +1303,27 @@ public class PlatformScene implements ContactListener, Screen{
                         }
                     }
                 }
+                    else if (bd1 instanceof DreamDweller) {
+                        // make sure it hits the body of the critter
+                        if (fd1 != "walk_sensor" && fd1 != "vision_sensor"
+                            && fd1 != "follow_sensor") {
+                            removeBullet(bd2);
+                            DreamDweller dweller =
+                                (bd2 instanceof DreamDweller) ? (DreamDweller) bd2
+                                    : (bd1 instanceof DreamDweller) ? (DreamDweller) bd1
+                                    : null;
+                            if (dreamDweller != null) {
+                                dreamDweller.setStunned(true);
+                                Texture texture = directory.getEntry("dream-dweller-inactive",
+                                    Texture.class);
+                                dreamDweller.setTexture(texture);
+                                System.out.println("Dweller is stunned");
+                            } else {
+                                System.out.println(
+                                    "WARNING: Bullet stun collision detected but Dweller reference is null.");
+                            }
+                        }
+                    }
                 //otherwise the bullet hits a non-enemy and should be removed
                 else {
                     removeBullet(bd2);
@@ -1243,6 +1351,23 @@ public class PlatformScene implements ContactListener, Screen{
                 {
                     harvestedCC = (CuriosityCritter) bd1;
                     performHarvest(harvestedCC);
+                }
+                avatar.setHarvesting(true);
+
+            }
+
+            if((avatar.getScareSensorName().equals(fd1) && (bd2 instanceof DreamDweller)) ||
+                (avatar.getScareSensorName().equals(fd2) && (bd1 instanceof DreamDweller)))
+            {
+               DreamDweller harvested;
+                if (avatar.getScareSensorName().equals(fd1))
+                {
+                    harvested = (DreamDweller) bd2;
+                    performHarvestD(harvested);
+                } else if (avatar.getScareSensorName().equals(fd2))
+                {
+                    harvested = (DreamDweller) bd1;
+                    performHarvestD(harvested);
                 }
                 avatar.setHarvesting(true);
 
@@ -1322,6 +1447,10 @@ public class PlatformScene implements ContactListener, Screen{
             } else if (bodyDataA instanceof Player && bodyDataB instanceof CuriosityCritter) {
                 ((Enemy) bodyDataB).setAwareOfPlayer(false);
             }
+            else if (bodyDataA instanceof Player && bodyDataB instanceof DreamDweller) {
+                ((Enemy) bodyDataB).setAwareOfPlayer(false);
+            }
+
             avatar.setTakingDamage(false);
             System.out.println("Enemy stopped seeing player");
         }
@@ -1349,6 +1478,36 @@ public class PlatformScene implements ContactListener, Screen{
             (avatar.getScareSensorName().equals(fd2) && (bd1 instanceof CuriosityCritter)))
         {
             queuedHarvestedEnemy = null;
+            avatar.setHarvesting(false);
+
+        }
+
+        if ("dweller_vision_sensor".equals(fd1) || "dweller_vision_sensor".equals(fd2)) {
+             bodyDataA = fix1.getBody().getUserData();
+             bodyDataB = fix2.getBody().getUserData();
+
+            DreamDweller dweller = null;
+            Player playerObj = null;
+
+            if (bodyDataA instanceof DreamDweller && bodyDataB instanceof Player) {
+                dweller = (DreamDweller) bodyDataA;
+                playerObj = (Player) bodyDataB;
+            } else if (bodyDataA instanceof Player && bodyDataB instanceof DreamDweller) {
+                dweller = (DreamDweller) bodyDataB;
+                playerObj = (Player) bodyDataA;
+            }
+
+            if (dweller != null) {
+
+                avatar.setTakingDamage(false);
+                System.out.println("Dream Dweller lost sight of player");
+            }
+        }
+
+        if((avatar.getScareSensorName().equals(fd1) && (bd2 instanceof DreamDweller)) ||
+            (avatar.getScareSensorName().equals(fd2) && (bd1 instanceof DreamDweller)))
+        {
+            queuedHarvestedEnemyD = null;
             avatar.setHarvesting(false);
 
         }
@@ -1382,3 +1541,4 @@ public class PlatformScene implements ContactListener, Screen{
         sounds.stop("jump");
     }
 }
+

@@ -83,14 +83,10 @@ public class AIControllerManager {
         START,
         /**dream dweller is idly looking around, but not moving*/
         IDLE_LOOK,
-        /**dream dweller is moving to a short location nearby idly, distance randomly from set interval*/
-        IDLE_WALK,
-        /**dream dweller is now alerted to player's presence and will flee*/
-        FLEEING,
-        /**dream dweller is under the light source and will alert mind maintenance*/
-        SAFE,        // Reached the light, calling for help
-        /** dream dweller is stunned, cannot move or see (do damage to player) */
-        STUNNED      // Temporarily immobilized by player's stun
+        /**dream dweller is now alerted to player's presence,will alert nearby enemies*/
+        ALERT,
+        /** dream dweller is stunned, cannot move or do damage to player */
+        STUNNED     // Temporarily immobilized by player's stun
     }
 
 
@@ -115,9 +111,6 @@ public class AIControllerManager {
         }
     }
 
-
-
-    // internal data for each critter state
     private class CritterAI extends EnemyAI{
         CuriosityCritter critter;
         CritterFSM state;
@@ -584,14 +577,138 @@ public class AIControllerManager {
         }
     }
 
+
     private Vector2 getDwellerPosition(DreamDweller dweller) {
         return new Vector2(dweller.getObstacle().getX(), dweller.getObstacle().getY());
     }
 
     private void updateDweller(DwellerAI data, float dt) {
+        data.stateTimer += dt;
+
+        Vector2 dwellerPos = getDwellerPosition(data.dweller);
+        boolean seesPlayer = data.dweller.isAwareOfPlayer();
+        boolean isStunned = data.dweller.isStunned();
+
+        data.dweller.setMovement(0);
+        data.dweller.getObstacle().setVX(0);
+        data.dweller.getObstacle().setVY(0);
+
+        if (isStunned) {
+            if (data.state != DwellerFSM.STUNNED) {
+                transitionDwellerState(data, DwellerFSM.STUNNED);
+            }
+            data.dweller.getObstacle().setVX(0);
+
+            if (data.stateTimer > data.stateDuration) {
+                System.out.println("Dream Dweller recovers from stun.");
+
+                Texture texture = asset_directory.getEntry("dream-dweller-active", Texture.class);
+                data.dweller.setTexture(texture);
+                data.dweller.setStunned(false);
+                transitionDwellerState(data, DwellerFSM.IDLE_LOOK);
+            }
+            return;
+        }
+
+        if (seesPlayer) {
+            if (data.state == DwellerFSM.IDLE_LOOK) {
+                transitionDwellerState(data, DwellerFSM.ALERT);
+            }
+
+            if (player != null) {
+                Vector2 playerPos = getPlayerPosition(player);
+                float dx = playerPos.x - dwellerPos.x;
+                float dy = playerPos.y - dwellerPos.y;
+
+                float angleToPlayer = MathUtils.atan2(dy, dx) * MathUtils.radiansToDegrees;
+
+                angleToPlayer -= 90;
+
+                data.dweller.setVisionAngle(angleToPlayer);
+
+                System.out.println("Dream Dweller tracking player at angle: " + angleToPlayer);
+            }
+        } else {
+            if (data.state == DwellerFSM.IDLE_LOOK) {
+                if (data.stateTimer > data.stateDuration) {
+                    transitionDwellerState(data, DwellerFSM.IDLE_LOOK);
+                } else {
+                    float time = data.stateTimer;
+                    float swingRange = 60.0f;
+                    float swingSpeed = 1.0f;
+                    float newAngle = swingRange * MathUtils.sin(time * swingSpeed);
+
+                    data.dweller.setVisionAngle(newAngle);
+                }
+            }
+        }
+
+        if (data.state == DwellerFSM.ALERT) {
+            alertNearbyEnemies(data.dweller);
+            transitionDwellerState(data, DwellerFSM.IDLE_LOOK);
+        }
+
+        data.dweller.applyForce();
 
     }
-    private void transitionDwellerState (DwellerAI data, DwellerFSM newState){
+    private void transitionDwellerState (DwellerAI data, DwellerFSM newState) {
+        data.state = newState;
+        data.stateTimer = 0;
+        data.state = newState;
+        data.stateTimer = 0;
 
+        switch (newState) {
+            case IDLE_LOOK:
+                break;
+
+            case ALERT:
+                data.stateDuration = 5.0f;
+                break;
+
+            case STUNNED:
+                data.stateDuration = 4.0f; // Harder to stun than other enemies
+                break;
+        }
+    }
+    private void alertNearbyEnemies(DreamDweller dweller) {
+        Vector2 dwellerPos = getDwellerPosition(dweller);
+        float alertRadius = dweller.getAlertRadius(); // 从 DreamDweller 获取警报半径
+
+        System.out.println("Dream Dweller alerting nearby enemies within radius: " + alertRadius);
+
+        for (EnemyAI enemyAI : entities) {
+            if (enemyAI.enemy == dweller) {
+                continue;
+            }
+
+            Vector2 enemyPos = new Vector2(
+                enemyAI.enemy.getObstacle().getX(),
+                enemyAI.enemy.getObstacle().getY()
+            );
+
+            float distance = dwellerPos.dst(enemyPos);
+
+            if (distance <= alertRadius) {
+                if (enemyAI instanceof CritterAI) {
+                    CritterAI critterAI = (CritterAI) enemyAI;
+
+
+                    if (critterAI.state != CritterFSM.STUNNED) {
+                        critterAI.critter.setAwareOfPlayer(true);
+                        transitionCritterState(critterAI, CritterFSM.ALERTED);
+                        System.out.println("Alerted a CuriosityCritter at distance: " + distance);
+                    }
+                } else if (enemyAI instanceof MaintenanceAI) {
+                    MaintenanceAI maintenanceAI = (MaintenanceAI) enemyAI;
+
+                    if (maintenanceAI.state != MaintenanceFSM.STUNNED) {
+                        maintenanceAI.maintenance.setAwareOfPlayer(true);
+                        transitionMaintenanceState(maintenanceAI, MaintenanceFSM.CHASING);
+                        System.out.println("Alerted a MindMaintenance at distance: " + distance);
+                    }
+                }
+
+            }
+        }
     }
 }
