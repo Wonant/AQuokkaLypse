@@ -77,6 +77,8 @@ public class CuriosityCritter extends Enemy {
     // pathing
     private boolean seesWall;
 
+    private RaycastVision raycastVision;
+
 
     public float getMovement() {
         return movement;
@@ -271,14 +273,34 @@ public class CuriosityCritter extends Enemy {
 
     public void attachHead() {
         RevoluteJointDef jointDef = new RevoluteJointDef();
-        jointDef.initialize(obstacle.getBody(), headBody, obstacle.getBody().getWorldCenter().add(0, height / 2));
+
+        // Position the head above the critter's body
+        Vector2 headPosition = new Vector2(
+            obstacle.getBody().getWorldCenter().x,
+            obstacle.getBody().getWorldCenter().y + height / 2
+        );
+
+        // Use this position for the joint
+        jointDef.initialize(obstacle.getBody(), headBody, headPosition);
         jointDef.enableMotor = true;
         jointDef.motorSpeed = 0;
         jointDef.maxMotorTorque = 100;
         headJoint = (RevoluteJoint) obstacle.getBody().getWorld().createJoint(jointDef);
     }
 
-    public void createVisionSensor() {
+    // Add this method to keep the head aligned with the body's direction
+    private void updateHeadPosition() {
+        if (headBody != null) {
+            // Position the head above the body
+            Vector2 bodyPos = obstacle.getPosition();
+            Vector2 headPos = new Vector2(bodyPos.x, bodyPos.y + height / 2);
+
+            // Preserve the current angle when updating position
+            headBody.setTransform(headPos, headBody.getAngle());
+        }
+    }
+
+    /*public void createVisionSensor() {
         createHeadBody();
         attachHead();
         float coneWidth = 3.0f;
@@ -351,7 +373,7 @@ public class CuriosityCritter extends Enemy {
             0, 0);
 
         visionShape.dispose();
-    }
+    }*/
 
     /**
      * Applies forces to the physics body based on the current input.
@@ -388,6 +410,53 @@ public class CuriosityCritter extends Enemy {
         }
     }
 
+    public void createVisionSensor() {
+        createHeadBody();
+        attachHead();
+
+        // Create the raycast vision system
+        raycastVision = new RaycastVision(headBody, obstacle.getBody().getWorld(),
+            obstacle.getPhysicsUnits(), null); // Player will be set later
+
+        // We still need limited fixtures for collision detection with player
+        // These will be used for additional behaviors like follow
+        float coneWidth = 1.8f;
+        float coneLength = 4.4f;
+
+        // Create the walk sensor for wall detection
+        Vector2[] vertices = new Vector2[3];
+        vertices[0] = new Vector2(-coneWidth/4, coneLength/2);
+        vertices[1] = new Vector2(coneWidth/4, coneLength/2);
+        vertices[2] = new Vector2(0, 0);
+
+        PolygonShape walkShape = new PolygonShape();
+        walkShape.set(vertices);
+
+        FixtureDef walkDef = new FixtureDef();
+        walkDef.shape = walkShape;
+        walkDef.isSensor = true;
+
+        walkSensor = headBody.createFixture(walkDef);
+        walkSensor.setUserData("walk_sensor");
+
+        float u = obstacle.getPhysicsUnits();
+        PathFactory factory = new PathFactory();
+        walkSensorOutline = factory.makeTriangle(
+            -coneWidth/4 * u, coneLength/2 * u,
+            coneWidth/4 * u, coneLength/2 * u,
+            0, 0);
+
+        walkShape.dispose();
+    }
+
+    // Add a method to set the player reference in the vision system
+    public void setPlayerReference(Player player) {
+        if (raycastVision != null) {
+            raycastVision = new RaycastVision(headBody, obstacle.getBody().getWorld(),
+                obstacle.getPhysicsUnits(), player);
+        }
+    }
+
 
     @Override
     public void update(float dt) {
@@ -395,6 +464,14 @@ public class CuriosityCritter extends Enemy {
             jumpCooldown = jumpLimit;
         } else {
             jumpCooldown = Math.max(0, jumpCooldown - 1);
+        }
+
+        updateHeadPosition();
+
+        // Update the raycast vision and check for player detection
+        if (raycastVision != null) {
+            boolean playerDetected = raycastVision.update();
+            setAwareOfPlayer(playerDetected);
         }
 
         super.update(dt);
@@ -454,7 +531,7 @@ public class CuriosityCritter extends Enemy {
 
             batch.outline(sensorOutline, transform);
         }
-        if (visionSensorOutline != null) {
+        /*if (visionSensorOutline != null) {
             batch.setTexture(Texture2D.getBlank());
             batch.setColor(Color.GREEN);
 
@@ -481,6 +558,10 @@ public class CuriosityCritter extends Enemy {
             transform.preTranslate(headPos.x * u, headPos.y * u);
 
             batch.outline(visionFollowOutline, transform);
+        }*/
+        if (raycastVision != null) {
+            Color visionColor = isAwareOfPlayer() ? Color.RED : Color.GREEN;
+            raycastVision.draw(batch, visionColor);
         }
         if (walkSensorOutline != null) {
             batch.setTexture(Texture2D.getBlank());

@@ -463,7 +463,7 @@ public class PlatformScene implements ContactListener, Screen{
         //batch.setColor(foregroundColor);
         //batch.draw(foregroundTexture, 0, 0, width, height);
 
-        float u = critter.getObstacle().getPhysicsUnits();
+        /*float u = critter.getObstacle().getPhysicsUnits();
 
         for (CuriosityCritter critter : visionCones.keySet()) {
             Vector2 headPos = critter.getHeadBody().getPosition();
@@ -474,7 +474,7 @@ public class PlatformScene implements ContactListener, Screen{
                 headPos.y * u - visionCone.getOriginY());
             visionCone.setRotation(headAngleDeg);
             visionCone.draw(batch);
-        }
+        }*/
 
         batch.end();
     }
@@ -750,8 +750,27 @@ public class PlatformScene implements ContactListener, Screen{
         aiManager.setPlayer(avatar);
 
 
-
         JsonValue critters = constants.get("curiosity-critter");
+        JsonValue critterspos = critters.get("pos");
+        visionCones = new HashMap<>(); // Keep this for now for compatibility
+
+        for (int i = 0; i < critterspos.size; i++) {
+            texture = directory.getEntry("curiosity-critter-active", Texture.class);
+            critter = new CuriosityCritter(units, constants.get("curiosity-critter"), critterspos.get(i).asFloatArray());
+            critter.setTexture(texture);
+            addSprite(critter);
+
+            // Have to do after body is created
+            critter.createSensor();
+            critter.createVisionSensor(); // This now creates the raycast vision system
+
+            // Set the player reference for the raycast vision system
+            critter.setPlayerReference(avatar);
+
+            // Register with AI manager
+            aiManager.register(critter);
+        }
+        /*JsonValue critters = constants.get("curiosity-critter");
         JsonValue critterspos = critters.get("pos");
         visionCones = new HashMap<>();
 
@@ -773,7 +792,7 @@ public class PlatformScene implements ContactListener, Screen{
             visionCone.setOrigin(visionCone.getWidth() / 2, 0);
 
             visionCones.put(critter, visionCone);
-        }
+        }*/
 
         JsonValue maintainers = constants.get("mind-maintenance");
         JsonValue maintenancePos = maintainers.get("pos");
@@ -922,6 +941,32 @@ public class PlatformScene implements ContactListener, Screen{
         if (input.didTakeTeleport() && currentTeleporter != null && avatar.getFearMeter() > TAKE_TELEPORTER_COST) {
             takeTeleporter(currentTeleporter);
             currentTeleporter = null;
+        }
+
+        for (ObstacleSprite sprite : sprites) {
+            if (sprite instanceof CuriosityCritter) {
+                CuriosityCritter critter = (CuriosityCritter) sprite;
+                if (critter.isAwareOfPlayer() && !critter.isStunned()) {
+                    avatar.setTakingDamage(true);
+                    break; // One is enough
+                }
+            }
+        }
+        // If no critters are aware of the player, stop taking damage
+        if (avatar.isTakingDamage()) {
+            boolean anyAware = false;
+            for (ObstacleSprite sprite : sprites) {
+                if (sprite instanceof CuriosityCritter) {
+                    CuriosityCritter critter = (CuriosityCritter) sprite;
+                    if (critter.isAwareOfPlayer() && !critter.isStunned()) {
+                        anyAware = true;
+                        break;
+                    }
+                }
+            }
+            if (!anyAware) {
+                avatar.setTakingDamage(false);
+            }
         }
 
 
@@ -1134,7 +1179,7 @@ public class PlatformScene implements ContactListener, Screen{
             }
 
 
-            if ("vision_sensor".equals(fd1) || "vision_sensor".equals(fd2)) {
+            /*if ("vision_sensor".equals(fd1) || "vision_sensor".equals(fd2)) {
                 Object bodyDataA = fix1.getBody().getUserData();
                 Object bodyDataB = fix2.getBody().getUserData();
 
@@ -1156,7 +1201,7 @@ public class PlatformScene implements ContactListener, Screen{
                     System.out.println("Critter saw player");
                     avatar.setTakingDamage(true);
                 }
-            }
+            }*/
 
 
             // Test bullet collision with world
@@ -1316,7 +1361,7 @@ public class PlatformScene implements ContactListener, Screen{
         }
 
 
-        if ("follow_sensor".equals(fd1) || "follow_sensor".equals(fd2)) {
+        /*if ("follow_sensor".equals(fd1) || "follow_sensor".equals(fd2)) {
             Object bodyDataA = fix1.getBody().getUserData();
             Object bodyDataB = fix2.getBody().getUserData();
 
@@ -1335,7 +1380,7 @@ public class PlatformScene implements ContactListener, Screen{
                  avatar.setTakingDamage(false);
                  System.out.println("Critter stopped seeing player");
             }
-        }
+        }*/
 
         if((avatar.getScareSensorName().equals(fd1) && (bd2 instanceof CuriosityCritter)) ||
             (avatar.getScareSensorName().equals(fd2) && (bd1 instanceof CuriosityCritter)))
