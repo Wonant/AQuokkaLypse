@@ -1,42 +1,54 @@
 package edu.cornell.cis3152.physics.platform;
+
+import com.badlogic.gdx.graphics.Color;
+import com.badlogic.gdx.graphics.Texture;
+import com.badlogic.gdx.graphics.g2d.Sprite;
 import com.badlogic.gdx.math.*;
-import com.badlogic.gdx.graphics.*;
 import com.badlogic.gdx.physics.box2d.*;
 import com.badlogic.gdx.physics.box2d.joints.RevoluteJoint;
 import com.badlogic.gdx.physics.box2d.joints.RevoluteJointDef;
 import com.badlogic.gdx.utils.JsonValue;
+import edu.cornell.gdiac.assets.AssetDirectory;
 import edu.cornell.gdiac.assets.ParserUtils;
 import edu.cornell.gdiac.graphics.SpriteBatch;
 import edu.cornell.gdiac.graphics.Texture2D;
 import edu.cornell.gdiac.math.Path2;
 import edu.cornell.gdiac.math.PathFactory;
-import edu.cornell.gdiac.physics2.*;
+import edu.cornell.gdiac.physics2.CapsuleObstacle;
+import edu.cornell.gdiac.physics2.Obstacle;
 
-
+import java.util.HashMap;
 
 public class DreamDweller extends Enemy {
-    /** Json constants for parameters */
     private final JsonValue data;
 
-    /** physics stuff */
+    /**
+     * physics stuff
+     */
     private float width;
     private float height;
 
     private float force;
     private float damping;
     private float max_speed;
-    private float jump_force;
-    private int jumpLimit;
-    private int shotLimit;
+    private float damage;
+    private float alertRadius;
+    private float stunResistance;
+    private float fearEnergyAmount;
 
     private float movement;
     private boolean facingRight;
-    private int jumpCooldown;
-    private boolean isJumping;
-    private int shootCooldown;
     private boolean isGrounded;
-    private boolean isShooting;
     private boolean stunned;
+    private float stunDuration;
+    private float currentStunTime;
+
+    // Vision related properties
+    private float visionAngle;
+    private float visionSwingSpeed;
+    private float visionSwingRange;
+    private float currentVisionSwingTime;
+    private boolean visionDirectionClockwise;
 
     // Sensor for ground detection
     private Path2 sensorOutline;
@@ -47,38 +59,33 @@ public class DreamDweller extends Enemy {
     private final Vector2 forceCache = new Vector2();
     private final Affine2 flipCache = new Affine2();
 
+    // Head and vision
     private Body headBody;
     private RevoluteJoint headJoint;
     private Fixture visionSensor;
-    private Fixture followSensor;
+    private Fixture alertSensor;
     private float headOffset = 2.0f;
-    private Fixture walkSensor;
 
-    /** game logic stuff */
-
-    // each npc ai character will have a unique one
+    /**
+     * game logic stuff
+     */
     private int entityID;
-    // indicates if this critter is interactable with or not. once harvested critteres are inactive
     private boolean active;
-    // where the critter is looking, 0 is relative down of the critter's central location, iterates clockwise
-    private float visionAngle;
-    // True when player has caught this critter's attention
     private boolean awareOfPlayer;
-
-    // should be seconds in how long it takes for the critter to reset from aware of player to idle
     private float awarenessCooldown;
+    private float currentAwarenessCooldown;
 
     private Path2 visionSensorOutline;
-    private Path2 visionFollowOutline;
-    private Path2 walkSensorOutline;
+    private Path2 alertSensorOutline;
 
-    // pathing
-    private boolean seesWall;
-
+    // Texture for the DreamDweller
+    private Texture2D dwellerTexture;
+    private HashMap<DreamDweller, Sprite> visionCones3;
 
     public float getMovement() {
         return movement;
     }
+
     public void setMovement(float value) {
         movement = value;
         // Change facing direction based on input
@@ -94,29 +101,24 @@ public class DreamDweller extends Enemy {
     }
 
     public void setVisionAngle(float theta) {
+        visionAngle = theta;
         float desiredAngle = theta * MathUtils.degreesToRadians; // Convert to radians
         headBody.setTransform(headBody.getPosition(), desiredAngle);
     }
 
-    public boolean isShooting() {
-        return isShooting && shootCooldown <= 0;
-    }
-
-    public void setShooting(boolean value) {
-        isShooting = value;
-    }
     public void setStunned(boolean value) {
         stunned = value;
+        if (stunned) {
+            currentStunTime = stunDuration;
+        }
     }
+
     public boolean isStunned() {
         return stunned;
     }
-    public boolean isJumping() {
-        return isJumping && isGrounded && jumpCooldown <= 0;
-    }
 
-    public void setJumping(boolean value) {
-        isJumping = value;
+    public float getStunResistance() {
+        return stunResistance;
     }
 
     public boolean isGrounded() {
@@ -139,14 +141,6 @@ public class DreamDweller extends Enemy {
         return max_speed;
     }
 
-    public boolean isSeesWall() {
-        return seesWall;
-    }
-
-    public void setSeesWall(boolean b) {
-        seesWall = b;
-    }
-
     public String getSensorName() {
         return sensorName;
     }
@@ -157,12 +151,47 @@ public class DreamDweller extends Enemy {
 
     public void setAwareOfPlayer(boolean awareOfPlayer) {
         this.awareOfPlayer = awareOfPlayer;
+        if (awareOfPlayer) {
+            currentAwarenessCooldown = awarenessCooldown;
+        }
     }
 
     public boolean isAwareOfPlayer() {
         return awareOfPlayer;
     }
 
+    public float getDamage() {
+        return damage;
+    }
+
+    public float getFearEnergyAmount() {
+        return fearEnergyAmount;
+    }
+
+    public float getAlertRadius() {
+        return alertRadius;
+    }
+
+    public Body getHeadBody() {
+        return headBody;
+    }
+
+    /**
+     * Alerts other enemies in the vicinity
+     * Should be called by the GameMode or other manager when this enemy detects the player
+     */
+    public void alertOtherEnemies() {
+        // This will be implemented in the game mode to find and alert other enemies
+        // This method serves as a hook for that functionality
+    }
+
+    /**
+     * Constructor for DreamDweller
+     *
+     * @param units  The ratio of pixels to Box2D units
+     * @param data   The JSON value containing enemy properties
+     * @param points The initial position of the enemy
+     */
     public DreamDweller(float units, JsonValue data, float[] points) {
         this.data = data;
         // Read initial position and overall size from JSON.
@@ -172,17 +201,18 @@ public class DreamDweller extends Enemy {
 
         float size = s * units;
 
-        width  = s * data.get("inner").getFloat(0);
+        width = s * data.get("inner").getFloat(0);
         height = s * data.get("inner").getFloat(1);
 
-        float drawWidth  = size/2;
+        float drawWidth = size / 2;
         float drawHeight = size;
 
-        // may want to change what kind of physical obstacle this is
+        // Create the physics body as a capsule
+
         obstacle = new CapsuleObstacle(x, y, width, height);
         // Optionally set a tolerance for collision detection (from JSON debug info)
         JsonValue debugInfo = data.get("debug");
-        ((CapsuleObstacle)obstacle).setTolerance( debugInfo.getFloat("tolerance", 0.5f) );
+        ((CapsuleObstacle) obstacle).setTolerance(debugInfo.getFloat("tolerance", 0.5f));
 
         obstacle.setDensity(data.getFloat("density", 0));
         obstacle.setFriction(data.getFloat("friction", 0));
@@ -192,31 +222,48 @@ public class DreamDweller extends Enemy {
         obstacle.setUserData(this);
         obstacle.setName("dweller");
 
+
         // Set debugging colors
         debug = ParserUtils.parseColor(debugInfo.get("avatar"), Color.WHITE);
         sensorColor = ParserUtils.parseColor(debugInfo.get("sensor"), Color.WHITE);
 
-        max_speed   = data.getFloat("maxspeed", 0);
-        damping    = data.getFloat("damping", 0);
-        force      = data.getFloat("force", 0);
-        jump_force = data.getFloat("jump_force", 0);
+        // Initialize physics properties
+        max_speed = data.getFloat("maxspeed", 0);
+        damping = data.getFloat("damping", 0);
+        force = data.getFloat("force", 0);
+        damage = data.getFloat("damage", 1.0f);
+        alertRadius = data.getFloat("alertRadius", 100.0f);
+        stunResistance = data.getFloat("stunResistance", 2.0f);
+        fearEnergyAmount = data.getFloat("fearEnergy", 20.0f);
+        stunDuration = data.getFloat("stunDuration", 3.0f);
 
-        isGrounded  = false;
-        isShooting  = false;
-        isJumping   = false;
-        facingRight   = true;
-        jumpCooldown = 0;
-        shootCooldown = 0;
-        //deg
+        // Initialize vision properties
+        visionSwingSpeed = data.getFloat("visionSwingSpeed", 0.5f);
+        visionSwingRange = data.getFloat("visionSwingRange", 90.0f);
+        currentVisionSwingTime = 0;
+        visionDirectionClockwise = true;
+
+        // Initialize state
+        isGrounded = false;
+        facingRight = true;
+        stunned = false;
+        currentStunTime = 0;
         visionAngle = 0;
+        awarenessCooldown = data.getFloat("awarenessCooldown", 5.0f);
+        currentAwarenessCooldown = 0;
 
+        mesh.set(-drawWidth / 1.5f, -drawHeight / 1.6f, drawWidth * 1.5f, drawHeight * 1.5f);
+    }
 
-        mesh.set(-drawWidth/1.5f, -drawHeight/1.6f, drawWidth*1.5f, drawHeight*1.5f);
+    /**
+     * Loads the texture for the DreamDweller
+     */
+    public void setTexture(Texture texture) {
+        super.setTexture(texture);
     }
 
     /**
      * Creates a sensor fixture to detect ground contact.
-     * This sensor prevents double-jumping by detecting when the player is on the ground.
      */
     public void createSensor() {
         // Position the sensor just below the physics body.
@@ -239,7 +286,7 @@ public class DreamDweller extends Enemy {
         sensorName = "dweller_sensor";
         sensorFixture.setUserData(sensorName);
 
-        // Create a debug outline for the sensor so you can see it in debug mode
+        // Create a debug outline for the sensor
         float u = obstacle.getPhysicsUnits();
         PathFactory factory = new PathFactory();
         sensorOutline = new Path2();
@@ -248,57 +295,159 @@ public class DreamDweller extends Enemy {
     }
 
     /**
+     * Creates a separate body for the head
+     */
+    public void createHeadBody() {
+        BodyDef bdef = new BodyDef();
+        bdef.type = BodyDef.BodyType.DynamicBody;
+        Vector2 pos = obstacle.getPosition().cpy().add(0, height / 2); // Head above body
+        bdef.position.set(pos);
+
+        headBody = obstacle.getBody().getWorld().createBody(bdef);
+        CircleShape headShape = new CircleShape();
+        headShape.setRadius(width / 3);
+
+        FixtureDef fdef = new FixtureDef();
+        fdef.shape = headShape;
+        fdef.density = 0.1f;
+        fdef.isSensor = true; // Prevent physical collisions
+        headBody.createFixture(fdef);
+        headBody.setUserData(this);
+
+        headShape.dispose();
+    }
+
+    /**
+     * Attaches the head to the main body with a revolute joint
+     */
+    public void attachHead() {
+        RevoluteJointDef jointDef = new RevoluteJointDef();
+        jointDef.initialize(obstacle.getBody(), headBody, obstacle.getBody().getWorldCenter().add(0, height / 2));
+        jointDef.enableMotor = true;
+        jointDef.motorSpeed = 0;
+        jointDef.maxMotorTorque = 100;
+        headJoint = (RevoluteJoint) obstacle.getBody().getWorld().createJoint(jointDef);
+    }
+
+    /**
+     * Creates vision sensors for the DreamDweller
+     * - A wider vision cone than other enemies
+     * - An alert radius to notify other enemies
+     */
+    public void createVisionSensor() {
+        createHeadBody();
+        attachHead();
+
+        // Vision cone - wider than CuriosityCritter
+        float coneWidth = 3.9f;  // Wider than CuriosityCritter
+        float coneLength = 4.8f; // Longer than CuriosityCritter
+        Vector2[] vertices = new Vector2[3];
+        vertices[0] = new Vector2(-coneWidth / 2, coneLength);
+        vertices[1] = new Vector2(coneWidth / 2, coneLength);
+        vertices[2] = new Vector2(0, 0);
+        PolygonShape visionShape = new PolygonShape();
+        visionShape.set(vertices);
+
+        FixtureDef visionDef = new FixtureDef();
+        visionDef.shape = visionShape;
+        visionDef.isSensor = true;
+
+        visionSensor = headBody.createFixture(visionDef);
+        visionSensor.setUserData("dweller_vision_sensor");
+
+        PathFactory factory = new PathFactory();
+        visionSensorOutline = new Path2();
+        float u = obstacle.getPhysicsUnits();
+        visionSensorOutline = factory.makeTriangle(
+            -coneWidth / 2 * u, coneLength * u,
+            coneWidth / 2 * u, coneLength * u,
+            0, 0);
+
+        // Alert sensor - a circular sensor for alerting other enemies
+        CircleShape alertShape = new CircleShape();
+        alertShape.setRadius(alertRadius);
+
+        FixtureDef alertDef = new FixtureDef();
+        alertDef.shape = alertShape;
+        alertDef.isSensor = true;
+
+        alertSensor = headBody.createFixture(alertDef);
+        alertSensor.setUserData("dweller_alert_sensor");
+
+        // Create outline for alert radius
+        alertSensorOutline = new Path2();
+        factory.makeCircle(0, 0, alertRadius * u);
+
+        visionShape.dispose();
+        alertShape.dispose();
+    }
+
+    /**
      * Applies forces to the physics body based on the current input.
      * This includes horizontal movement (with damping) and jumping impulses.
      */
     public void applyForce() {
-        if (!obstacle.isActive()) {
-            return;
+        setMovement(0);
+
+        if (obstacle.isActive()) {
+            obstacle.setVX(0);
+            obstacle.setVY(0);
         }
 
-        Vector2 pos = obstacle.getPosition();
-        float vx = obstacle.getVX();
         Body body = obstacle.getBody();
-
-        // Apply damping when no horizontal input is provided
-        if (getMovement() == 0f) {
-            float slowFactor = 2.0f; // Adjust this to fine-tune slowdown speed
-            forceCache.set(-slowFactor * vx, 0);
-            body.applyForce(forceCache, pos, true);
-        }
-
-        // Clamp horizontal velocity to the maximum speed
-        if (Math.abs(vx) >= getMaxSpeed()) {
-            obstacle.setVX(Math.signum(vx) * getMaxSpeed());
-        } else {
-            forceCache.set(getMovement(), 0);
-            body.applyForce(forceCache, pos, true);
-        }
-
-        // Apply a vertical impulse if a jump is initiated
-        if (isJumping()) {
-            forceCache.set(0, jump_force);
-            body.applyLinearImpulse(forceCache, pos, true);
+        if (body != null) {
+            body.setLinearVelocity(0, 0);
+            body.setAngularVelocity(0);
         }
     }
 
-
+    /**
+     * Updates the DreamDweller's state
+     *
+     * @param dt The time elapsed since the last update
+     */
     @Override
     public void update(float dt) {
-        if (isJumping()) {
-            jumpCooldown = jumpLimit;
-        } else {
-            jumpCooldown = Math.max(0, jumpCooldown - 1);
+        // Update stun state
+        if (stunned) {
+            currentStunTime -= dt;
+            if (currentStunTime <= 0) {
+                stunned = false;
+            }
         }
 
+        // Update awareness cooldown
+        if (awareOfPlayer && !stunned) {
+            currentAwarenessCooldown -= dt;
+            if (currentAwarenessCooldown <= 0) {
+                awareOfPlayer = false;
+            }
+        }
+
+        // Update vision swing
+        if (!awareOfPlayer && !stunned) {
+            // Update the vision swing time
+            currentVisionSwingTime += dt;
+
+            // Calculate the new vision angle based on a sine wave
+            float swingProgress = (float) Math.sin(currentVisionSwingTime * visionSwingSpeed);
+            float newAngle = swingProgress * visionSwingRange;
+
+            // Set the new vision angle
+            setVisionAngle(newAngle);
+        } else if (awareOfPlayer && !stunned) {
+            // When aware of player, vision tracks the player's position
+            // This would be implemented in the game mode where it has access to player position
+        }
+
+        applyForce();
         super.update(dt);
     }
 
     /**
-     * Draws the player sprite.
-     * The sprite is flipped horizontally if the player is facing left.
+     * Draws the DreamDweller sprite
      *
-     * @param batch  The sprite batch used for drawing.
+     * @param batch The sprite batch used for drawing
      */
     @Override
     public void draw(SpriteBatch batch) {
@@ -307,15 +456,16 @@ public class DreamDweller extends Enemy {
         } else {
             flipCache.setToScaling(-1, 1);
         }
-        if (obstacle != null && mesh != null) {
-            float scaleFactor = 1.4f; // Increase sprite size by 20%
+
+        if (obstacle != null && mesh != null && sprite != null) {
+            float scaleFactor = 1.5f; // Increase sprite size
             float x = obstacle.getX();
             float y = obstacle.getY();
             float a = obstacle.getAngle();
             float u = obstacle.getPhysicsUnits();
 
             transform.idt();
-            transform.preScale(scaleFactor, scaleFactor); // Scale up sprite only
+            transform.preScale(scaleFactor, scaleFactor);
             transform.preRotate((float) ((double) (a * 180.0F) / Math.PI));
             transform.preTranslate(x * u, y * u);
 
@@ -326,13 +476,14 @@ public class DreamDweller extends Enemy {
     }
 
     /**
-     * Draws the debug outlines for the physics body and sensor.
+     * Draws the debug outlines for the physics body and sensors
      *
-     * @param batch  The sprite batch used for drawing.
+     * @param batch The sprite batch used for drawing
      */
     @Override
     public void drawDebug(SpriteBatch batch) {
         super.drawDebug(batch);
+
         if (sensorOutline != null) {
             batch.setTexture(Texture2D.getBlank());
             batch.setColor(sensorColor);
@@ -343,14 +494,15 @@ public class DreamDweller extends Enemy {
 
             // Prepare a transformation matrix for proper sensor positioning
             transform.idt();
-            transform.preRotate((float)(a * 180.0f / Math.PI));
+            transform.preRotate((float) (a * 180.0f / Math.PI));
             transform.preTranslate(p.x * u, p.y * u);
 
             batch.outline(sensorOutline, transform);
         }
+
         if (visionSensorOutline != null) {
             batch.setTexture(Texture2D.getBlank());
-            batch.setColor(Color.GREEN);
+            batch.setColor(Color.PURPLE); // Different color for DreamDweller vision
 
             Vector2 headPos = headBody.getPosition();
             float headAngleDeg = headBody.getAngle() * MathUtils.radiansToDegrees;
@@ -362,39 +514,21 @@ public class DreamDweller extends Enemy {
 
             batch.outline(visionSensorOutline, transform);
         }
-        if (visionFollowOutline != null) {
+
+        if (alertSensorOutline != null && awareOfPlayer) {
             batch.setTexture(Texture2D.getBlank());
-            batch.setColor(Color.LIME);
+            batch.setColor(Color.RED); // Alert radius when active
 
             Vector2 headPos = headBody.getPosition();
-            float headAngleDeg = headBody.getAngle() * MathUtils.radiansToDegrees;
             float u = obstacle.getPhysicsUnits();
 
             transform.idt();
-            transform.preRotate(headAngleDeg);
             transform.preTranslate(headPos.x * u, headPos.y * u);
 
-            batch.outline(visionFollowOutline, transform);
-        }
-        if (walkSensorOutline != null) {
-            batch.setTexture(Texture2D.getBlank());
-            batch.setColor(Color.RED);
-
-            Vector2 headPos = headBody.getPosition();
-            float headAngleDeg = headBody.getAngle() * MathUtils.radiansToDegrees;
-            float u = obstacle.getPhysicsUnits();
-
-            transform.idt();
-            transform.preRotate(headAngleDeg);
-            transform.preTranslate(headPos.x * u, headPos.y * u);
-
-            batch.outline(walkSensorOutline, transform);
+            batch.outline(alertSensorOutline, transform);
             batch.setColor(Color.WHITE);
         }
     }
-
-    public Body getHeadBody() {
-        return headBody;
-    }
-
 }
+
+

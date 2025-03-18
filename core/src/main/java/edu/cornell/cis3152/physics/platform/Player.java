@@ -423,7 +423,9 @@ public class Player extends ObstacleSprite {
         float x = data.get("pos").getFloat(0);
         float y = data.get("pos").getFloat(1);
         float s = data.getFloat( "size" );
-        float size = s*units;
+        float sizeWidth = s*units;
+        float sizeHeight = s*units*1.5f;
+
 
         // The capsule is smaller than the image
         // "inner" is the fraction of the original size for the capsule
@@ -478,7 +480,7 @@ public class Player extends ObstacleSprite {
         // since Player is a rectangular image. But note that the capsule is
         // actually smaller than the image, making a tighter hitbox. You can
         // see this when you enable debug mode.
-        mesh.set(-size/2.0f,-size/2.0f,size,size);
+        mesh.set(-sizeWidth/2.0f,-sizeHeight/2.0f,sizeWidth,sizeHeight);
     }
 
     /**
