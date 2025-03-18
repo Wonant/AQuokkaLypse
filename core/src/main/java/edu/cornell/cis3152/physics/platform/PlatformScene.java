@@ -476,6 +476,7 @@ public class PlatformScene implements ContactListener, Screen{
             visionCone.setRotation(headAngleDeg);
             visionCone.draw(batch);
         }
+
         for (DreamDweller dweller : visionCones3.keySet()) {
             Vector2 headPos = dweller.getHeadBody().getPosition();
             float headAngleDeg = dweller.getHeadBody().getAngle() * MathUtils.radiansToDegrees;
@@ -494,7 +495,6 @@ public class PlatformScene implements ContactListener, Screen{
 
             visionCone.draw(batch);
         }
-
 
         batch.end();
     }
@@ -1149,6 +1149,7 @@ public class PlatformScene implements ContactListener, Screen{
                     System.out.println(bodyDataB.getClass() + " saw player!");
                     ((Enemy) bodyDataB).setAwareOfPlayer(true);
                     avatar.setTakingDamage(true);
+
                 }
                 // The player should always take damage when they are detected by a vision sensor
                 // not associated with an enemy (e.g. lamp)
@@ -1177,7 +1178,11 @@ public class PlatformScene implements ContactListener, Screen{
                     dweller.setAwareOfPlayer(true);
                     System.out.println("Dream Dweller saw player");
                     avatar.setTakingDamage(true);
+
                 }
+
+
+
             }
 
 
@@ -1212,6 +1217,7 @@ public class PlatformScene implements ContactListener, Screen{
                                 (bd1 instanceof MindMaintenance) ? (MindMaintenance) bd1
                                     : (bd2 instanceof MindMaintenance) ? (MindMaintenance) bd2
                                     : null;
+
                             if (maintenance != null) {
                                 maintenance.setStunned(true);
                                 Texture texture = directory.getEntry("mind-maintenance-inactive",
@@ -1245,6 +1251,7 @@ public class PlatformScene implements ContactListener, Screen{
                                 "WARNING: Bullet stun collision detected but Dweller reference is null.");
                         }
                     }
+
                 }
                 //otherwise the bullet hits a non-enemy and should be removed
                 else {
@@ -1443,6 +1450,7 @@ public class PlatformScene implements ContactListener, Screen{
             else if (bodyDataA instanceof Player && bodyDataB instanceof DreamDweller) {
                 ((Enemy) bodyDataB).setAwareOfPlayer(false);
             }
+
             avatar.setTakingDamage(false);
             System.out.println("Enemy stopped seeing player");
         }
