@@ -74,7 +74,8 @@ public class AIControllerManager {
         /**mind maintenance is now alerted to player's presence, will follow and stare at them*/
         ALERTED,
         /** mind maintenance is stunned, cannot move or see (do damage to player) */
-        STUNNED
+        STUNNED,
+        CHASING
     }
 
     private enum DwellerFSM{
@@ -177,7 +178,9 @@ public class AIControllerManager {
     public void register(MindMaintenance entity) {
         entities.add(new MaintenanceAI(entity));
     }
-    public void register(DreamDweller entity) {entities.add(new DwellerAI(entity));}
+    public void register(DreamDweller entity) {
+        entities.add(new DwellerAI(entity));
+    }
 
 
     public void unregister(CuriosityCritter entity) {
@@ -197,7 +200,8 @@ public class AIControllerManager {
 
             }
             else if (enemy.enemy.getClass() == MindMaintenance.class){
-
+                MaintenanceAI maintenance = (MaintenanceAI) enemy;
+                updateMaintenance(maintenance, dt);
             }
             else if (enemy.enemy.getClass() == DreamDweller.class) {
                 DwellerAI dweller = (DwellerAI) enemy;
@@ -412,12 +416,172 @@ public class AIControllerManager {
                 break;
         }
     }
-    private void updateMaintenance(MaintenanceAI data, float dt) {
 
+    private Vector2 getMaintenancePosition(MindMaintenance maintenance) {
+        return new Vector2(maintenance.getObstacle().getX(), maintenance.getObstacle().getY());
+    }
+
+    private void updateMaintenance(MaintenanceAI data, float dt) {
+        data.stateTimer += dt;
+
+        // quick comment on how the angle works:
+        // 0 is straight above the critter. so that means 180 means its look straight down
+        Vector2 maintenancePos = getMaintenancePosition(data.maintenance);
+        Vector2 visionRef = new Vector2(maintenancePos.x, maintenancePos.y + 10.0f);
+        boolean seesPlayer = data.maintenance.isAwareOfPlayer();
+        boolean isStunned = data.maintenance.isStunned();
+        System.out.println("Updating Maintenance");
+        // if the enemy is stunned, transition to the stunned state
+        if (isStunned) {
+            if (data.state != MaintenanceFSM.STUNNED) {
+                transitionMaintenanceState(data, MaintenanceFSM.STUNNED);
+            }
+            data.maintenance.getObstacle().setVX(0);
+
+            if (data.stateTimer > data.stateDuration) {
+                System.out.println("Maintenance stun wears off");
+
+                Texture texture = asset_directory.getEntry( "mind-maintenance-active", Texture.class );
+                data.maintenance.setTexture(texture);
+                data.maintenance.setStunned(false);
+                transitionMaintenanceState(data, MaintenanceFSM.IDLE_LOOK);
+            }
+        }
+        else{
+            if (player != null) {
+                Vector2 playerPos = getPlayerPosition(player);
+                float distanceToPlayer = maintenancePos.dst(
+                    playerPos); // maybe needing for how long the critter should flee
+                //            System.out.println(playerPos.x + " " + critterPos.x);
+                //d If the critter sees the player, transition to ALERTED
+                if (seesPlayer) {
+                    data.stateTimer = 0; //reset for all states
+                    if (data.state == MaintenanceFSM.CHASING) {
+
+                        // ig we stay in it for now
+                        // this might not work
+                        data.maintenance.setMovement(0);
+                        data.maintenance.applyForce();
+
+                        // math - with critter as center
+                        // arctan point 1 - center normalized - arctan point 2 - center normalized = angle in radians
+                        visionRef.sub(maintenancePos).nor();
+                        playerPos.sub(maintenancePos).nor();
+
+                        float angleToPlayer =
+                            MathUtils.atan2(playerPos.y, playerPos.x) - MathUtils.atan2(visionRef.y,
+                                visionRef.x);
+                        angleToPlayer *= MathUtils.radiansToDegrees;
+
+                        //System.out.println("in stare mode, angle:" + angleToPlayer);
+                        data.maintenance.setVisionAngle(angleToPlayer);
+                    }
+
+                    else if (data.state == MaintenanceFSM.IDLE_LOOK || data.state == MaintenanceFSM.IDLE_WALK) {
+                        System.out.println("Maintenance sees player, alerted");
+                        transitionMaintenanceState(data, MaintenanceFSM.ALERTED);
+                    }
+                    else if (data.state == MaintenanceFSM.ALERTED) {
+                        // change for testing
+                        data.maintenance.setMovement(0);
+                        data.maintenance.applyForce();
+                        transitionMaintenanceState(data, MaintenanceFSM.CHASING);
+
+                    }
+
+                }
+            }
+        }
+        System.out.println("Maintenance state is : " + data.state);
+
+        Vector2 playerPos = getPlayerPosition(player);
+        if (data.state == MaintenanceFSM.CHASING) {
+            if (data.stateTimer > data.stateDuration) {
+                transitionMaintenanceState(data, MaintenanceFSM.IDLE_LOOK);
+            }
+            else{
+                float chaseSpeed = 10f;
+                if (playerPos.x < maintenancePos.x) {
+                    data.horizontal = -chaseSpeed;
+                    data.movingRight = !data.movingRight;
+                    data.maintenance.setMovement(data.horizontal);
+                    data.maintenance.applyForce();
+                } else {
+                    data.horizontal = chaseSpeed;
+                    data.movingRight = !data.movingRight;
+                    data.maintenance.setMovement(data.horizontal);
+                    data.maintenance.applyForce();
+                }
+            }
+        }
+
+        if (data.state == MaintenanceFSM.START) {
+            transitionMaintenanceState(data, random.nextBoolean() ? MaintenanceFSM.IDLE_LOOK : MaintenanceFSM.IDLE_WALK);
+        }
+
+        if (data.state == MaintenanceFSM.IDLE_LOOK) {
+            if (data.stateTimer > data.stateDuration) {
+                transitionMaintenanceState(data, MaintenanceFSM.IDLE_WALK);
+            } else {
+                // Look straight for now
+                data.maintenance.setVisionAngle(data.movingRight ? 270 : 90);
+                data.maintenance.setMovement(0);
+                data.maintenance.applyForce();
+            }
+        }
+
+        if (data.state == MaintenanceFSM.IDLE_WALK) {
+            if (data.stateTimer > data.stateDuration) {
+                transitionMaintenanceState(data, MaintenanceFSM.IDLE_LOOK);
+            } else if (data.maintenance.isSeesWall()) {
+                data.maintenance.setMovement(0);
+                data.maintenance.applyForce();
+                transitionMaintenanceState(data, MaintenanceFSM.IDLE_LOOK);
+            } else {
+                // Walk in a direction, will have already known if wall is in front
+                data.maintenance.setVisionAngle(data.movingRight ? 270 : 90);
+                data.maintenance.setMovement(data.horizontal);
+                data.maintenance.applyForce();
+            }
+        }
     }
 
     private void transitionMaintenanceState(MaintenanceAI data, MaintenanceFSM newState) {
+        data.state = newState;
+        data.stateTimer = 0;
 
+        switch (newState) {
+            case IDLE_LOOK:
+                data.stateDuration = random.nextFloat() * 2.0f + 1.0f; // 1-3 seconds
+                data.horizontal = 0;
+                break;
+
+            case IDLE_WALK:
+                data.stateDuration = random.nextFloat() + 1.0f; // 1-2 seconds
+                if (data.maintenance.isSeesWall()) {
+                    data.movingRight = !data.movingRight;
+                    data.maintenance.setSeesWall(false);
+                } else {
+                    data.movingRight = random.nextBoolean();
+                }
+                data.horizontal = data.movingRight ? 1.0f : -1.0f;
+                break;
+
+            case ALERTED:
+                data.stateDuration = 1.0f;
+                data.horizontal = 10f;
+                break;
+
+            case CHASING:
+                data.stateDuration = 4.0f;
+                data.horizontal = 10f;
+                break;
+
+            case STUNNED:
+                data.stateDuration = 3.0f;
+                data.horizontal = 0;
+                break;
+        }
     }
 
     private Vector2 getDwellerPosition(DreamDweller dweller) {

@@ -48,7 +48,6 @@ public class MindMaintenance extends Enemy {
     private final Vector2 forceCache = new Vector2();
     private final Affine2 flipCache = new Affine2();
 
-    private Body headBody;
     private RevoluteJoint headJoint;
     private Fixture visionSensor;
     private Fixture followSensor;
@@ -63,8 +62,6 @@ public class MindMaintenance extends Enemy {
     private boolean active;
     // where the critter is looking, 0 is relative down of the critter's central location, iterates clockwise
     private float visionAngle;
-    // True when player has caught this critter's attention
-    private boolean awareOfPlayer;
 
     // should be seconds in how long it takes for the critter to reset from aware of player to idle
     private float awarenessCooldown;
@@ -72,9 +69,6 @@ public class MindMaintenance extends Enemy {
     private Path2 visionSensorOutline;
     private Path2 visionFollowOutline;
     private Path2 walkSensorOutline;
-
-    // pathing
-    private boolean seesWall;
 
 
     public float getMovement() {
@@ -135,14 +129,6 @@ public class MindMaintenance extends Enemy {
         return max_speed;
     }
 
-    public boolean isSeesWall() {
-        return seesWall;
-    }
-
-    public void setSeesWall(boolean b) {
-        seesWall = b;
-    }
-
     public String getSensorName() {
         return sensorName;
     }
@@ -151,13 +137,6 @@ public class MindMaintenance extends Enemy {
         return facingRight;
     }
 
-    public void setAwareOfPlayer(boolean awareOfPlayer) {
-        this.awareOfPlayer = awareOfPlayer;
-    }
-
-    public boolean isAwareOfPlayer() {
-        return awareOfPlayer;
-    }
 
     public MindMaintenance(float units, JsonValue data, float[] points) {
         this.data = data;
@@ -240,7 +219,7 @@ public class MindMaintenance extends Enemy {
         PathFactory factory = new PathFactory();
         sensorOutline = new Path2();
         factory.makeRect((sensorCenter.x - w / 2) * u, (sensorCenter.y - h / 2) * u, w * u, h * u, sensorOutline);
-
+        sensorShape.dispose();
 
     }
 
@@ -347,6 +326,7 @@ public class MindMaintenance extends Enemy {
 
         visionShape.dispose();
     }
+
 
     /**
      * Applies forces to the physics body based on the current input.
