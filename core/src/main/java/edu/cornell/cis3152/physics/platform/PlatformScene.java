@@ -158,6 +158,7 @@ public class PlatformScene implements ContactListener, Screen{
     private Door goalDoor;
     private int totalGoals;
     private int collectedGoals;
+    private TextLayout dreamShardCountText;
 
     /** Mark set to handle more sophisticated collision callbacks */
     protected ObjectSet<Fixture> sensorFixtures;
@@ -182,6 +183,7 @@ public class PlatformScene implements ContactListener, Screen{
     protected PooledList<Surface> shadowPlatformQueue = new PooledList<Surface>();
     private DreamDweller queuedHarvestedEnemyD = null;
     private HashMap<DreamDweller, Sprite> visionCones3;
+
 
 
 
@@ -450,7 +452,7 @@ public class PlatformScene implements ContactListener, Screen{
                 obj.drawDebug( batch );
             }
         }
-
+        batch.drawText(dreamShardCountText, 11, height - 50);
         // Draw a final message
         if (complete && !failed) {
             batch.drawText(goodMessage, width/2, height/2);
@@ -653,6 +655,15 @@ public class PlatformScene implements ContactListener, Screen{
         debug  = false;
         active = false;
         countdown = -1;
+
+        BitmapFont smallFont = new BitmapFont(displayFont.getData(), displayFont.getRegions(), false);
+        smallFont.getData().setScale(0.5f);
+        dreamShardCountText = new TextLayout();
+        dreamShardCountText.setFont(smallFont);
+        dreamShardCountText.setAlignment(TextAlign.left);
+        dreamShardCountText.setColor(Color.WHITE);
+        dreamShardCountText.setText("Dream Shards: " + totalGoals);
+        dreamShardCountText.layout();
 
         world.setContactListener(this);
         sensorFixtures = new ObjectSet<Fixture>();
@@ -1165,6 +1176,8 @@ public class PlatformScene implements ContactListener, Screen{
                     collectedDoor.getObstacle().markRemoved(true);
                     collectedGoals++;
 
+                    dreamShardCountText.setText("Dream Shards: " + (totalGoals - collectedGoals));
+                    dreamShardCountText.layout();
 
                     if (collectedGoals == totalGoals) {
                         setComplete(true);
