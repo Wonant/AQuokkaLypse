@@ -513,6 +513,7 @@ public class DreamDweller extends Enemy {
             transform.preTranslate(headPos.x * u, headPos.y * u);
 
             batch.outline(visionSensorOutline, transform);
+            batch.setColor(Color.WHITE);
         }
 
         if (alertSensorOutline != null && awareOfPlayer) {

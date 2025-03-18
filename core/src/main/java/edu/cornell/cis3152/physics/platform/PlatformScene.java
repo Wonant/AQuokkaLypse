@@ -1287,18 +1287,18 @@ public class PlatformScene implements ContactListener, Screen{
                 }
                 else if (bd2 instanceof DreamDweller) {
                     // make sure it hits the body of the critter
-                    if (fd2 != "walk_sensor" && fd2 != "vision_sensor"
-                        && fd2 != "follow_sensor") {
+                    if (fd2 != "walk_sensor" && fd2 != "dweller_vision_sensor"
+                        && fd2 != "dweller_alert_sensor") {
                         removeBullet(bd1);
                         DreamDweller dweller =
                             (bd1 instanceof DreamDweller) ? (DreamDweller) bd1
                                 : (bd2 instanceof DreamDweller) ? (DreamDweller) bd2
                                 : null;
-                        if (dreamDweller != null) {
+                        if (dweller != null) {
                             dreamDweller.setStunned(true);
                             Texture texture = directory.getEntry("dream-dweller-inactive",
                                 Texture.class);
-                            maintenance.setTexture(texture);
+                            dreamDweller.setTexture(texture);
                             System.out.println("Dreamdweller is stunned");
                         } else {
                             System.out.println(
@@ -1359,14 +1359,14 @@ public class PlatformScene implements ContactListener, Screen{
                 }
                     else if (bd1 instanceof DreamDweller) {
                         // make sure it hits the body of the critter
-                        if (fd1 != "walk_sensor" && fd1 != "vision_sensor"
-                            && fd1 != "follow_sensor") {
+                        if (fd1 != "walk_sensor" && fd1 != "dweller_vision_sensor"
+                            && fd1 != "dweller_alert_sensor") {
                             removeBullet(bd2);
                             DreamDweller dweller =
                                 (bd2 instanceof DreamDweller) ? (DreamDweller) bd2
                                     : (bd1 instanceof DreamDweller) ? (DreamDweller) bd1
                                     : null;
-                            if (dreamDweller != null) {
+                            if (dweller != null) {
                                 dreamDweller.setStunned(true);
                                 Texture texture = directory.getEntry("dream-dweller-inactive",
                                     Texture.class);
