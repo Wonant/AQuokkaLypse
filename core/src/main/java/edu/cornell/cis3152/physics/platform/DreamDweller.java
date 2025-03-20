@@ -254,7 +254,15 @@ public class DreamDweller extends Enemy {
 
         mesh.set(-drawWidth / 1.5f, -drawHeight / 1.6f, drawWidth * 1.5f, drawHeight * 1.5f);
     }
+    public void setActiveTexture(AssetDirectory directory){
+        Texture texture = directory.getEntry( "dream-dweller-active", Texture.class );
+        this.setTexture(texture);
+    }
 
+    public void setStunTexture(AssetDirectory directory){
+        Texture texture = directory.getEntry( "dream-dweller-inactive", Texture.class );
+        this.setTexture(texture);
+    }
     /**
      * Loads the texture for the DreamDweller
      */
@@ -353,7 +361,7 @@ public class DreamDweller extends Enemy {
         visionDef.isSensor = true;
 
         visionSensor = headBody.createFixture(visionDef);
-        visionSensor.setUserData("dweller_vision_sensor");
+        visionSensor.setUserData("vision_sensor");
 
         PathFactory factory = new PathFactory();
         visionSensorOutline = new Path2();
@@ -363,23 +371,12 @@ public class DreamDweller extends Enemy {
             coneWidth / 2 * u, coneLength * u,
             0, 0);
 
-        // Alert sensor - a circular sensor for alerting other enemies
-        CircleShape alertShape = new CircleShape();
-        alertShape.setRadius(alertRadius);
-
-        FixtureDef alertDef = new FixtureDef();
-        alertDef.shape = alertShape;
-        alertDef.isSensor = true;
-
-        alertSensor = headBody.createFixture(alertDef);
-        alertSensor.setUserData("dweller_alert_sensor");
 
         // Create outline for alert radius
         alertSensorOutline = new Path2();
         factory.makeCircle(0, 0, alertRadius * u);
 
         visionShape.dispose();
-        alertShape.dispose();
     }
 
     /**
