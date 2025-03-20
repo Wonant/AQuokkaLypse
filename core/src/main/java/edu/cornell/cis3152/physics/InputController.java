@@ -74,15 +74,15 @@ public class InputController {
     private boolean exitPressed;
     private boolean exitPrevious;
 
+
+
     /** Whether the stun action button was pressed. */
     private boolean stunPressed;
     /** Whether the teleport button was pressed */
-    private boolean createTeleportPressed;
-    private boolean createTeleportPrevious;
 
-    /** Whether the teleport button was pressed */
-    private boolean takeTeleportPressed;
-    private boolean takeTeleportPrevious;
+    private boolean m1Pressed;
+    private boolean teleportPrevious;
+
 
     /** How much did we move horizontally? */
     private float horizontal;
@@ -98,6 +98,41 @@ public class InputController {
     /** An X-Box controller (if it is connected) */
     XBoxController xbox;
 
+    /** Training Mode(arena) support */
+    private boolean arenaMode = false;
+    private boolean spawnDwellerPressed = false;
+    private boolean spawnDwellerPrevious = false;
+    private boolean spawnCritterPressed = false;
+    private boolean spawnCritterPrevious = false;
+    private boolean spawnGuardPressed = false;
+    private boolean spawnGuardPrevious = false;
+    private boolean invulPressed = false;
+    private boolean invulPrev = false;
+
+
+    public boolean isArenaMode() {
+        return arenaMode;
+    }
+
+    public void setArenaMode(boolean arenaMode) {
+        this.arenaMode = arenaMode;
+    }
+
+    public boolean didPressInvulnerability() {
+        return invulPressed;
+    }
+
+    public boolean isSpawningDweller() {
+        return arenaMode && spawnDwellerPressed && !spawnDwellerPrevious;
+    }
+
+    public boolean isSpawningCritter() {
+        return arenaMode && spawnCritterPressed && !spawnCritterPrevious;
+    }
+
+    public boolean isSpawningGuard() {
+        return arenaMode && spawnGuardPressed && !spawnGuardPrevious;
+    }
     /**
      * Returns the amount of sideways movement.
      *
@@ -133,6 +168,10 @@ public class InputController {
      */
     public Vector2 getCrossHair() {
         return crosscache.set(crosshair);
+    }
+
+    public Vector2 getMouse() {
+        return new Vector2(Gdx.input.getX(), Gdx.input.getY());
     }
 
     /**
@@ -217,8 +256,9 @@ public class InputController {
      *
      * @return true if the create teleport button was pressed
      */
-    public boolean didCreateTeleport() {
-        return createTeleportPressed && !createTeleportPrevious;
+    public boolean didM1() {
+        return m1Pressed && !teleportPrevious;
+
     }
 
     /**
@@ -226,7 +266,7 @@ public class InputController {
      *
      * @return true if the take teleport button was pressed
      */
-    public boolean didTakeTeleport() { return takeTeleportPressed && !takeTeleportPrevious;}
+    public boolean didTakeTeleport() { return m1Pressed && !teleportPrevious;}
 
 
     /**
@@ -268,8 +308,16 @@ public class InputController {
         exitPrevious = exitPressed;
         nextPrevious = nextPressed;
         prevPrevious = prevPressed;
-        createTeleportPrevious = createTeleportPressed;
-        takeTeleportPrevious = takeTeleportPressed;
+
+        teleportPrevious = m1Pressed;
+
+        if (arenaMode) {
+            spawnDwellerPrevious = spawnDwellerPressed;
+            spawnGuardPrevious = spawnGuardPressed;
+            spawnCritterPrevious = spawnCritterPressed;
+            invulPressed = invulPrev;
+        }
+
 
         // Check to see if a GamePad is connected
         if (xbox != null && xbox.isConnected()) {
@@ -316,6 +364,7 @@ public class InputController {
             momentum = 0;
         }
         clampPosition(bounds);
+        // need gamepad support here for arena/training
     }
 
     /**
@@ -336,7 +385,7 @@ public class InputController {
         prevPressed = (secondary && prevPressed) || (Gdx.input.isKeyPressed(Input.Keys.P));
         nextPressed = (secondary && nextPressed) || (Gdx.input.isKeyPressed(Input.Keys.N));
         exitPressed  = (secondary && exitPressed) || (Gdx.input.isKeyPressed(Input.Keys.ESCAPE));
-        takeTeleportPressed = (secondary && takeTeleportPressed) || (Gdx.input.isKeyPressed(Input.Keys.T));
+        //takeTeleportPressed = (secondary && takeTeleportPressed) || (Gdx.input.isKeyPressed(Input.Keys.T));
 
         //teleportPressed = (secondary && teleportPressed) || (Gdx.input.isKeyPressed(Input.Buttons.LEFT));
         //Mouse
@@ -362,13 +411,22 @@ public class InputController {
 
         // Mouse results
 
-        createTeleportPressed = Gdx.input.isButtonPressed(Input.Buttons.LEFT);
+
+        m1Pressed = Gdx.input.isButtonPressed(Input.Buttons.LEFT);
+
         stunPressed = Gdx.input.isButtonPressed(Input.Buttons.RIGHT);
 
         crosshair.set(Gdx.input.getX(), Gdx.input.getY());
         crosshair.scl(1/scale.x,-1/scale.y);
         crosshair.y += bounds.height;
         clampPosition(bounds);
+
+        if (arenaMode) {
+            spawnCritterPressed = Gdx.input.isKeyPressed(Input.Keys.NUM_1);
+            spawnGuardPressed = Gdx.input.isKeyPressed(Input.Keys.NUM_2);
+            spawnDwellerPressed = Gdx.input.isKeyPressed(Input.Keys.NUM_3);
+            invulPressed = Gdx.input.isKeyPressed(Input.Keys.I);
+        }
     }
 
     /**

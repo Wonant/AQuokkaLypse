@@ -471,8 +471,9 @@ public class Player extends ObstacleSprite {
         jumpCooldown = 0;
         takeDamageCooldown = 0;
 
-        fearMeter = 10;
+
         maxFearMeter = data.getInt("maxfear", 0);
+        fearMeter = maxFearMeter;
 
         teleportRangeRadius = 300;
 
@@ -578,11 +579,12 @@ public class Player extends ObstacleSprite {
             body.applyForce(forceCache,pos,true);
         }
 
-        // Jump!
         if (isJumping()) {
             forceCache.set(0, jump_force);
             body.applyLinearImpulse(forceCache,pos,true);
         }
+
+        //smoothStairClimb();
     }
 
     /**
@@ -633,15 +635,47 @@ public class Player extends ObstacleSprite {
 
     }
 
-    /**
-     * Draws the physics object.
-     *
-     * This method is overridden from ObstacleSprite. We need to flip the
-     * texture back-and-forth depending on her facing. We do that by creating
-     * a reflection affine transform.
-     *
-     * @param batch The sprite batch to draw to
-     */
+    public void smoothStairClimb() {
+        if (!isGrounded() || Math.abs(getMovement()) < 0.1f) {
+            return;
+        }
+
+        Body body = obstacle.getBody();
+        Vector2 pos = obstacle.getPosition();
+        World world = body.getWorld();
+
+        float sensorWidth = width * 0.8f;
+        float sensorHeight = height * 0.2f;  // adjust this to maximum step height
+        float recastOffset = sensorHeight + 0.2f; // offset from bottom of player
+
+        float horizontalOffset = isFacingRight() ? width / 2 : -width / 2;
+
+        Vector2 sensorCenter = new Vector2(pos.x + horizontalOffset, pos.y - height / 2 + recastOffset);
+        final boolean[] stepClear = { true };
+
+        world.QueryAABB(new QueryCallback(){
+                            @Override
+                            public boolean reportFixture(Fixture fixture) {
+                                Object userData = fixture.getUserData();
+                                // Adjust the condition as needed to recognize your wall/platform fixtures.
+                                if (userData != null && userData.toString().startsWith("platform")) {
+                                    stepClear[0] = false;
+                                    return false; // stop the query early
+                                }
+                                return true;
+                            }
+                        },
+            sensorCenter.x - sensorWidth / 2,
+            sensorCenter.y - sensorHeight / 2,
+            sensorCenter.x + sensorWidth / 2,
+            sensorCenter.y + sensorHeight / 2);
+
+        if (stepClear[0]) {
+            float climbSpeed = 0.05f;  // change this value for faster or slower climbing
+            body.setTransform(pos.x, pos.y + climbSpeed, body.getAngle());
+        }
+    }
+
     @Override
     public void draw(SpriteBatch batch) {
         if (faceRight) {
@@ -653,16 +687,6 @@ public class Player extends ObstacleSprite {
 
     }
 
-    /**
-     * Draws the outline of the physics object.
-     *
-     * This method is overridden from ObstacleSprite. By default, that method
-     * only draws the outline of the main physics obstacle. We also want to
-     * draw the outline of the sensor, and in a different color. Since it
-     * is not an obstacle, we have to draw that by hand.
-     *
-     * @param batch The sprite batch to draw to
-     */
     @Override
     public void drawDebug(SpriteBatch batch) {
         super.drawDebug( batch );
@@ -670,6 +694,41 @@ public class Player extends ObstacleSprite {
         drawSensorDebug(batch, sensorOutline, sensorColor);
         drawSensorDebug(batch, sensorScareOutline, sensorScareColor);
         drawTeleportRadius(batch);
+        drawRecastSensor(batch);
+    }
+
+    public void drawRecastSensor(SpriteBatch batch) {
+
+
+        Vector2 pos = obstacle.getPosition();
+        float u = obstacle.getPhysicsUnits();
+
+        float sensorWidth = width * 0.8f;
+        float sensorHeight = height * 0.4f;
+        float recastOffset = sensorHeight + 0.1f;
+
+        float horizontalOffset = isFacingRight() ? width / 2 : -width / 2;
+
+        Vector2 sensorCenter = new Vector2(pos.x + horizontalOffset,
+            pos.y - height / 2 + recastOffset);
+
+        Path2 recastSensorOutline = new Path2();
+        PathFactory factory = new PathFactory();
+        factory.makeRect((sensorCenter.x - sensorWidth / 2) * u,
+            (sensorCenter.y - sensorHeight / 2) * u,
+            sensorWidth * u,
+            sensorHeight * u,
+            recastSensorOutline);
+
+        Affine2 transform = new Affine2();
+        transform.idt();
+        transform.preRotate((float) (obstacle.getAngle() * 180.0 / Math.PI));
+        transform.preTranslate(pos.x * u, pos.y * u);
+
+        batch.setTexture(Texture2D.getBlank());
+        batch.setColor(Color.RED);
+        batch.outline(recastSensorOutline, transform);
+        batch.setColor(Color.WHITE);
     }
 
     public void drawSensorDebug (SpriteBatch batch, Path2 outline, Color color)

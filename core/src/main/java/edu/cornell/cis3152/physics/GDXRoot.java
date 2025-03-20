@@ -136,21 +136,10 @@ public class GDXRoot extends Game implements ScreenListener {
             loading.dispose();
             loading = null;
 
-            // Initialize the three game worlds
-            //controllers = new PhysicsScene[3];
-            controllers = new PlatformScene[1];
-            //controllers[0] = new RocketScene(directory);
-            controllers[0] = new PlatformScene(directory,maps[currentMapIndex]);
-            //controllers[2] = new RagdollScene(directory);
-
-            for(int ii = 0; ii < controllers.length; ii++) {
-                controllers[ii].setScreenListener(this);
-                controllers[ii].setSpriteBatch(batch);
-            }
-
-            current = 0;
-            controllers[current].reset();
-            setScreen(controllers[current]);
+            Arena arena = new Arena(directory, "arena");
+            arena.setScreenListener(this);
+            arena.setSpriteBatch(batch);
+            setScreen(arena);
 
         } else if (exitCode == PlatformScene.EXIT_NEXT) {
             current = (current + 1) % maps.length;
@@ -164,6 +153,11 @@ public class GDXRoot extends Game implements ScreenListener {
             prevScene.setScreenListener(this);
             prevScene.setSpriteBatch(batch);
             setScreen(prevScene);
+        } else if (exitCode == Arena.EXIT_ARENA) {
+            Arena arena = new Arena(directory, "arena");
+            arena.setScreenListener(this);
+            arena.setSpriteBatch(batch);
+            setScreen(arena);
         } else if (exitCode == PlatformScene.EXIT_QUIT) {
             // We quit the main application
             Gdx.app.exit();
