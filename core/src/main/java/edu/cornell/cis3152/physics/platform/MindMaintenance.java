@@ -7,6 +7,7 @@ import com.badlogic.gdx.physics.box2d.*;
 import com.badlogic.gdx.physics.box2d.joints.RevoluteJoint;
 import com.badlogic.gdx.physics.box2d.joints.RevoluteJointDef;
 import com.badlogic.gdx.utils.JsonValue;
+import edu.cornell.gdiac.assets.AssetDirectory;
 import edu.cornell.gdiac.assets.ParserUtils;
 import edu.cornell.gdiac.graphics.SpriteBatch;
 import edu.cornell.gdiac.graphics.Texture2D;
@@ -188,7 +189,15 @@ public class MindMaintenance extends Enemy {
 
         mesh.set(-drawWidth/1.5f, -drawHeight/1.6f, drawWidth*1.5f, drawHeight*1.5f);
     }
+    public void setActiveTexture(AssetDirectory directory){
+        Texture texture = directory.getEntry( "mind-maintenance-active", Texture.class );
+        this.setTexture(texture);
+    }
 
+    public void setStunTexture(AssetDirectory directory){
+        Texture texture = directory.getEntry( "mind-maintenance-inactive", Texture.class );
+        this.setTexture(texture);
+    }
     /**
      * Creates a sensor fixture to detect ground contact.
      * This sensor prevents double-jumping by detecting when the player is on the ground.

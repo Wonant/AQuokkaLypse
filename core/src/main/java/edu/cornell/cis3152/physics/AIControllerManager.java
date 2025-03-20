@@ -1,3 +1,4 @@
+
 package edu.cornell.cis3152.physics;
 
 import com.badlogic.gdx.graphics.Texture;
@@ -227,9 +228,7 @@ public class AIControllerManager {
 
             if (data.stateTimer > data.stateDuration) {
                 System.out.println("Critter stun wears off");
-
-                Texture texture = asset_directory.getEntry( "curiosity-critter-active", Texture.class );
-                data.critter.setTexture(texture);
+                data.critter.setActiveTexture(asset_directory);
                 data.critter.setStunned(false);
                 transitionCritterState(data, CritterFSM.IDLE_LOOK);
             }
@@ -423,7 +422,7 @@ public class AIControllerManager {
         Vector2 visionRef = new Vector2(maintenancePos.x, maintenancePos.y + 10.0f);
         boolean seesPlayer = data.maintenance.isAwareOfPlayer();
         boolean isStunned = data.maintenance.isStunned();
-        System.out.println("Updating Maintenance");
+
         // if the enemy is stunned, transition to the stunned state
         if (isStunned) {
             if (data.state != MaintenanceFSM.STUNNED) {
@@ -433,9 +432,7 @@ public class AIControllerManager {
 
             if (data.stateTimer > data.stateDuration) {
                 System.out.println("Maintenance stun wears off");
-
-                Texture texture = asset_directory.getEntry( "mind-maintenance-active", Texture.class );
-                data.maintenance.setTexture(texture);
+                data.maintenance.setActiveTexture(asset_directory);
                 data.maintenance.setStunned(false);
                 transitionMaintenanceState(data, MaintenanceFSM.IDLE_LOOK);
             }
@@ -485,7 +482,6 @@ public class AIControllerManager {
                 }
             }
         }
-        System.out.println("Maintenance state is : " + data.state);
 
         Vector2 playerPos = getPlayerPosition(player);
         if (data.state == MaintenanceFSM.CHASING) {
@@ -601,9 +597,7 @@ public class AIControllerManager {
 
             if (data.stateTimer > data.stateDuration) {
                 System.out.println("Dream Dweller recovers from stun.");
-
-                Texture texture = asset_directory.getEntry("dream-dweller-active", Texture.class);
-                data.dweller.setTexture(texture);
+                data.dweller.setActiveTexture(asset_directory);
                 data.dweller.setStunned(false);
                 transitionDwellerState(data, DwellerFSM.IDLE_LOOK);
             }
