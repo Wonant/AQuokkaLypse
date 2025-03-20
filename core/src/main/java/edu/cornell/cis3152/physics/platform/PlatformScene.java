@@ -423,6 +423,7 @@ public class PlatformScene implements ContactListener, Screen{
 
         // This shows off how powerful our new SpriteBatch is
         batch.begin(camera);
+
         background = directory.getEntry("background-proto", Texture.class);
         batch.draw(background, 0, 0);
 
@@ -460,11 +461,24 @@ public class PlatformScene implements ContactListener, Screen{
             batch.drawText(badMessage, width/2, height/2);
         }
 
+
         InputController input = InputController.getInstance();
         float units = height/bounds.height;
-        float x = input.getCrossHair().x*units-units/2;
-        float y = input.getCrossHair().y*units-units/2;
-        batch.draw(crosshairTexture, x, y, units, units);
+        float x = input.getMouse().x;
+        float y = Gdx.graphics.getHeight() - input.getMouse().y;
+
+        Vector3 crosshairPos = new Vector3(x, -y, 0);
+        camera.unproject(crosshairPos);
+
+        float cw = crosshairTexture.getRegionHeight();
+        float ch = crosshairTexture.getRegionHeight();
+
+        float viewX = avatar.getObstacle().getX() - camera.viewportWidth /2f;
+        float viewY = avatar.getObstacle().getY() - camera.viewportHeight /2f;
+
+
+
+        batch.draw(crosshairTexture, crosshairPos.x - cw/2f, crosshairPos.y - cw/2f, units, units);
 
         //batch.setColor(foregroundColor);
         //batch.draw(foregroundTexture, 0, 0, width, height);
@@ -555,6 +569,16 @@ public class PlatformScene implements ContactListener, Screen{
      */
     public void render(float delta) {
         if (active) {
+            float units = height/bounds.height;
+            float lerp = 1.5f;
+            Vector3 position = this.camera.position;
+            System.out.println(this.camera.position);
+            position.x += (this.avatar.getObstacle().getX() * units - position.x) * lerp * delta;
+            position.y += (this.avatar.getObstacle().getY() * units - position.y) * lerp * delta;
+            camera.position.set(position);
+            camera.zoom = 0.8f;
+            camera.update();
+
             if (preUpdate(delta)) {
                 update(delta); // This is the one that must be defined.
                 postUpdate(delta);
@@ -724,7 +748,6 @@ public class PlatformScene implements ContactListener, Screen{
 
         texture = directory.getEntry( "shared-cloud", Texture.class );
         Texture shadowedTexture = directory.getEntry("shared-shadow-cloud", Texture.class);
-
 
 
         aiManager = new AIControllerManager(avatar, directory);
@@ -922,12 +945,18 @@ public class PlatformScene implements ContactListener, Screen{
 
         avatar.setStunning(input.didStun());
         avatar.setHarvesting(input.didSecondary());
-        avatar.setTeleporting(input.didCreateTeleport());
+        avatar.setTeleporting(input.didM1());
 
         // Process actions in object model
         avatar.setMovement(input.getHorizontal() *avatar.getForce());
 
         if (avatar.isGrounded()) avatar.setJumping(input.didPrimary());
+
+
+        avatar.setStunning(input.didStun());
+        avatar.setHarvesting(input.didSecondary());
+        //avatar.setTeleporting(input.didTeleport());
+        avatar.setTeleporting(input.didM1());
 
         if (avatar.isHarvesting())
         {
@@ -994,6 +1023,7 @@ public class PlatformScene implements ContactListener, Screen{
     private void createTeleporter() {
         float units = height/bounds.height;
         InputController input = InputController.getInstance();
+
         Vector2 mousePosition = input.getCrossHair();
         float cursorX = mousePosition.x;
         float cursorY = mousePosition.y;
@@ -1018,6 +1048,7 @@ public class PlatformScene implements ContactListener, Screen{
 
         if (isOnSurface[0]) {
             System.out.println("Cannot place teleporter: Mouse is directly on a surface!");
+
             return;
         }
 
@@ -1057,6 +1088,7 @@ public class PlatformScene implements ContactListener, Screen{
 
         Teleporter exitTeleporter = new Teleporter(units, teleporter, teleporterPosition);
         exitTeleporter.setTexture(texture);
+
         exitTeleporter.getObstacle().setName("exit_teleporter");
 
         originTeleporter.setLinkedTeleporter(exitTeleporter);

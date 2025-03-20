@@ -218,7 +218,7 @@ public class CuriosityCritter extends Enemy {
         // Create the sensor fixture on the physics body
         Body body = obstacle.getBody();
         Fixture sensorFixture = body.createFixture(sensorDef);
-        sensorName = "critter_sensor";
+
         sensorFixture.setUserData(sensorName);
 
         // Create a debug outline for the sensor so you can see it in debug mode

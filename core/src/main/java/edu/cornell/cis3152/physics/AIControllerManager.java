@@ -176,6 +176,16 @@ public class AIControllerManager {
         entities.add(new DwellerAI(entity));
     }
 
+    public void register(Enemy entity) {
+        if (entity instanceof CuriosityCritter) {
+            entities.add(new CritterAI((CuriosityCritter)entity));
+        } else if (entity instanceof MindMaintenance) {
+            entities.add(new MaintenanceAI((MindMaintenance) entity));
+        } else if (entity instanceof DreamDweller) {
+            entities.add(new DwellerAI((DreamDweller) entity));
+        }
+    }
+
 
     public void unregister(CuriosityCritter entity) {
         entities.removeIf(data -> data.enemy == entity);
