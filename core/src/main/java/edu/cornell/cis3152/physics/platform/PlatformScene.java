@@ -714,7 +714,6 @@ public class PlatformScene implements ContactListener, Screen{
         dreamShardCountText.setFont(smallFont);
         dreamShardCountText.setAlignment(TextAlign.left);
         dreamShardCountText.setColor(Color.WHITE);
-        dreamShardCountText.setText("Dream Shards: " + totalGoals);
         dreamShardCountText.layout();
 
         world.setContactListener(this);
@@ -911,7 +910,10 @@ public class PlatformScene implements ContactListener, Screen{
 
         }
 
-
+        if (dreamShardCountText != null) {
+            dreamShardCountText.setText("Dream Shards: " + (totalGoals - collectedGoals));
+            dreamShardCountText.layout();
+        }
 
     }
 
