@@ -49,7 +49,6 @@ public class MindMaintenance extends Enemy {
     private final Vector2 forceCache = new Vector2();
     private final Affine2 flipCache = new Affine2();
 
-    private RevoluteJoint headJoint;
     private Fixture visionSensor;
     private Fixture followSensor;
     private float headOffset = 2.0f;
@@ -70,6 +69,7 @@ public class MindMaintenance extends Enemy {
     private Path2 visionSensorOutline;
     private Path2 visionFollowOutline;
     private Path2 walkSensorOutline;
+    private Path2 harvestOutline;
 
 
     public float getMovement() {
@@ -230,6 +230,34 @@ public class MindMaintenance extends Enemy {
         factory.makeRect((sensorCenter.x - w / 2) * u, (sensorCenter.y - h / 2) * u, w * u, h * u, sensorOutline);
         sensorShape.dispose();
 
+        createHarvestSensor(width, height);
+    }
+
+    public void createHarvestSensor(float harvestWidth, float harvestHeight) {
+        float u = obstacle.getPhysicsUnits();
+
+        // Create the harvest outline (for visualization)
+        PathFactory factory = new PathFactory();
+        harvestOutline = new Path2();
+
+        factory.makeRoundedRect(-harvestWidth/2 * u, -harvestHeight/2 * u,
+            harvestWidth * u, harvestHeight * u,
+            (harvestWidth/2) * u, harvestOutline);
+
+        // Create a sensor fixture for the harvest area
+        PolygonShape harvestShape = new PolygonShape();
+        harvestShape.setAsBox(harvestWidth/2, harvestHeight/2);
+
+        FixtureDef harvestDef = new FixtureDef();
+        harvestDef.shape = harvestShape;
+        harvestDef.isSensor = true;
+
+        Body body = obstacle.getBody();
+        Fixture harvestFixture = body.createFixture(harvestDef);
+
+        harvestFixture.setUserData("harvest_sensor");
+
+        harvestShape.dispose();
     }
 
     public void createHeadBody() {
@@ -265,7 +293,7 @@ public class MindMaintenance extends Enemy {
         createHeadBody();
         attachHead();
         float coneWidth = 3.0f;
-        float coneLength = 4.4f;
+        float coneLength = 2.4f;
         Vector2[] vertices = new Vector2[3];
         vertices[0] = new Vector2(-coneWidth/2, coneLength);
         vertices[1] = new Vector2(coneWidth/2, coneLength);
@@ -479,6 +507,22 @@ public class MindMaintenance extends Enemy {
             transform.preTranslate(headPos.x * u, headPos.y * u);
 
             batch.outline(walkSensorOutline, transform);
+            batch.setColor(Color.WHITE);
+        }
+        if (harvestOutline != null) {
+            batch.setTexture(Texture2D.getBlank());
+            batch.setColor(Color.BLUE);
+
+            Vector2 p = obstacle.getPosition();
+            float a = obstacle.getAngle();
+            float u = obstacle.getPhysicsUnits();
+
+            transform.idt();
+            transform.preRotate((float)(a * 180.0f / Math.PI));
+            transform.preTranslate(p.x * u, p.y * u);
+
+            batch.outline(harvestOutline, transform);
+
             batch.setColor(Color.WHITE);
         }
     }

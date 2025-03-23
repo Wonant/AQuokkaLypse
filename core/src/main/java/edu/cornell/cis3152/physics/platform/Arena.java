@@ -82,15 +82,17 @@ public class Arena implements ContactListener, Screen{
     private ScreenListener listener;
 
     private int countdown = -1;
+    private int max_enemies = 5;
+    private int totalEnemies = 0;
     // This variable holds the type of enemy pending to be added via mouse click.
     // It can be "critter", "guard", or "dweller", or null if none is pending.
     private String pendingEnemyType = null;
 
 
     /** Lists of the current enemies in world */
-    protected ArrayList<CuriosityCritter> critters = new ArrayList<>();
-    protected ArrayList<MindMaintenance> guards = new ArrayList<>();
-    protected ArrayList<DreamDweller> dwellers = new ArrayList<>();
+
+
+    private HashMap<Teleporter, Float> teleporterCreationTimes = new HashMap<>();
 
     private Texture background;
 
@@ -125,6 +127,7 @@ public class Arena implements ContactListener, Screen{
     private Texture vision;
     private int prev_debug;
     private Sprite visionCone;
+    private float timeElapsed = 0f;
 
     private HashMap<CuriosityCritter, Sprite> visionCones;
     private AIControllerManager aiManager;
@@ -150,6 +153,7 @@ public class Arena implements ContactListener, Screen{
     private boolean placementMode = false;
 
     private CuriosityCritter queuedHarvestedEnemy = null;
+    //private CuriosityCritter queuedHarvestedEnemy = null;
     private DreamDweller queuedHarvestedEnemyD = null;
 
 
@@ -174,7 +178,6 @@ public class Arena implements ContactListener, Screen{
         crosshairTexture  = new TextureRegion(directory.getEntry( "ragdoll-crosshair", Texture.class ));
         scareEffectTexture = new TextureRegion(directory.getEntry("platform-scare-effect", Texture.class));
         fearMeterTexture = directory.getEntry("fear-meter", Texture.class);
-        System.out.println("Fear meter texture created: " + (fearMeterTexture != null));
 
         batch = new SpriteBatch();
         scale = new Vector2();
@@ -436,6 +439,9 @@ public class Arena implements ContactListener, Screen{
             obj.draw(batch);
         }
 
+
+
+
         drawFearMeter();
 
 
@@ -604,16 +610,22 @@ public class Arena implements ContactListener, Screen{
 
                 // 2 / (1 + e^(-5(x-0.5)))
 
-                float lerp = 1.5f;
-                float fast_lerp = 3.0f;
+
+
                 Vector3 position = this.camera.position;
-                Vector3 playerPosition = new Vector3(this.avatar.getObstacle().getX(), this.avatar.getObstacle().getY(), 0);
+                Vector3 playerPosition = new Vector3(this.avatar.getObstacle().getX() * units, this.avatar.getObstacle().getY() * units, 0);
 
-                System.out.println(playerPosition.x * units - position.x);
-                // through testing we can say if its greater than like 10~15 dont make it lerp slowly, 
 
-                position.x += (playerPosition.x * units - position.x) * lerp * delta;
-                position.y += (playerPosition.y * units - position.y) * lerp * delta;
+                Vector3 diff = new Vector3(position).sub(playerPosition);
+                float dis = diff.len();
+                if (dis > 220.0) {
+                    diff.nor().scl(250);
+                    position.lerp(new Vector3((playerPosition).add(diff)), 0.1f);
+                }
+
+                float lerp = 3.0f;
+                position.x += (this.avatar.getObstacle().getX() * units - position.x) * lerp * delta;
+                position.y += (this.avatar.getObstacle().getY() * units - position.y) * lerp * delta;
                 camera.position.set(position);
                 camera.zoom = 0.8f;
                 clampCamera();
@@ -658,6 +670,7 @@ public class Arena implements ContactListener, Screen{
     }
 
     private void createEnemy(String type, Vector2 position) {
+        if (totalEnemies == max_enemies) return;
         float units = height/bounds.height;
         System.out.println(units);
         Texture texture;
@@ -668,7 +681,7 @@ public class Arena implements ContactListener, Screen{
             addSprite(enemy);
             enemy.createSensor();
             enemy.createVisionSensor();
-            critters.add(enemy);
+
             aiManager.register(enemy);
         } else if (type.equals("maintenance")) {
             texture = directory.getEntry("mind-maintenance-active", Texture.class);
@@ -677,7 +690,7 @@ public class Arena implements ContactListener, Screen{
             addSprite(enemy);
             enemy.createSensor();
             enemy.createVisionSensor();
-            guards.add(enemy);
+
             aiManager.register(enemy);
 
         } else if (type.equals("dreamdweller")) {
@@ -687,26 +700,13 @@ public class Arena implements ContactListener, Screen{
             addSprite(enemy);
             enemy.createSensor();
             enemy.createVisionSensor();
-            dwellers.add(enemy);
+
             aiManager.register(enemy);
         }
+        totalEnemies++;
         System.out.println("Enemy created: " + type + " at " + position);
     }
 
-    private void resetEnemies() {
-        for (CuriosityCritter crit : critters) {
-            crit.getObstacle().markRemoved(true);
-        }
-        for (MindMaintenance mm : guards) {
-            mm.getObstacle().markRemoved(true);
-        }
-        for (DreamDweller dd : dwellers) {
-            dd.getObstacle().markRemoved(true);
-        }
-        critters.clear();
-        guards.clear();
-        dwellers.clear();
-    }
 
     public void reset() {
         JsonValue values = constants.get("world");
@@ -717,10 +717,10 @@ public class Arena implements ContactListener, Screen{
         }
         sprites.clear();
         addQueue.clear();
-        resetEnemies();
         if (world != null) {
             world.dispose();
         }
+        totalEnemies = 0;
 
 
         world = new World(gravity,false);
@@ -735,11 +735,27 @@ public class Arena implements ContactListener, Screen{
 
         Texture texture;
 
-        texture = directory.getEntry( "shared-test", Texture.class );
+
+        texture = directory.getEntry("shared-goal", Texture.class);
         JsonValue goal = constants.get("goal");
         JsonValue goalpos = goal.get("pos");
         totalGoals = goalpos.size;
         collectedGoals = 0;
+        for (int i = 0; i < goalpos.size; i++) {
+
+            System.out.println("Fetching Goal Positions.");
+            float x = goalpos.get(i).getFloat(0);
+            System.out.println("X.");
+            float y = goalpos.get(i).getFloat(1);
+            System.out.println("Y.");
+
+            Door goalDoor = new Door(units, goal, x, y);
+            goalDoor.setTexture(texture);
+            goalDoor.getObstacle().setName("goal_" + i);
+            addSprite(goalDoor);
+        }
+
+        texture = directory.getEntry( "shared-test", Texture.class );
         aiManager = new AIControllerManager(avatar, directory);
         Surface wall;
         String wname = "wall";
@@ -781,62 +797,6 @@ public class Arena implements ContactListener, Screen{
             camera.update();
         }
 
-
-
-//        JsonValue critters = constants.get("curiosity-critter");
-//        JsonValue critterspos = critters.get("pos");
-//        visionCones = new HashMap<>();
-//
-//        for (int i = 0; i < critterspos.size; i++) {
-//            texture = directory.getEntry( "curiosity-critter-active", Texture.class );
-//            critter = new CuriosityCritter(units, constants.get("curiosity-critter"), critterspos.get(i).asFloatArray());
-//            critter.setTexture(texture);
-//            addSprite(critter);
-//            // Have to do after body is created
-//            critter.createSensor();
-//            critter.createVisionSensor();
-//
-//            aiManager.register(critter);
-//            texture = directory.getEntry("vision_cone", Texture.class);
-//            visionConeRegion = new TextureRegion(texture);
-//            visionCone = new Sprite(visionConeRegion.getTexture());
-//            visionCone.setRegion(visionConeRegion);
-//            visionCone.setSize(240, 200);
-//            visionCone.setOrigin(visionCone.getWidth() / 2, 0);
-//
-//            visionCones.put(critter, visionCone);
-//        }
-//
-//        JsonValue maintainers = constants.get("mind-maintenance");
-//        JsonValue maintenancePos = maintainers.get("pos");
-//
-//        for (int i = 0; i < maintenancePos.size; i++) {
-//            texture = directory.getEntry( "mind-maintenance-active", Texture.class );
-//
-//            maintenance = new MindMaintenance(units, constants.get("mind-maintenance"), maintenancePos.get(i).asFloatArray());
-//            maintenance.setTexture(texture);
-//            addSprite(maintenance);
-//            // Have to do after body is created
-//            maintenance.createSensor();
-//            maintenance.createVisionSensor();
-//
-//            aiManager.register(maintenance);
-//            texture = directory.getEntry("vision_cone", Texture.class);
-//            visionConeRegion = new TextureRegion(texture);
-//            visionCone = new Sprite(visionConeRegion.getTexture());
-//            visionCone.setRegion(visionConeRegion);
-//            visionCone.setSize(240, 200);
-//            visionCone.setOrigin(visionCone.getWidth() / 2, 0);
-//
-//            visionCones.put(critter, visionCone);
-//        }
-
-
-
-
-
-
-
     }
 
     /**
@@ -867,6 +827,30 @@ public class Arena implements ContactListener, Screen{
             reset();
         }
 
+        if (input.didExit()) {
+            pause();
+            listener.exitScreen(this, EXIT_QUIT);
+            return false;
+        } else if (input.didAdvance()) {
+            pause();
+            listener.exitScreen(this, EXIT_NEXT);
+            return false;
+        } else if (input.didRetreat()) {
+            pause();
+            listener.exitScreen(this, EXIT_PREV);
+            return false;
+        } else if (countdown > 0) {
+            countdown--;
+        } else if (countdown == 0) {
+            if (failed) {
+                reset();
+            } else if (complete) {
+                pause();
+                listener.exitScreen(this, EXIT_NEXT);
+                return false;
+            }
+        }
+
 
         if (!isFailure() && (avatar.getObstacle().getY() < -1 || avatar.getFearMeter() == 0)) {
             setFailure(true);
@@ -889,6 +873,14 @@ public class Arena implements ContactListener, Screen{
      */
     public void update(float dt) {
         InputController input = InputController.getInstance();
+        timeElapsed += dt;
+        for (Teleporter tp : new ArrayList<>(teleporterCreationTimes.keySet())) {
+            float creationTime = teleporterCreationTimes.get(tp);
+            if(timeElapsed - creationTime >= 2.0f) {
+                tp.getObstacle().markRemoved(true);
+                teleporterCreationTimes.remove(tp);
+            }
+        }
         if (input.didPressInvulnerability()) toggleInvulnerability();
         if (input.isSpawningCritter()) {
             pendingEnemyType = "critter";
@@ -907,7 +899,6 @@ public class Arena implements ContactListener, Screen{
         }
 
 
-
         if (avatar.isGrounded()) {
             avatar.setJumping(input.didPrimary());
             avatar.setMovement(input.getHorizontal() *avatar.getForce());
@@ -924,6 +915,7 @@ public class Arena implements ContactListener, Screen{
         if (avatar.isHarvesting())
         {
             drawScareEffect = true;
+            //keeping the one at the time scare
             if (queuedHarvestedEnemy != null)
             {
                 if (!queuedHarvestedEnemy.getObstacle().isRemoved()) {
@@ -957,13 +949,6 @@ public class Arena implements ContactListener, Screen{
             takeTeleporter(currentTeleporter);
             currentTeleporter = null;
         }
-
-
-        /*if(avatar.isTakingDamage())
-        {
-            avatar.setFearMeter(avatar.getFearMeter() - 1);
-            avatar.setTakingDamage(false);
-        }*/
 
 
         if (queuedTeleportPosition != null) {
@@ -1131,6 +1116,9 @@ public class Arena implements ContactListener, Screen{
 
         originTeleporter.setLinkedTeleporter(exitTeleporter);
         exitTeleporter.setLinkedTeleporter(originTeleporter);
+
+        teleporterCreationTimes.put(originTeleporter, timeElapsed);
+        teleporterCreationTimes.put(exitTeleporter, timeElapsed);
 
         addSprite(originTeleporter);
         addSprite(exitTeleporter);
@@ -1471,8 +1459,11 @@ public class Arena implements ContactListener, Screen{
                 }
             }
 
-            if((avatar.getScareSensorName().equals(fd1) && (bd2 instanceof CuriosityCritter)) ||
-                    (avatar.getScareSensorName().equals(fd2) && (bd1 instanceof CuriosityCritter)))
+            System.out.println(fd1 + " " +  fd2);
+
+
+            if((avatar.getScareSensorName().equals(fd1) && fd2.equals("harvest_sensor") ||
+                    (avatar.getScareSensorName().equals(fd2) && fd1.equals("harvest_sensor"))))
             {
                 CuriosityCritter harvestedCC;
                 if (avatar.getScareSensorName().equals(fd1))
@@ -1502,7 +1493,6 @@ public class Arena implements ContactListener, Screen{
                     performHarvestD(harvested);
                 }
                 avatar.setHarvesting(true);
-
             }
 
             if( !avatar.getScareSensorName().equals(fd1) && bd1 == avatar && bd2.getName().equals("origin_teleporter"))
@@ -1608,8 +1598,7 @@ public class Arena implements ContactListener, Screen{
         if((avatar.getScareSensorName().equals(fd1) && (bd2 instanceof CuriosityCritter)) ||
                 (avatar.getScareSensorName().equals(fd2) && (bd1 instanceof CuriosityCritter)))
         {
-            queuedHarvestedEnemy = null;
-            avatar.setHarvesting(false);
+
 
         }
 
@@ -1644,8 +1633,6 @@ public class Arena implements ContactListener, Screen{
         if((avatar.getScareSensorName().equals(fd1) && (bd2 instanceof DreamDweller)) ||
                 (avatar.getScareSensorName().equals(fd2) && (bd1 instanceof DreamDweller)))
         {
-            queuedHarvestedEnemyD = null;
-            avatar.setHarvesting(false);
 
         }
 

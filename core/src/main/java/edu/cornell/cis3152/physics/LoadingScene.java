@@ -181,6 +181,7 @@ public class LoadingScene implements Screen, InputProcessor {
 
         // Start loading the REAL assets
         assets = new AssetDirectory( file );
+        System.out.println("Loading assets from: " + file);
         assets.loadAssets();
         active = true;
     }

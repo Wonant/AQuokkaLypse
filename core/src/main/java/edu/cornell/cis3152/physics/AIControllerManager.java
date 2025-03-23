@@ -572,7 +572,7 @@ public class AIControllerManager {
                 break;
 
             case CHASING:
-                data.stateDuration = 4.0f;
+                data.stateDuration = 2.0f;
                 data.horizontal = 10f;
                 break;
 

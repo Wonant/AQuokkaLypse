@@ -47,11 +47,11 @@ public class CuriosityCritter extends Enemy {
     private final Vector2 forceCache = new Vector2();
     private final Affine2 flipCache = new Affine2();
 
-    private RevoluteJoint headJoint;
     private Fixture visionSensor;
     private Fixture followSensor;
     private float headOffset = 2.0f;
     private Fixture walkSensor;
+
 
     /** game logic stuff */
 
@@ -65,7 +65,10 @@ public class CuriosityCritter extends Enemy {
     // should be seconds in how long it takes for the critter to reset from aware of player to idle
     private float awarenessCooldown;
 
-    private Path2 visionSensorOutline;
+    /** used to draw the harvest hitbox, which differs from the physical hitbox */
+    private Path2 harvestOutline;
+
+    private Path2 visionTriggerOutline; //
     private Path2 visionFollowOutline;
     private Path2 walkSensorOutline;
 
@@ -227,7 +230,41 @@ public class CuriosityCritter extends Enemy {
         sensorOutline = new Path2();
         factory.makeRect((sensorCenter.x - w / 2) * u, (sensorCenter.y - h / 2) * u, w * u, h * u, sensorOutline);
         sensorShape.dispose();
+
+        createHarvestSensor(width, height);
     }
+
+    public void createHarvestSensor(float harvestWidth, float harvestHeight) {
+        float u = obstacle.getPhysicsUnits();
+
+        // Create the harvest outline (for visualization)
+        PathFactory factory = new PathFactory();
+        harvestOutline = new Path2();
+
+        factory.makeRoundedRect(-harvestWidth/2 * u, -harvestHeight/2 * u,
+            harvestWidth * u, harvestHeight * u,
+            (harvestWidth/2) * u, harvestOutline);
+
+        // Create a sensor fixture for the harvest area
+        // This will be used for collision detection without physical response
+        PolygonShape harvestShape = new PolygonShape();
+        harvestShape.setAsBox(harvestWidth/2, harvestHeight/2);
+
+        FixtureDef harvestDef = new FixtureDef();
+        harvestDef.shape = harvestShape;
+        harvestDef.isSensor = true;
+
+        Body body = obstacle.getBody();
+        Fixture harvestFixture = body.createFixture(harvestDef);
+
+        harvestFixture.setUserData("harvest_sensor");
+
+        harvestShape.dispose();
+    }
+
+
+
+    // vision following
 
     public void createHeadBody() {
         BodyDef bdef = new BodyDef();
@@ -261,7 +298,7 @@ public class CuriosityCritter extends Enemy {
     public void createVisionSensor() {
         createHeadBody();
         attachHead();
-        float coneWidth = 3.0f;
+        float coneWidth = 4.0f;
         float coneLength = 4.4f;
         Vector2[] vertices = new Vector2[3];
         vertices[0] = new Vector2(-coneWidth/2, coneLength);
@@ -279,18 +316,17 @@ public class CuriosityCritter extends Enemy {
 
 
         PathFactory factory = new PathFactory();
-        visionSensorOutline = new Path2();
+        visionTriggerOutline = new Path2();
         float u = obstacle.getPhysicsUnits();
-        visionSensorOutline = factory.makeTriangle(
+        visionTriggerOutline = factory.makeTriangle(
             -coneWidth/2 * u, coneLength * u,
             coneWidth/2 * u, coneLength * u,
             0, 0);
 
         // follow sensor
         coneWidth *= 1.8f;
+        coneLength *= 3.0f / 4.4f;
 
-
-        //okay idk why this works but it works for having the vision cone follow the player once aggro'd
         vertices[0] = new Vector2((-coneWidth)/2, coneLength);
         vertices[1] = new Vector2((coneWidth)/2, coneLength);
         vertices[2] = new Vector2(0, -3f);
@@ -434,7 +470,7 @@ public class CuriosityCritter extends Enemy {
 
             batch.outline(sensorOutline, transform);
         }
-        if (visionSensorOutline != null) {
+        if (visionTriggerOutline != null) {
             batch.setTexture(Texture2D.getBlank());
             batch.setColor(Color.GREEN);
 
@@ -446,7 +482,7 @@ public class CuriosityCritter extends Enemy {
             transform.preRotate(headAngleDeg);
             transform.preTranslate(headPos.x * u, headPos.y * u);
 
-            batch.outline(visionSensorOutline, transform);
+            batch.outline(visionTriggerOutline, transform);
         }
         if (visionFollowOutline != null) {
             batch.setTexture(Texture2D.getBlank());
@@ -475,6 +511,22 @@ public class CuriosityCritter extends Enemy {
             transform.preTranslate(headPos.x * u, headPos.y * u);
 
             batch.outline(walkSensorOutline, transform);
+            batch.setColor(Color.WHITE);
+        }
+        if (harvestOutline != null) {
+            batch.setTexture(Texture2D.getBlank());
+            batch.setColor(Color.BLUE);
+
+            Vector2 p = obstacle.getPosition();
+            float a = obstacle.getAngle();
+            float u = obstacle.getPhysicsUnits();
+
+            transform.idt();
+            transform.preRotate((float)(a * 180.0f / Math.PI));
+            transform.preTranslate(p.x * u, p.y * u);
+
+            batch.outline(harvestOutline, transform);
+
             batch.setColor(Color.WHITE);
         }
     }

@@ -409,12 +409,14 @@ public class InputController {
             vertical -= 1.0f;
         }
 
+        stunPressed = Gdx.input.isKeyPressed(Input.Keys.SHIFT_LEFT);
+
         // Mouse results
 
 
         m1Pressed = Gdx.input.isButtonPressed(Input.Buttons.LEFT);
 
-        stunPressed = Gdx.input.isButtonPressed(Input.Buttons.RIGHT);
+
 
         crosshair.set(Gdx.input.getX(), Gdx.input.getY());
         crosshair.scl(1/scale.x,-1/scale.y);

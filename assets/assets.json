@@ -1,7 +1,9 @@
 {
 	"textures": {
-        "shared-test" : {
-
+        "shared-shadow-test" : {
+          "file":  "shared/okay.png",
+          "wrapU": "repeated",
+          "wrapV": "repeated"
         },
         "shared-cloud" : {
             "file":  "shared/cloud.png",
@@ -72,6 +74,7 @@
         "platf" : "shared/platf1.png",
 
         "background-proto" : "platform/dreamBackground.png",
+        "background-technical" : "shared/backgroundTemple.png",
         "curiosity-critter-active": "shared/CuriosityCritterActive.png",
         "curiosity-critter-inactive": "shared/CuriosityCritterInactive.png",
         "mind-maintenance-active": "shared/MindMaintenanceActive.png" ,
@@ -129,8 +132,9 @@
     },
     "jsons"  : {
         "platform-constants": "platform/constants.json",
-        "platform-constant1": "platform/constant1.json",
-        "arena" : "arena/arena.json"
+        "platform-constants1": "platform/constant1.json",
+        "arena" : "arena/arena.json",
+        "arena1" : "arena/arena1.json"
     },
     "soundfx" : {
         "rocket-bump"       : "rocket/bump.wav",

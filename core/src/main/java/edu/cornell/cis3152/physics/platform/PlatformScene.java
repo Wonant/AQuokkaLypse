@@ -16,6 +16,7 @@ import com.badlogic.gdx.graphics.g2d.Sprite;
 import edu.cornell.cis3152.physics.AIControllerManager;
 import edu.cornell.cis3152.physics.ObstacleGroup;
 
+import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.Iterator;
 import com.badlogic.gdx.*;
@@ -73,6 +74,7 @@ public class PlatformScene implements ContactListener, Screen{
     protected AssetDirectory directory;
     /** The drawing camera for this scene */
     protected OrthographicCamera camera;
+    protected OrthographicCamera uiCamera;
     /** Reference to the sprite batch */
     protected SpriteBatch batch;
 
@@ -151,7 +153,6 @@ public class PlatformScene implements ContactListener, Screen{
     private int prev_debug;
     private Sprite visionCone;
 
-    private HashMap<Enemy, Sprite> visionCones;
 
     private AIControllerManager aiManager;
     /** Reference to the goalDoor (for collision detection) */
@@ -183,8 +184,8 @@ public class PlatformScene implements ContactListener, Screen{
     protected PooledList<Surface> shadowPlatformQueue = new PooledList<Surface>();
     private DreamDweller queuedHarvestedEnemyD = null;
     private HashMap<DreamDweller, Sprite> visionCones3;
-
-
+    private HashMap<Teleporter, Float> teleporterCreationTimes = new HashMap<>();
+    private float timeElapsed = 0f;
 
 
     /**
@@ -302,7 +303,6 @@ public class PlatformScene implements ContactListener, Screen{
         }
         sprites.clear();
         addQueue.clear();
-        world.dispose();
         addQueue = null;
         sprites = null;
         bounds = null;
@@ -312,6 +312,7 @@ public class PlatformScene implements ContactListener, Screen{
         fearMeterTexture.dispose();
         background.dispose();
     }
+
 
     /**
      *
@@ -424,8 +425,13 @@ public class PlatformScene implements ContactListener, Screen{
         // This shows off how powerful our new SpriteBatch is
         batch.begin(camera);
 
-        background = directory.getEntry("background-proto", Texture.class);
-        batch.draw(background, 0, 0);
+        background = directory.getEntry("background-technical", Texture.class);
+        float parallaxFactor = 0.4f;
+
+        float bgX = camera.position.x * parallaxFactor - background.getWidth() / 2f;
+        float bgY = camera.position.y * parallaxFactor - background.getHeight() / 2f;
+
+        batch.draw(background, bgX, bgY, background.getWidth(), background.getHeight() * 2);
 
         if (drawScareEffect)
         {
@@ -439,12 +445,12 @@ public class PlatformScene implements ContactListener, Screen{
             }
         }
 
+
         // Draw the meshes (images)
         for(ObstacleSprite obj : sprites) {
             obj.draw(batch);
         }
 
-        drawFearMeter();
 
 
         if (debug) {
@@ -453,51 +459,55 @@ public class PlatformScene implements ContactListener, Screen{
                 obj.drawDebug( batch );
             }
         }
-        batch.drawText(dreamShardCountText, 11, height - 50);
+
         // Draw a final message
-        if (complete && !failed) {
-            batch.drawText(goodMessage, width/2, height/2);
-        } else if (failed) {
-            batch.drawText(badMessage, width/2, height/2);
-        }
 
-
-        InputController input = InputController.getInstance();
-        float units = height/bounds.height;
-        float x = input.getMouse().x;
-        float y = Gdx.graphics.getHeight() - input.getMouse().y;
-
-        Vector3 crosshairPos = new Vector3(x, -y, 0);
-        camera.unproject(crosshairPos);
-
-        float cw = crosshairTexture.getRegionHeight();
-        float ch = crosshairTexture.getRegionHeight();
-
-        float viewX = avatar.getObstacle().getX() - camera.viewportWidth /2f;
-        float viewY = avatar.getObstacle().getY() - camera.viewportHeight /2f;
-
-
-
-        batch.draw(crosshairTexture, crosshairPos.x - cw/2f, crosshairPos.y - cw/2f, units, units);
 
         //batch.setColor(foregroundColor);
         //batch.draw(foregroundTexture, 0, 0, width, height);
 
-        float u = critter.getObstacle().getPhysicsUnits();
+        batch.end();
+    }
 
-        for (Enemy e : visionCones.keySet()) {
-            if (!e.isStunned()) {
-                Vector2 headPos = e.getHeadBody().getPosition();
-                float headAngleDeg = e.getHeadBody().getAngle() * MathUtils.radiansToDegrees;
+    private void drawUI() {
+        uiCamera.update();
+        batch.setProjectionMatrix(uiCamera.combined);
+        batch.begin();
+        float scaleFactor = 0.5f;
+        float originalWidth = crosshairTexture.getRegionWidth();
+        float originalHeight = crosshairTexture.getRegionHeight();
+        float scaledWidth = originalWidth * scaleFactor;
+        float scaledHeight = originalHeight * scaleFactor;
 
-                // Get the correct vision cone for the current enemy `e`
-                Sprite visionCone = visionCones.get(e);
+        float crossX = Gdx.input.getX() - scaledWidth / 2;
+        float crossY = Gdx.graphics.getHeight() - Gdx.input.getY() - scaledHeight / 2;
 
-                visionCone.setPosition(headPos.x * u - visionCone.getOriginX(),
-                    headPos.y * u - visionCone.getOriginY());
-                visionCone.setRotation(headAngleDeg);
-                visionCone.draw(batch);
-            }
+        batch.drawText(dreamShardCountText, 11, height - 50);
+
+        batch.draw(crosshairTexture, crossX, crossY, scaledWidth, scaledHeight);
+
+        if (fearMeterTexture != null && avatar != null) {
+            int fearLevel = avatar.getFearMeter();
+            int maxFear = avatar.getMaxFearMeter();
+            float meterWidth = 150 * ((float) fearLevel / maxFear);
+            float meterHeight = 20;
+            float meterX = 20;
+            float meterY = 20;
+
+            float outlineThickness = 2;
+            batch.setColor(Color.RED);
+            batch.draw(fearMeterTexture, meterX - outlineThickness, meterY - outlineThickness,
+                meterWidth + 2 * outlineThickness, meterHeight + 2 * outlineThickness);
+
+            batch.draw(fearMeterTexture, meterX, meterY, meterWidth, meterHeight);
+
+            batch.setColor(Color.WHITE);
+        }
+
+        if (complete && !failed) {
+            batch.drawText(goodMessage, width/2, height/2);
+        } else if (failed) {
+            batch.drawText(badMessage, width/2, height/2);
         }
 
         batch.end();
@@ -569,25 +579,60 @@ public class PlatformScene implements ContactListener, Screen{
      */
     public void render(float delta) {
         if (active) {
-            float units = height/bounds.height;
-            float lerp = 1.5f;
+            if (preUpdate(delta)) {
+                update(delta);
+                postUpdate(delta);
+            }
+            draw(delta);
+            float units = height / bounds.height;
+
+            // TA feedback was to make it a little less smooth
+            // if the camera is far from being directly over the player, we can try to increase the change
+
+            // 2 / (1 + e^(-5(x-0.5)))
+
+
+
             Vector3 position = this.camera.position;
-            System.out.println(this.camera.position);
+            Vector3 playerPosition = new Vector3(this.avatar.getObstacle().getX() * units, this.avatar.getObstacle().getY() * units, 0);
+
+
+            Vector3 diff = new Vector3(position).sub(playerPosition);
+            float dis = diff.len();
+            if (dis > 220.0) {
+                diff.nor().scl(250);
+                position.lerp(new Vector3((playerPosition).add(diff)), 0.1f);
+            }
+
+            float lerp = 3.0f;
             position.x += (this.avatar.getObstacle().getX() * units - position.x) * lerp * delta;
             position.y += (this.avatar.getObstacle().getY() * units - position.y) * lerp * delta;
             camera.position.set(position);
             camera.zoom = 0.8f;
+            clampCamera();
             camera.update();
 
-            if (preUpdate(delta)) {
-                update(delta); // This is the one that must be defined.
-                postUpdate(delta);
-            }
-            draw(delta);
+
+            drawUI();
         }
     }
 
-    /**
+    private void clampCamera() {
+        float units = height / bounds.height; // conversion factor: pixels per physics unit
+        float halfViewportWidth = camera.viewportWidth / 2;
+        float halfViewportHeight = camera.viewportHeight / 2;
+
+        // Convert world bounds to screen coordinates
+        float minX = bounds.x * units + halfViewportWidth;
+        float maxX = (bounds.x + bounds.width) * units - halfViewportWidth;
+        float minY = bounds.y * units + halfViewportHeight;
+        float maxY = (bounds.y + bounds.height) * units - halfViewportHeight;
+
+        camera.position.x = MathUtils.clamp(camera.position.x, minX-100, maxX+100);
+        camera.position.y = MathUtils.clamp(camera.position.y, minY-50, maxY+50);
+    }
+
+    /**g
      * Called when the Screen is resumed from a paused state.
      *
      * This is usually when it regains focus.
@@ -655,6 +700,8 @@ public class PlatformScene implements ContactListener, Screen{
         badMessage.setText("FAILURE!");
         badMessage.layout();
 
+        fearMeterTexture = directory.getEntry("fear-meter", Texture.class);
+
         complete = false;
         failed = false;
         debug  = false;
@@ -682,6 +729,10 @@ public class PlatformScene implements ContactListener, Screen{
 
         drawScareLimit = 60;
         drawScareCooldown = 0;
+
+        uiCamera = new OrthographicCamera(Gdx.graphics.getWidth(), Gdx.graphics.getHeight());
+        uiCamera.setToOrtho(false, Gdx.graphics.getWidth(), Gdx.graphics.getHeight());
+        uiCamera.update();
     }
 
     /**
@@ -746,8 +797,8 @@ public class PlatformScene implements ContactListener, Screen{
         // Create ground pieces
 
 
-        texture = directory.getEntry( "shared-cloud", Texture.class );
-        Texture shadowedTexture = directory.getEntry("shared-shadow-cloud", Texture.class);
+        texture = directory.getEntry( "shared-test", Texture.class );
+        Texture shadowedTexture = directory.getEntry("shared-shadow-test", Texture.class);
 
 
         aiManager = new AIControllerManager(avatar, directory);
@@ -795,7 +846,6 @@ public class PlatformScene implements ContactListener, Screen{
 
         JsonValue critters = constants.get("curiosity-critter");
         JsonValue critterspos = critters.get("pos");
-        visionCones = new HashMap<>();
 
         for (int i = 0; i < critterspos.size; i++) {
             texture = directory.getEntry( "curiosity-critter-active", Texture.class );
@@ -814,14 +864,14 @@ public class PlatformScene implements ContactListener, Screen{
             visionCone.setSize(240, 200);
             visionCone.setOrigin(visionCone.getWidth() / 2, 0);
 
-            visionCones.put(critter, visionCone);
+
         }
 
         JsonValue maintainers = constants.get("mind-maintenance");
         JsonValue maintenancePos = maintainers.get("pos");
 
         for (int i = 0; i < maintenancePos.size; i++) {
-            texture = directory.getEntry( "mind-maintenance-active", Texture.class );
+            texture = directory.getEntry("mind-maintenance-active", Texture.class);
 
             maintenance = new MindMaintenance(units, constants.get("mind-maintenance"), maintenancePos.get(i).asFloatArray());
             maintenance.setTexture(texture);
@@ -837,8 +887,6 @@ public class PlatformScene implements ContactListener, Screen{
             visionCone.setRegion(visionConeRegion);
             visionCone.setSize(240, 200);
             visionCone.setOrigin(visionCone.getWidth() / 2, 0);
-
-            visionCones.put(maintenance, visionCone);
         }
 
         JsonValue dreamdwellers = constants.get("dream-dweller");
@@ -861,7 +909,6 @@ public class PlatformScene implements ContactListener, Screen{
             visionCone.setOrigin(visionCone.getWidth() / 2, 0);
             visionCone.setColor(new Color(0.8f, 0.2f, 0.8f, 0.5f));
 
-            visionCones.put(dreamDweller, visionCone);
         }
 
 
@@ -943,6 +990,7 @@ public class PlatformScene implements ContactListener, Screen{
     public void update(float dt) {
         InputController input = InputController.getInstance();
 
+
         avatar.setStunning(input.didStun());
         avatar.setHarvesting(input.didSecondary());
         avatar.setTeleporting(input.didM1());
@@ -982,6 +1030,14 @@ public class PlatformScene implements ContactListener, Screen{
             avatar.setFearMeter(avatar.getFearMeter() - STUN_COST);
         }
 
+        for (Teleporter tp : new ArrayList<>(teleporterCreationTimes.keySet())) {
+            float creationTime = teleporterCreationTimes.get(tp);
+            if(timeElapsed - creationTime >= 2.0f) {
+                tp.getObstacle().markRemoved(true);
+                teleporterCreationTimes.remove(tp);
+            }
+        }
+
         if (avatar.isTeleporting() && avatar.getFearMeter() > CREATE_TELEPORTER_COST && avatar.isInShadow())
         {
             createTeleporter();
@@ -993,11 +1049,11 @@ public class PlatformScene implements ContactListener, Screen{
         }
 
 
-        /*if(avatar.isTakingDamage())
+        if(avatar.isTakingDamage())
         {
             avatar.setFearMeter(avatar.getFearMeter() - 1);
             avatar.setTakingDamage(false);
-        }*/
+        }
 
 
         if (queuedTeleportPosition != null) {
@@ -1021,83 +1077,122 @@ public class PlatformScene implements ContactListener, Screen{
     }
 
     private void createTeleporter() {
-        float units = height/bounds.height;
         InputController input = InputController.getInstance();
+        float units = height / bounds.height;
 
-        Vector2 mousePosition = input.getCrossHair();
-        float cursorX = mousePosition.x;
-        float cursorY = mousePosition.y;
+        Vector2 playerPosition = avatar.getObstacle().getPosition();
 
-        // Necessary if using Anonymous Function
+        // Get crosshair position in screen coordinates
+        Vector2 crosshairScreen = input.getMouse();
+
+        // Unproject the crosshair screen position to get world coordinates
+        Vector3 crosshairTemp = new Vector3(
+            crosshairScreen.x,
+            crosshairScreen.y,
+            0
+        );
+        camera.unproject(crosshairTemp);
+        Vector2 crosshairWorld = new Vector2(crosshairTemp.x / units, crosshairTemp.y / units);
+
+        // Check if mouse is on a surface (from second function)
         final boolean[] isOnSurface = {false};
-
-        // Use QueryAABB with a small box around the mouse point
         world.QueryAABB(new QueryCallback() {
-            @Override
-            public boolean reportFixture(Fixture fixture) {
-                Object userData = fixture.getBody().getUserData();
-                if (userData instanceof Surface) {
-                    if (fixture.testPoint(mousePosition)) {
-                        isOnSurface[0] = true;
-                        return false; // Stop the query
-                    }
-                }
-                return true; // Continue the query
-            }
-        }, cursorX - 0.1f, cursorY - 0.1f, cursorX + 0.1f, cursorY + 0.1f);
+                            @Override
+                            public boolean reportFixture(Fixture fixture) {
+                                Object userData = fixture.getBody().getUserData();
+                                if (userData instanceof Surface) {
+                                    if (fixture.testPoint(crosshairWorld)) {
+                                        isOnSurface[0] = true;
+                                        return false; // Stop the query
+                                    }
+                                }
+                                return true; // Continue the query
+                            }
+                        }, crosshairWorld.x - 0.1f, crosshairWorld.y - 0.1f,
+            crosshairWorld.x + 0.1f, crosshairWorld.y + 0.1f);
 
         if (isOnSurface[0]) {
             System.out.println("Cannot place teleporter: Mouse is directly on a surface!");
-
             return;
         }
 
+        // Use raycast to find platform below cursor (from second function)
+        Vector2 rayStart = new Vector2(crosshairWorld.x, crosshairWorld.y);
+        Vector2 rayEnd = new Vector2(crosshairWorld.x, 0);
 
-        Vector2 rayStart = new Vector2(cursorX, cursorY);
-        Vector2 rayEnd = new Vector2(cursorX, 0);
 
-        // Use the PlatformRayCast class
         PlatformRayCast callback = new PlatformRayCast();
-
-        // Perform the raycast
         world.rayCast(callback, rayStart, rayEnd);
 
         if (callback.getPlatformFixture() == null) {
-            System.out.println("Platform not found");
+            System.out.println("Platform not found below cursor");
             return;
         }
 
         Surface platform = (Surface)callback.getPlatformFixture().getBody().getUserData();
         Vector2 hitPoint = callback.getHitPoint();
+        Vector2 initialPosition = new Vector2(crosshairWorld.x, hitPoint.y + 0.75f);
 
-        Vector2 teleporterPosition = new Vector2(cursorX, hitPoint.y + 0.75f);
+        // Position the teleporter above the platform
+        Vector2 teleporterPosition = new Vector2(crosshairWorld.x, hitPoint.y + 0.75f);
 
-        Vector2 avatarPosition = avatar.getObstacle().getPosition();
-        float dist = avatarPosition.dst(teleporterPosition);
+        // Calculate distance in world coordinates
+        float worldDistance = playerPosition.dst(teleporterPosition);
+        float maxDistance = avatar.getTeleportRangeRadius() / units; // In world units
 
-        if (dist >= avatar.getTeleportRangeRadius() / units) {
-            return;
+        // Check if destination is within range
+        if (worldDistance > maxDistance) {
+            Vector2 direction = new Vector2(
+                initialPosition.x - playerPosition.x,
+                initialPosition.y - playerPosition.y
+            ).nor();
+
+            // Clamp position to max distance
+            teleporterPosition = new Vector2(
+                playerPosition.x + direction.x * maxDistance,
+                playerPosition.y + direction.y * maxDistance
+            );
+
+            // Use new raycast to find platform below the clamped position
+            rayStart = new Vector2(teleporterPosition.x, teleporterPosition.y);
+            rayEnd = new Vector2(teleporterPosition.x, 0);
+
+            PlatformRayCast clampedCallback = new PlatformRayCast();
+            world.rayCast(clampedCallback, rayStart, rayEnd);
+
+            if (clampedCallback.getPlatformFixture() != null) {
+                Vector2 clampedHitPoint = clampedCallback.getHitPoint();
+                teleporterPosition.y = clampedHitPoint.y + 0.75f;
+            } else {
+                System.out.println("No platform found at clamped position");
+                return;
+            }
         }
 
+        // Create the teleporters at the correct world positions
         Texture texture = directory.getEntry("platform-teleporter", Texture.class);
         JsonValue teleporter = constants.get("teleporter");
 
-        Teleporter originTeleporter = new Teleporter(units, teleporter, avatar.getObstacle().getPosition());
+        Teleporter originTeleporter = new Teleporter(units, teleporter, playerPosition);
         originTeleporter.setTexture(texture);
         originTeleporter.getObstacle().setName("origin_teleporter");
 
         Teleporter exitTeleporter = new Teleporter(units, teleporter, teleporterPosition);
         exitTeleporter.setTexture(texture);
-
         exitTeleporter.getObstacle().setName("exit_teleporter");
 
         originTeleporter.setLinkedTeleporter(exitTeleporter);
         exitTeleporter.setLinkedTeleporter(originTeleporter);
 
+        teleporterCreationTimes.put(originTeleporter, timeElapsed);
+        teleporterCreationTimes.put(exitTeleporter, timeElapsed);
+
         addSprite(originTeleporter);
         addSprite(exitTeleporter);
 
-        avatar.setFearMeter(Math.max(0, avatar.getFearMeter() - CREATE_TELEPORTER_COST));
+        // Reduce fear meter after placing the teleporter
+        avatar.setFearMeter(Math.max(0, avatar.getFearMeter() - 2));
+        takeTeleporter(originTeleporter);
     }
 
     private void takeTeleporter(Teleporter tp)
@@ -1476,7 +1571,7 @@ public class PlatformScene implements ContactListener, Screen{
             }
 
             if (dweller != null) {
-
+                dweller.setAwareOfPlayer(true);
                 avatar.setTakingDamage(false);
                 System.out.println("Dream Dweller lost sight of player");
             }
