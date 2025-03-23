@@ -1,5 +1,10 @@
 {
 	"textures": {
+        "shared-shadow-test" : {
+          "file":  "shared/okay.png",
+          "wrapU": "repeated",
+          "wrapV": "repeated"
+        },
         "shared-cloud" : {
             "file":  "shared/cloud.png",
             "wrapU": "repeated",
@@ -65,7 +70,11 @@
             "minfilter": "linear mipmap linear",
             "magfilter": "linear mipmap linear"
         },
+        "platf1" : "shared/platf1.png",
+        "platf" : "shared/platf1.png",
+
         "background-proto" : "platform/dreamBackground.png",
+        "background-technical" : "shared/backgroundTemple.png",
         "curiosity-critter-active": "shared/CuriosityCritterActive.png",
         "curiosity-critter-inactive": "shared/CuriosityCritterInactive.png",
         "mind-maintenance-active": "shared/MindMaintenanceActive.png" ,
@@ -73,6 +82,7 @@
         "dream-dweller-active": "shared/DreamDwellerActive.png",
         "dream-dweller-inactive": "shared/DreamDwellerInactive.png",
         "vision_cone" : "shared/vision1.png",
+        "fear-meter" : "shared/earthtile.png",
         "platform-traci"    : "platform/traci.png",
         "platform-playerSprite": "platform/playerSprite.png",
         "platform-barrier"  : "platform/barrier.png",
@@ -122,7 +132,9 @@
     },
     "jsons"  : {
         "platform-constants": "platform/constants.json",
-        "platform-constant1": "platform/constant1.json"
+        "platform-constants1": "platform/constant1.json",
+        "arena" : "arena/arena.json",
+        "arena1" : "arena/arena1.json"
     },
     "soundfx" : {
         "rocket-bump"       : "rocket/bump.wav",

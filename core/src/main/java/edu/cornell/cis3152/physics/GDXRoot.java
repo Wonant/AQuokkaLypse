@@ -11,88 +11,66 @@
  * Author:  Walker M. White
  * Version: 2/8/2025
  */
- package edu.cornell.cis3152.physics;
+package edu.cornell.cis3152.physics;
 
 import com.badlogic.gdx.*;
-
+import edu.cornell.cis3152.physics.platform.PlatformScene;
 import edu.cornell.gdiac.util.*;
 import edu.cornell.gdiac.assets.*;
 import edu.cornell.gdiac.graphics.*;
 
-import edu.cornell.cis3152.physics.platform.*;
+import edu.cornell.cis3152.physics.platform.Arena;
 
-
-/**
- * Root class for a LibGDX.
- *
- * This class is technically not the ROOT CLASS. Each platform has another class
- * above this (e.g. PC games use DesktopLauncher) which serves as the true root.
- * However, those classes are unique to each platform, while this class is the
- * same across all plaforms. In addition, this functions as the root class all
- * intents and purposes, and you would draw it as a root class in an
- * architecture specification.
- */
 public class GDXRoot extends Game implements ScreenListener {
-    /** AssetManager to load game assets (textures, sounds, etc.) */
-    AssetDirectory directory;
-    /** The spritebatch to draw the screen (VIEW CLASS) */
+    /** AssetDirectory to load game assets (textures, sounds, etc.) */
+    private AssetDirectory directory;
+    /** The SpriteBatch used for drawing the screens */
     private SpriteBatch batch;
-    /** Scene for the asset loading screen (CONTROLLER CLASS) */
+    /** The loading scene that loads assets asynchronously */
     private LoadingScene loading;
-    /** Player mode for the the game proper (CONTROLLER CLASS) */
-    private int current;
-    /** List of all WorldControllers */
+    /** Array of Arena controllers (one per map) */
     private PlatformScene[] controllers;
-
-    private String[] maps = {"platform-constants", "platform-constant1"};
+    /** Index of the current Arena */
+    private int current;
+    /** Array of map keys for each level */
+    private String[] maps = {"platform-constants", "platform-constants1"};
+    /** Current map index for switching levels */
     private int currentMapIndex = 0;
 
-    /**
-     * Creates a new game from the configuration settings.
-     *
-     * This method configures the asset manager, but does not load any assets
-     * or assign any screen.
-     */
+    /** Constructor */
     public GDXRoot() { }
 
     /**
-     * Called when the Application is first created.
-     *
-     * This is method immediately loads assets for the loading screen, and
-     * prepares the asynchronous loader for all other assets.
+     * Called when the application is first created.
+     * Initializes the SpriteBatch and the loading scene.
      */
     public void create() {
-        batch  = new SpriteBatch();
-
-        // Create the loading scene
-        loading = new LoadingScene("assets.json",batch,1);
+        batch = new SpriteBatch();
+        loading = new LoadingScene("assets.json", batch, 1);
         loading.setScreenListener(this);
         setScreen(loading);
     }
 
     /**
-     * Called when the Application is destroyed.
-     *
-     * This is preceded by a call to pause().
+     * Called when the application is disposed.
+     * Disposes of the current screen, controllers, SpriteBatch, and asset directory.
      */
     public void dispose() {
-        // Call dispose on our children
         setScreen(null);
         if (loading != null) {
             loading.dispose();
             loading = null;
         }
         if (controllers != null) {
-            for(int ii = 0; ii < controllers.length; ii++) {
-                controllers[ii].dispose();
+            for (int i = 0; i < controllers.length; i++) {
+                controllers[i].dispose();
             }
             controllers = null;
         }
-
-        batch.dispose();
-        batch = null;
-
-        // Unload all of the resources
+        if (batch != null) {
+            batch.dispose();
+            batch = null;
+        }
         if (directory != null) {
             directory.unloadAssets();
             directory.dispose();
@@ -102,33 +80,28 @@ public class GDXRoot extends Game implements ScreenListener {
     }
 
     /**
-     * Called when the Application is resized.
-     *
-     * This can happen at any point during a non-paused state but will never
-     * happen before a call to create().
+     * Called when the application is resized.
      *
      * @param width  The new width in pixels
      * @param height The new height in pixels
      */
     public void resize(int width, int height) {
         if (loading != null) {
-            loading.resize(width,height);
+            loading.resize(width, height);
         }
         if (controllers != null) {
-            for(int ii = 0; ii < controllers.length; ii++) {
-                controllers[ii].resize(width,height);
+            for (int i = 0; i < controllers.length; i++) {
+                controllers[i].resize(width, height);
             }
         }
     }
 
     /**
-     * Responds to a request from a child scene.
+     * Called when a child screen requests an exit.
+     * This method switches to the appropriate Arena based on the exit code.
      *
-     * Typically this is used to have a scene exit its player mode. The value
-     * exitCode can be also used to implement menu options.
-     *
-     * @param screen   The screen requesting to exit
-     * @param exitCode The state of the screen upon exit
+     * @param screen   The screen that is exiting.
+     * @param exitCode The exit code indicating the desired action.
      */
     public void exitScreen(Screen screen, int exitCode) {
         if (screen == loading) {
@@ -136,38 +109,44 @@ public class GDXRoot extends Game implements ScreenListener {
             loading.dispose();
             loading = null;
 
-            // Initialize the three game worlds
-            //controllers = new PhysicsScene[3];
-            controllers = new PlatformScene[1];
-            //controllers[0] = new RocketScene(directory);
-            controllers[0] = new PlatformScene(directory,maps[currentMapIndex]);
-            //controllers[2] = new RagdollScene(directory);
-
-            for(int ii = 0; ii < controllers.length; ii++) {
-                controllers[ii].setScreenListener(this);
-                controllers[ii].setSpriteBatch(batch);
+            // Create one Arena for each map key
+            controllers = new PlatformScene[maps.length];
+            for (int i = 0; i < maps.length; i++) {
+                controllers[i] = new PlatformScene(directory, maps[i]);
+                controllers[i].setScreenListener(this);
+                controllers[i].setSpriteBatch(batch);
+                controllers[i].reset();
             }
-
             current = 0;
-            controllers[current].reset();
             setScreen(controllers[current]);
-
-        } else if (exitCode == PlatformScene.EXIT_NEXT) {
-            current = (current + 1) % maps.length;
-            PlatformScene nextScene = new PlatformScene(directory, maps[current]);
-            nextScene.setScreenListener(this);
-            nextScene.setSpriteBatch(batch);
-            setScreen(nextScene);
-        } else if (exitCode == PlatformScene.EXIT_PREV) {
-            current = (current + maps.length - 1) % maps.length; // 切换到上一关
-            PlatformScene prevScene = new PlatformScene(directory, maps[current]);
-            prevScene.setScreenListener(this);
-            prevScene.setSpriteBatch(batch);
-            setScreen(prevScene);
-        } else if (exitCode == PlatformScene.EXIT_QUIT) {
-            // We quit the main application
+        }
+        else if (exitCode == PlatformScene.EXIT_NEXT) {
+            current = (current + 1) % controllers.length;
+            setScreen(controllers[current]);
+        }
+        else if (exitCode == PlatformScene.EXIT_PREV) {
+            // Go back to the previous Arena
+            current = (current + controllers.length - 1) % controllers.length;
+            setScreen(controllers[current]);
+        }
+        else if (exitCode == Arena.EXIT_ARENA) {
+            // Create a new Arena with a fixed map key ("arena")
+            Arena arena = new Arena(directory, "arena");
+            arena.setScreenListener(this);
+            arena.setSpriteBatch(batch);
+            setScreen(arena);
+        }
+        else if (exitCode == PlatformScene.EXIT_QUIT) {
+            // Quit the application
             Gdx.app.exit();
         }
     }
 
+    /**
+     * The render method.
+     * Delegates rendering to the current screen.
+     */
+    public void render() {
+        super.render();
+    }
 }

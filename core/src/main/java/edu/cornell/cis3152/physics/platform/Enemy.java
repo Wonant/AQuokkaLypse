@@ -21,6 +21,9 @@ public class Enemy extends ObstacleSprite {
     private boolean stunned;
     private boolean seesWall;
     protected Body headBody;
+    protected RevoluteJoint headJoint;
+
+
 
     public Enemy(){
         this.awareOfPlayer = false;
@@ -44,6 +47,19 @@ public class Enemy extends ObstacleSprite {
     }
     public void setSeesWall(boolean b) {
         seesWall = b;
+    }
+
+    public void removeFromWorld(World world) {
+        // If we have a headBody, destroy it
+        if (headBody != null) {
+            // Also destroy the joint if it exists
+            if (headJoint != null) {
+                world.destroyJoint(headJoint);
+                headJoint = null;
+            }
+            world.destroyBody(headBody);
+            headBody = null;
+        }
     }
 
 

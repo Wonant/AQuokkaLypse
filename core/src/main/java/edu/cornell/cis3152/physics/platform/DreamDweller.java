@@ -60,8 +60,6 @@ public class DreamDweller extends Enemy {
     private final Affine2 flipCache = new Affine2();
 
     // Head and vision
-    private Body headBody;
-    private RevoluteJoint headJoint;
     private Fixture visionSensor;
     private Fixture alertSensor;
     private float headOffset = 2.0f;
@@ -81,6 +79,7 @@ public class DreamDweller extends Enemy {
     // Texture for the DreamDweller
     private Texture2D dwellerTexture;
     private HashMap<DreamDweller, Sprite> visionCones3;
+    private Path2 harvestOutline;
 
     public float getMovement() {
         return movement;
@@ -300,6 +299,44 @@ public class DreamDweller extends Enemy {
         sensorOutline = new Path2();
         factory.makeRect((sensorCenter.x - w / 2) * u, (sensorCenter.y - h / 2) * u, w * u, h * u, sensorOutline);
         sensorShape.dispose();
+
+        createHarvestSensor(width, height);
+    }
+
+    // hitbox
+    public void createHarvestSensor(float harvestWidth, float harvestHeight) {
+        float u = obstacle.getPhysicsUnits();
+
+        // Create the harvest outline (for visualization)
+        PathFactory factory = new PathFactory();
+        harvestOutline = new Path2();
+
+        float minDim = Math.min(harvestWidth, harvestHeight);
+        float cornerRadius = (minDim / 2.0f) * u;
+
+        factory.makeRoundedRect(
+            -harvestWidth / 2 * u,
+            -harvestHeight / 2 * u,
+            harvestWidth * u,
+            harvestHeight * u,
+            cornerRadius,
+            harvestOutline
+        );
+
+        // hitbox!!!
+        PolygonShape harvestShape = new PolygonShape();
+        harvestShape.setAsBox(harvestWidth/2, harvestHeight/2);
+
+        FixtureDef harvestDef = new FixtureDef();
+        harvestDef.shape = harvestShape;
+        harvestDef.isSensor = true;
+
+        Body body = obstacle.getBody();
+        Fixture harvestFixture = body.createFixture(harvestDef);
+
+        harvestFixture.setUserData("harvest_sensor");
+
+        harvestShape.dispose();
     }
 
     /**
@@ -524,6 +561,22 @@ public class DreamDweller extends Enemy {
             transform.preTranslate(headPos.x * u, headPos.y * u);
 
             batch.outline(alertSensorOutline, transform);
+            batch.setColor(Color.WHITE);
+        }
+        if (harvestOutline != null) {
+            batch.setTexture(Texture2D.getBlank());
+            batch.setColor(Color.BLUE);
+
+            Vector2 p = obstacle.getPosition();
+            float a = obstacle.getAngle();
+            float u = obstacle.getPhysicsUnits();
+
+            transform.idt();
+            transform.preRotate((float)(a * 180.0f / Math.PI));
+            transform.preTranslate(p.x * u, p.y * u);
+
+            batch.outline(harvestOutline, transform);
+
             batch.setColor(Color.WHITE);
         }
     }

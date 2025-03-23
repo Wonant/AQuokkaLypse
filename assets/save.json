@@ -1,0 +1,16 @@
+{
+  "level 1":{
+    "completed": false,
+    "enemies-defeated": 0,
+    "shards-collected": 2,
+    "time-to-beat": -1,
+    "pos-when-last-collected": [10.0, 14.0]
+  },
+  "level 2":{
+    "completed": true,
+    "enemies-defeated": 10,
+    "shards-collected": 5,
+    "time-to-beat": 223,
+    "pos-last-shard": [120.0, 15.0]
+  }
+}
