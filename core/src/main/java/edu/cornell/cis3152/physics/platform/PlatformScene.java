@@ -55,7 +55,7 @@ import edu.cornell.gdiac.physics2.*;
  * interface. That is the method that is called upon collisions, giving us a
  * chance to define a response.
  */
-public class PlatformScene implements ContactListener, Screen{
+public class PlatformScene implements Screen{
     // SOME EXIT CODES FOR GDXROOT
     /** Exit code for quitting the game */
     public static final int EXIT_QUIT = 0;
@@ -155,6 +155,7 @@ public class PlatformScene implements ContactListener, Screen{
 
 
     private AIControllerManager aiManager;
+    private LevelContactListener levelContactListener;
     /** Reference to the goalDoor (for collision detection) */
     private Door goalDoor;
     private int totalGoals;
@@ -186,6 +187,35 @@ public class PlatformScene implements ContactListener, Screen{
     private HashMap<DreamDweller, Sprite> visionCones3;
     private HashMap<Teleporter, Float> teleporterCreationTimes = new HashMap<>();
     private float timeElapsed = 0f;
+
+
+    /*==============================ContactListener Getters/Setters===============================*/
+
+    public Player getAvatar() { return avatar;}
+
+    public void incrementGoal() {collectedGoals++;}
+
+    public boolean checkCollectedAllGoals() {return collectedGoals == totalGoals;}
+
+    public void setCurrentTeleporter(Teleporter tele) {currentTeleporter = tele; }
+
+    //CHANGE: QUEUE OF ENEMIES ADDED EACH COLLISION. HARVEST SHOULD REMOVE ALL IN QUEUE.
+    public void performHarvest(CuriosityCritter enemy)
+    {
+        queuedHarvestedEnemy = enemy;
+    }
+
+    public void performHarvestD(DreamDweller enemy)
+    {
+        queuedHarvestedEnemyD = enemy;
+    }
+
+    public void removeHarvestedEnemy(Enemy enemy) {queuedHarvestedEnemy = null;}
+
+    public void removeHarvestedD(DreamDweller enemy)
+    {
+        queuedHarvestedEnemyD = null;
+    }
 
 
     /**
@@ -432,6 +462,9 @@ public class PlatformScene implements ContactListener, Screen{
         float bgY = camera.position.y * parallaxFactor - background.getHeight() / 2f;
 
         batch.draw(background, bgX, bgY, background.getWidth(), background.getHeight() * 2);
+
+        dreamShardCountText.setText("Dream Shards: " + (totalGoals - collectedGoals));
+        dreamShardCountText.layout();
 
         if (drawScareEffect)
         {
@@ -716,7 +749,9 @@ public class PlatformScene implements ContactListener, Screen{
         dreamShardCountText.setColor(Color.WHITE);
         dreamShardCountText.layout();
 
-        world.setContactListener(this);
+        this.levelContactListener = new LevelContactListener(this);
+
+        world.setContactListener(levelContactListener);
         sensorFixtures = new ObjectSet<Fixture>();
         shadowSensorFixtures = new ObjectSet<Fixture>();
 
@@ -754,7 +789,7 @@ public class PlatformScene implements ContactListener, Screen{
         }
 
         world = new World(gravity,false);
-        world.setContactListener(this);
+        world.setContactListener(levelContactListener);
         setComplete(false);
         setFailure(false);
         populateLevel();
@@ -1206,15 +1241,6 @@ public class PlatformScene implements ContactListener, Screen{
     }
 
 
-    private void performHarvest(CuriosityCritter enemy)
-    {
-        queuedHarvestedEnemy = enemy;
-    }
-
-    private void performHarvestD(DreamDweller enemy)
-    {
-        queuedHarvestedEnemyD = enemy;
-    }
 
 
 
@@ -1251,362 +1277,6 @@ public class PlatformScene implements ContactListener, Screen{
         sounds.play("plop", plopSound, volume);
     }
 
-
-    /**
-     * Callback method for the start of a collision
-     *
-     * This method is called when we first get a collision between two objects.
-     * We use this method to test if it is the "right" kind of collision. In
-     * particular, we use it to test if we made it to the win door.
-     *
-     * @param contact The two bodies that collided
-     */
-    public void beginContact(Contact contact) {
-        Fixture fix1 = contact.getFixtureA();
-        Fixture fix2 = contact.getFixtureB();
-
-        Body body1 = fix1.getBody();
-        Body body2 = fix2.getBody();
-
-        Object fd1 = fix1.getUserData();
-        Object fd2 = fix2.getUserData();
-
-        Object bodyDataA = fix1.getBody().getUserData();
-        Object bodyDataB = fix2.getBody().getUserData();
-
-        try {
-            ObstacleSprite bd1 = (ObstacleSprite)body1.getUserData();
-            ObstacleSprite bd2 = (ObstacleSprite)body2.getUserData();
-            // Check for win condition
-            if ((bd1 == avatar && bd2 instanceof Door) || (bd2 == avatar && bd1 instanceof Door)) {
-                Door collectedDoor = (bd1 instanceof Door) ? (Door) bd1 : (Door) bd2;
-
-                if (!collectedDoor.getObstacle().isRemoved()) {
-                    collectedDoor.getObstacle().markRemoved(true);
-                    collectedGoals++;
-
-                    dreamShardCountText.setText("Dream Shards: " + (totalGoals - collectedGoals));
-                    dreamShardCountText.layout();
-
-                    if (collectedGoals == totalGoals) {
-                        setComplete(true);
-                    }
-                }
-            }
-
-            // Check if an enemy's walk sensor detects a wall or another enemy
-            if (("walk_sensor".equals(fd1) && (bd2 instanceof Surface || bd2 instanceof Enemy)) ||
-                ("walk_sensor".equals(fd2) && (bd2 instanceof Surface || bd2 instanceof Enemy))) {
-                System.out.println("walk_sensor collision detected with: " + bd1 + " and " + bd2);
-
-
-                // Ensure the Enemy reference is correctly retrieved
-                Enemy e = (bd1 instanceof Enemy) ? (Enemy) bd1
-                    : (bd2 instanceof Enemy) ? (Enemy) bd2
-                    : null;
-
-                if (e != null) {
-                    e.setSeesWall(true);
-                    System.out.println("Enemy sees wall");
-                } else {
-                    System.out.println("WARNING: Walk sensor collision detected but Enemy reference is null.");
-                }
-            }
-
-            // If there is a collision between a vision sensor and the player
-            if ( ("vision_sensor".equals(fd1) || "vision_sensor".equals(fd2))
-                && (bodyDataA instanceof Player || bodyDataB instanceof Player) ) {
-
-                // Check if the vision sensor belongs to an "un-stunned" enemy, and if
-                // so update the enemy's awareness and apply damage to player
-                if ( bodyDataA instanceof Enemy && !((Enemy) bodyDataA).isStunned() ) {
-                    ((Enemy) bodyDataA).setAwareOfPlayer(true);
-                    System.out.println(bodyDataA.getClass() + " saw player!");
-                    avatar.setTakingDamage(true);
-                }
-                else if ( bodyDataB instanceof Enemy && !((Enemy) bodyDataB).isStunned() )  {
-                    System.out.println(bodyDataB.getClass() + " saw player!");
-                    ((Enemy) bodyDataB).setAwareOfPlayer(true);
-                    avatar.setTakingDamage(true);
-
-                }
-                // The player should always take damage when they are detected by a vision sensor
-                // not associated with an enemy (e.g. lamp)
-
-                else{
-                    avatar.setTakingDamage(true);
-
-                }
-
-            }
-
-            // BULLET COLLISION CASES
-
-            // Test bullet collision with world
-            if (bd1.getName().equals("bullet") && bd2 != avatar && !(bd2 instanceof Door)) {
-                // if it hits an eenemy
-                if (bd2 instanceof Enemy) {
-                    // make sure it hits the body of the enemy, and not any sensors
-                    if (fd2 != "walk_sensor" && fd2 != "vision_sensor" && fd2 != "follow_sensor"
-                        && fd2 != "alert_sensor") {
-                        removeBullet(bd1);
-                        if (bd2 instanceof CuriosityCritter) {
-                            CuriosityCritter critter = (CuriosityCritter) bd2;
-                            critter.setStunned(true);
-                            critter.setStunTexture(directory);
-                            System.out.println("Critter is stunned");
-                        } else if (bd2 instanceof MindMaintenance) {
-                            MindMaintenance maintenance = (MindMaintenance) bd2;
-                            maintenance.setStunned(true);
-                            maintenance.setStunTexture(directory);
-                            System.out.println("Maintenance is stunned");
-                        } else if (bd2 instanceof DreamDweller) {
-                            DreamDweller dweller = (DreamDweller) bd2;
-                            dweller.setStunned(true);
-                            dweller.setStunTexture(directory);
-                            System.out.println("Dweller is stunned");
-                        } else {
-                            System.out.println(
-                                "WARNING: Bullet stun collision detected but Enemy reference is null.");
-                        }
-                    }
-                }
-                //otherwise the bullet hits a non-enemy and should be removed
-                else {
-                    removeBullet(bd1);
-                }
-
-            }
-
-            // Test bullet collision with world
-            if (bd2.getName().equals("bullet") && bd1 != avatar && !(bd1 instanceof Door)) {
-                // if it hits an enemy
-                if (bd1 instanceof Enemy) {
-                    // make sure it hits the body of the enemy, and not any sensors
-                    if (fd1 != "walk_sensor" && fd1 != "vision_sensor" && fd1 != "follow_sensor"
-                        && fd1 != "alert_sensor") {
-                        removeBullet(bd2);
-                        if (bd1 instanceof CuriosityCritter) {
-                            System.out.println("Critter ");
-                            CuriosityCritter critter = (CuriosityCritter) bd1;
-                            critter.setStunned(true);
-                            critter.setStunTexture(directory);
-                            System.out.println("Critter is stunned");
-                        } else if (bd1 instanceof MindMaintenance) {
-                            MindMaintenance maintenance = (MindMaintenance) bd1;
-                            maintenance.setStunned(true);
-                            maintenance.setStunTexture(directory);
-                            System.out.println("Maintenance is stunned");
-                        } else if (bd1 instanceof DreamDweller) {
-                            DreamDweller dweller = (DreamDweller) bd1;
-                            dweller.setStunned(true);
-                            dweller.setStunTexture(directory);
-                            System.out.println("Dweller is stunned");
-                        } else {
-                            System.out.println(
-                                "WARNING: Bullet stun collision detected but Enemy reference is null.");
-                        }
-                    }
-                }
-                //otherwise the bullet hits a non-enemy and should be removed
-                else {
-                    removeBullet(bd2);
-                }
-
-            }
-
-            // See if we have landed on the ground.
-            if ((avatar.getSensorName().equals(fd2) && bd1 instanceof Surface) ||
-                (avatar.getSensorName().equals(fd1) && bd2 instanceof Surface)) {
-                avatar.setGrounded(true);
-                sensorFixtures.add(avatar == bd1 ? fix2 : fix1); // Could have more than one ground
-
-                Surface currentSurface;
-                if (bd1 instanceof Surface)
-                {
-                    currentSurface = (Surface) bd1;
-                } else {
-                    currentSurface = (Surface) bd2;
-                }
-
-               if (currentSurface.isShadowed())
-               {
-                   avatar.setIsShadow(true);
-                   shadowSensorFixtures.add(avatar == bd1 ? fix2 : fix1);
-               }
-            }
-
-            if((avatar.getScareSensorName().equals(fd1) && (bd2 instanceof CuriosityCritter)) ||
-                (avatar.getScareSensorName().equals(fd2) && (bd1 instanceof CuriosityCritter)))
-            {
-                CuriosityCritter harvestedCC;
-                if (avatar.getScareSensorName().equals(fd1))
-                {
-                    harvestedCC = (CuriosityCritter) bd2;
-                    performHarvest(harvestedCC);
-                } else if (avatar.getScareSensorName().equals(fd2))
-                {
-                    harvestedCC = (CuriosityCritter) bd1;
-                    performHarvest(harvestedCC);
-                }
-                avatar.setHarvesting(true);
-
-            }
-
-            if((avatar.getScareSensorName().equals(fd1) && (bd2 instanceof DreamDweller) && fd2 != "dweller_vision_sensor" && fd2 != "dweller_alert_sensor") ||
-                (avatar.getScareSensorName().equals(fd2) && (bd1 instanceof DreamDweller) && fd1 != "dweller_vision_sensor" && fd1 != "dweller_alert_sensor"))
-            {
-               DreamDweller harvested;
-                if (avatar.getScareSensorName().equals(fd1))
-                {
-                    harvested = (DreamDweller) bd2;
-                    performHarvestD(harvested);
-                } else if (avatar.getScareSensorName().equals(fd2))
-                {
-                    harvested = (DreamDweller) bd1;
-                    performHarvestD(harvested);
-                }
-                avatar.setHarvesting(true);
-
-            }
-
-            if( !avatar.getScareSensorName().equals(fd1) && bd1 == avatar && bd2.getName().equals("origin_teleporter"))
-            {
-                if (!(bd2 instanceof Teleporter)) {
-                    System.out.println("Error: bd2 is not a Teleporter!");
-                } else {
-                    currentTeleporter = (Teleporter) bd2;
-                }
-            } else if (bd1.getName().equals("origin_teleporter") && bd2 == avatar){
-                if (!(bd1 instanceof Teleporter)) {
-                    System.out.println("Error: bd2 is not a Teleporter!");
-                } else {
-                    currentTeleporter = (Teleporter) bd1;
-                }
-            }
-
-
-        } catch (Exception e) {
-            e.printStackTrace();
-        }
-
-    }
-
-    /**
-     * Callback method for the start of a collision
-     *
-     * This method is called when two objects cease to touch. The main use of
-     * this method is to determine when the character is NOT on the ground. This
-     * is how we prevent double jumping.
-     */
-    public void endContact(Contact contact) {
-        Fixture fix1 = contact.getFixtureA();
-        Fixture fix2 = contact.getFixtureB();
-
-        Body body1 = fix1.getBody();
-        Body body2 = fix2.getBody();
-
-        Object fd1 = fix1.getUserData();
-        Object fd2 = fix2.getUserData();
-
-        Object bd1 = body1.getUserData();
-        Object bd2 = body2.getUserData();
-
-        Object bodyDataA = fix1.getBody().getUserData();
-        Object bodyDataB = fix2.getBody().getUserData();
-
-        if (("walk_sensor".equals(fd1) && bd2 instanceof Surface) ||
-            ("walk_sensor".equals(fd2) && bd1 instanceof Surface)) {
-
-
-            CuriosityCritter critter = (bd1 instanceof CuriosityCritter) ? (CuriosityCritter) bd1
-                : (bd2 instanceof CuriosityCritter) ? (CuriosityCritter) bd2
-                : null;
-
-            if (critter != null) {
-                critter.setSeesWall(false);
-                System.out.println("Critter stopped seeing wall");
-            } else {
-                System.out.println("WARNING: Walk sensor end contact detected but Critter reference is null.");
-            }
-        }
-
-
-        if (("follow_sensor".equals(fd1) || "follow_sensor".equals(fd2)) && (bodyDataA instanceof Player || bodyDataB instanceof Player)) {
-            if (bodyDataA instanceof Enemy) {
-                ((Enemy) bodyDataA).setAwareOfPlayer(false);
-            }
-            else {
-                ((Enemy) bodyDataB).setAwareOfPlayer(false);
-            }
-            avatar.setTakingDamage(false);
-            System.out.println("Enemy stopped seeing player");
-        }
-
-        if((avatar.getScareSensorName().equals(fd1) && (bd2 instanceof CuriosityCritter)) ||
-            (avatar.getScareSensorName().equals(fd2) && (bd1 instanceof CuriosityCritter)))
-        {
-            queuedHarvestedEnemy = null;
-            avatar.setHarvesting(false);
-
-        }
-
-
-        if ((bd1 instanceof Teleporter && bd2 == avatar) || (bd1 == avatar && bd2 instanceof Teleporter)) {
-            currentTeleporter = null;
-            System.out.println("Player moved away from teleporter");
-        }
-
-        if ("dweller_vision_sensor".equals(fd1) || "dweller_vision_sensor".equals(fd2)) {
-             bodyDataA = fix1.getBody().getUserData();
-             bodyDataB = fix2.getBody().getUserData();
-
-            DreamDweller dweller = null;
-            Player playerObj = null;
-
-            if (bodyDataA instanceof DreamDweller && bodyDataB instanceof Player) {
-                dweller = (DreamDweller) bodyDataA;
-                playerObj = (Player) bodyDataB;
-            } else if (bodyDataA instanceof Player && bodyDataB instanceof DreamDweller) {
-                dweller = (DreamDweller) bodyDataB;
-                playerObj = (Player) bodyDataA;
-            }
-
-            if (dweller != null) {
-                dweller.setAwareOfPlayer(true);
-                avatar.setTakingDamage(false);
-                System.out.println("Dream Dweller lost sight of player");
-            }
-        }
-
-        if((avatar.getScareSensorName().equals(fd1) && (bd2 instanceof DreamDweller)) ||
-            (avatar.getScareSensorName().equals(fd2) && (bd1 instanceof DreamDweller)))
-        {
-            queuedHarvestedEnemyD = null;
-            avatar.setHarvesting(false);
-
-        }
-
-
-
-
-        if ((avatar.getSensorName().equals(fd2) && bd1 instanceof Surface) ||
-            (avatar.getSensorName().equals(fd1) && bd2 instanceof Surface)) {
-            sensorFixtures.remove(avatar == bd1 ? fix2 : fix1);
-            if (sensorFixtures.size == 0) {
-                avatar.setGrounded(false);
-            }
-            shadowSensorFixtures.remove(avatar == bd1? fix2 : fix1);
-            if (shadowSensorFixtures.size == 0){
-                avatar.setIsShadow(false);
-            }
-        }
-    }
-
-    /** Unused ContactListener method */
-    public void postSolve(Contact contact, ContactImpulse impulse) {}
-    /** Unused ContactListener method */
-    public void preSolve(Contact contact, Manifold oldManifold) {}
 
     /**
      * Called when the Screen is paused.
