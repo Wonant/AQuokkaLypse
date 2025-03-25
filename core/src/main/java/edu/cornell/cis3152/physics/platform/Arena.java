@@ -48,7 +48,7 @@ import edu.cornell.gdiac.audio.SoundEffectManager;
 import edu.cornell.gdiac.physics2.*;
 
 import static edu.cornell.cis3152.physics.platform.PlatformScene.STUN_COST;
-import static edu.cornell.cis3152.physics.platform.PlatformScene.TAKE_TELEPORTER_COST;
+import static edu.cornell.cis3152.physics.platform.PlatformScene.TELEPORT_COST;
 
 public class Arena implements ContactListener, Screen{
     /** Exit code for quitting the game */
@@ -945,7 +945,7 @@ public class Arena implements ContactListener, Screen{
             System.out.println("hi");
             createTeleporter();
         }
-        if (input.didTakeTeleport() && currentTeleporter != null && avatar.getFearMeter() > TAKE_TELEPORTER_COST) {
+        if (input.didTakeTeleport() && currentTeleporter != null && avatar.getFearMeter() > TELEPORT_COST) {
             takeTeleporter(currentTeleporter);
             currentTeleporter = null;
         }

@@ -67,8 +67,7 @@ public class PlatformScene implements Screen{
     public static final int EXIT_COUNT = 180;
 
     public static final int STUN_COST = 1;
-    public static final int CREATE_TELEPORTER_COST = 2;
-    public static final int TAKE_TELEPORTER_COST = 1;
+    public static final int TELEPORT_COST = 2;
 
     /** The asset directory for retrieving textures, atlases */
     protected AssetDirectory directory;
@@ -179,7 +178,7 @@ public class PlatformScene implements Screen{
     private Vector2 queuedTeleportPosition = null;
 
 
-    private CuriosityCritter queuedHarvestedEnemy = null;
+    private Enemy queuedHarvestedEnemy = null;
     private Teleporter currentTeleporter = null;
 
     protected PooledList<Surface> shadowPlatformQueue = new PooledList<Surface>();
@@ -200,14 +199,9 @@ public class PlatformScene implements Screen{
     public void setCurrentTeleporter(Teleporter tele) {currentTeleporter = tele; }
 
     //CHANGE: QUEUE OF ENEMIES ADDED EACH COLLISION. HARVEST SHOULD REMOVE ALL IN QUEUE.
-    public void performHarvest(CuriosityCritter enemy)
+    public void performHarvest(Enemy enemy)
     {
         queuedHarvestedEnemy = enemy;
-    }
-
-    public void performHarvestD(DreamDweller enemy)
-    {
-        queuedHarvestedEnemyD = enemy;
     }
 
     public void removeHarvestedEnemy(Enemy enemy) {queuedHarvestedEnemy = null;}
@@ -1075,14 +1069,9 @@ public class PlatformScene implements Screen{
             }
         }
 
-        if (avatar.isTeleporting() && avatar.getFearMeter() > CREATE_TELEPORTER_COST && avatar.isInShadow())
+        if (avatar.isTeleporting() && avatar.getFearMeter() > TELEPORT_COST)
         {
-            createTeleporter();
-        }
-
-        if (input.didTakeTeleport() && currentTeleporter != null && avatar.getFearMeter() > TAKE_TELEPORTER_COST) {
-            takeTeleporter(currentTeleporter);
-            currentTeleporter = null;
+            teleport();
         }
 
 
@@ -1099,10 +1088,7 @@ public class PlatformScene implements Screen{
             queuedTeleportPosition = null; // Clear after applying
         }
 
-//        System.out.println("critter pos" + critter.getObstacle().getPosition());
-//        System.out.println("avatar pos" + avatar.getObstacle().getPosition());
         aiManager.update(dt);
-
 
         avatar.applyForce();
         if (avatar.isJumping()) {
@@ -1113,7 +1099,7 @@ public class PlatformScene implements Screen{
         }
     }
 
-    private void createTeleporter() {
+    private void teleport() {
         InputController input = InputController.getInstance();
         float units = height / bounds.height;
 
@@ -1153,16 +1139,23 @@ public class PlatformScene implements Screen{
             return;
         }
 
-        // Use raycast to find platform below cursor (from second function)
-        Vector2 rayStart = new Vector2(crosshairWorld.x, crosshairWorld.y);
+        Vector2 rayStart = new Vector2(playerPosition.x, playerPosition.y);
         Vector2 rayEnd = new Vector2(crosshairWorld.x, 0);
-
-
         PlatformRayCast callback = new PlatformRayCast();
+        world.rayCast(callback, rayStart, rayEnd);
+        if (callback.getPlatformFixture() == null) {
+            System.out.println("Player is not shadowed, cannot teleport");
+            return;
+        }
+
+        // Use raycast to find platform below cursor (from second function)
+        rayStart = new Vector2(crosshairWorld.x, crosshairWorld.y);
+        rayEnd = new Vector2(crosshairWorld.x, 0);
+
         world.rayCast(callback, rayStart, rayEnd);
 
         if (callback.getPlatformFixture() == null) {
-            System.out.println("Platform not found below cursor");
+            System.out.println("Teleport location is not shadowed, cannot teleport");
             return;
         }
 
@@ -1197,6 +1190,7 @@ public class PlatformScene implements Screen{
             PlatformRayCast clampedCallback = new PlatformRayCast();
             world.rayCast(clampedCallback, rayStart, rayEnd);
 
+
             if (clampedCallback.getPlatformFixture() != null) {
                 Vector2 clampedHitPoint = clampedCallback.getHitPoint();
                 teleporterPosition.y = clampedHitPoint.y + 0.75f;
@@ -1206,44 +1200,9 @@ public class PlatformScene implements Screen{
             }
         }
 
-        // Create the teleporters at the correct world positions
-        Texture texture = directory.getEntry("platform-teleporter", Texture.class);
-        JsonValue teleporter = constants.get("teleporter");
-
-        Teleporter originTeleporter = new Teleporter(units, teleporter, playerPosition);
-        originTeleporter.setTexture(texture);
-        originTeleporter.getObstacle().setName("origin_teleporter");
-
-        Teleporter exitTeleporter = new Teleporter(units, teleporter, teleporterPosition);
-        exitTeleporter.setTexture(texture);
-        exitTeleporter.getObstacle().setName("exit_teleporter");
-
-        originTeleporter.setLinkedTeleporter(exitTeleporter);
-        exitTeleporter.setLinkedTeleporter(originTeleporter);
-
-        teleporterCreationTimes.put(originTeleporter, timeElapsed);
-        teleporterCreationTimes.put(exitTeleporter, timeElapsed);
-
-        addSprite(originTeleporter);
-        addSprite(exitTeleporter);
-
-        // Reduce fear meter after placing the teleporter
-        avatar.setFearMeter(Math.max(0, avatar.getFearMeter() - 2));
-        takeTeleporter(originTeleporter);
+        avatar.setFearMeter(Math.max(0, avatar.getFearMeter() - TELEPORT_COST));
+        queuedTeleportPosition = crosshairWorld;
     }
-
-    private void takeTeleporter(Teleporter tp)
-    {
-        System.out.println(tp.getLinkedTeleporter().getPosition());
-        //avatar.getObstacle().setPosition(tp.getLinkedTeleporter().getPosition());
-        queuedTeleportPosition = tp.getLinkedTeleporter().getPosition().cpy();
-
-    }
-
-
-
-
-
 
     /**
      * Adds a new bullet to the world and send it in the right direction.
@@ -1276,7 +1235,6 @@ public class PlatformScene implements Screen{
         SoundEffectManager sounds = SoundEffectManager.getInstance();
         sounds.play("plop", plopSound, volume);
     }
-
 
     /**
      * Called when the Screen is paused.

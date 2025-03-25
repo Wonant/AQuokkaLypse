@@ -43,8 +43,10 @@ public class LevelContactListener implements ContactListener {
         try {
             ObstacleSprite bd1 = (ObstacleSprite)body1.getUserData();
             ObstacleSprite bd2 = (ObstacleSprite)body2.getUserData();
-            // Check for win condition
-            if ((bd1 == dreamWalkerScene.getAvatar() && bd2 instanceof Door) || (bd2 == dreamWalkerScene.getAvatar() && bd1 instanceof Door)) {
+            // Check for collision with dream shard
+            if ((bd1 == dreamWalkerScene.getAvatar() && bd2 instanceof Door)
+                || (bd2 == dreamWalkerScene.getAvatar() && bd1 instanceof Door
+                && !(dreamWalkerScene.getAvatar().getScareSensorName().equals(fd1) || dreamWalkerScene.getAvatar().getScareSensorName().equals(fd2)) )) {
                 Door collectedDoor = (bd1 instanceof Door) ? (Door) bd1 : (Door) bd2;
 
                 if (!collectedDoor.getObstacle().isRemoved()) {
@@ -79,7 +81,8 @@ public class LevelContactListener implements ContactListener {
 
             // If there is a collision between a vision sensor and the player
             if ( ("vision_sensor".equals(fd1) || "vision_sensor".equals(fd2))
-                && (bodyDataA instanceof Player || bodyDataB instanceof Player) ) {
+                && (bodyDataA instanceof Player || bodyDataB instanceof Player)
+                && !(dreamWalkerScene.getAvatar().getScareSensorName().equals(fd1) || dreamWalkerScene.getAvatar().getScareSensorName().equals(fd2))) {
 
                 // Check if the vision sensor belongs to an "un-stunned" enemy, and if
                 // so update the enemy's awareness and apply damage to player
@@ -94,14 +97,6 @@ public class LevelContactListener implements ContactListener {
                     dreamWalkerScene.getAvatar().setTakingDamage(true);
 
                 }
-                // The player should always take damage when they are detected by a vision sensor
-                // not associated with an enemy (e.g. lamp)
-
-                else{
-                    dreamWalkerScene.getAvatar().setTakingDamage(true);
-
-                }
-
             }
 
             // BULLET COLLISION CASES
@@ -200,55 +195,26 @@ public class LevelContactListener implements ContactListener {
                 }
             }
 
-            if((dreamWalkerScene.getAvatar().getScareSensorName().equals(fd1) && (bd2 instanceof CuriosityCritter)) ||
-                (dreamWalkerScene.getAvatar().getScareSensorName().equals(fd2) && (bd1 instanceof CuriosityCritter)))
-            {
-                CuriosityCritter harvestedCC;
-                if (dreamWalkerScene.getAvatar().getScareSensorName().equals(fd1))
-                {
-                    harvestedCC = (CuriosityCritter) bd2;
-                    dreamWalkerScene.performHarvest(harvestedCC);
-                } else if (dreamWalkerScene.getAvatar().getScareSensorName().equals(fd2))
-                {
-                    harvestedCC = (CuriosityCritter) bd1;
-                    dreamWalkerScene.performHarvest(harvestedCC);
+            // if there is a collision between an enemy and the player's scare sensor
+            if( (dreamWalkerScene.getAvatar().getScareSensorName().equals(fd1) && bd2 instanceof Enemy)
+                || (dreamWalkerScene.getAvatar().getScareSensorName().equals(fd2) && bd1 instanceof Enemy) ){
+
+                Enemy harvestedEnemy;
+                // if the enemy is not a Mind Maintenance
+                if (!(bd2 instanceof MindMaintenance) && !(bd1 instanceof MindMaintenance)) {
+                    if (dreamWalkerScene.getAvatar().getScareSensorName().equals(fd1) && fd2 != "walk_sensor" && fd2 != "follow_sensor" && fd2 != "vision_sensor" )
+                    {
+                        harvestedEnemy = (Enemy) bd2;
+                        dreamWalkerScene.performHarvest(harvestedEnemy);
+                    } else if (dreamWalkerScene.getAvatar().getScareSensorName().equals(fd2) && fd1 != "walk_sensor" && fd1 != "follow_sensor" && fd1 != "vision_sensor")
+                    {
+                        harvestedEnemy = (Enemy) bd1;
+                        dreamWalkerScene.performHarvest(harvestedEnemy);
+                    }
                 }
                 dreamWalkerScene.getAvatar().setHarvesting(true);
 
             }
-
-            if((dreamWalkerScene.getAvatar().getScareSensorName().equals(fd1) && (bd2 instanceof DreamDweller) && fd2 != "dweller_vision_sensor" && fd2 != "dweller_alert_sensor") ||
-                (dreamWalkerScene.getAvatar().getScareSensorName().equals(fd2) && (bd1 instanceof DreamDweller) && fd1 != "dweller_vision_sensor" && fd1 != "dweller_alert_sensor"))
-            {
-                DreamDweller harvested;
-                if (dreamWalkerScene.getAvatar().getScareSensorName().equals(fd1))
-                {
-                    harvested = (DreamDweller) bd2;
-                    dreamWalkerScene.performHarvestD(harvested);
-                } else if (dreamWalkerScene.getAvatar().getScareSensorName().equals(fd2))
-                {
-                    harvested = (DreamDweller) bd1;
-                    dreamWalkerScene.performHarvestD(harvested);
-                }
-                dreamWalkerScene.getAvatar().setHarvesting(true);
-
-            }
-
-            if( !dreamWalkerScene.getAvatar().getScareSensorName().equals(fd1) && bd1 == dreamWalkerScene.getAvatar() && bd2.getName().equals("origin_teleporter"))
-            {
-                if (!(bd2 instanceof Teleporter)) {
-                    System.out.println("Error: bd2 is not a Teleporter!");
-                } else {
-                    dreamWalkerScene.setCurrentTeleporter( (Teleporter) bd2);
-                }
-            } else if (bd1.getName().equals("origin_teleporter") && bd2 == dreamWalkerScene.getAvatar()){
-                if (!(bd1 instanceof Teleporter)) {
-                    System.out.println("Error: bd2 is not a Teleporter!");
-                } else {
-                    dreamWalkerScene.setCurrentTeleporter((Teleporter) bd1);
-                }
-            }
-
 
         } catch (Exception e) {
             e.printStackTrace();
