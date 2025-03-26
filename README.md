@@ -19,7 +19,7 @@ Space Bar : Harvest (used to defeat and drain fear meter from enemies). 0 cost t
 
 Left Click : Create a teleporter where your mouse is if the cursor is within the red radius shown in debug mode. Making contact with an entrance portal will teleport the player to the exit portal. -2 to create a portal. -1 to take a portal.
 
-Shift : Shoot a projectile that will stun enemies (NOT FULLY IMPLEMENTED). -1 to shoot each projectile.
+Shift : Shoot a projectile that will stun enemies. -1 to shoot each projectile.
 
 R : Restart Level
 
