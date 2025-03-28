@@ -10,7 +10,7 @@ public class PlatformRayCast implements RayCastCallback {
     private Fixture platformFixture = null;
     private float closestFraction = 1f;
     private Vector2 hitPoint = new Vector2();
-
+    private int hitPointCount = 0;
     @Override
     public float reportRayFixture(Fixture fixture, Vector2 point, Vector2 normal, float fraction) {
         Object userData = fixture.getBody().getUserData();
@@ -19,6 +19,7 @@ public class PlatformRayCast implements RayCastCallback {
             Surface surface = (Surface)userData;
             String obstacleName = surface.getObstacle().getName();
             if (obstacleName != null && obstacleName.startsWith("platform")) {
+                this.hitPointCount+=1;
                 if (surface.isShadowed()) {
                     platformFixture = fixture;
                     closestFraction = fraction;
@@ -41,4 +42,6 @@ public class PlatformRayCast implements RayCastCallback {
     public Vector2 getHitPoint() {
         return hitPoint;
     }
+
+    public int getHitPointCount(){return hitPointCount;}
 }
