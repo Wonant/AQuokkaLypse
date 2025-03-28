@@ -1034,7 +1034,6 @@ public class PlatformScene implements Screen{
 
         avatar.setStunning(input.didStun());
         avatar.setHarvesting(input.didSecondary());
-        //avatar.setTeleporting(input.didTeleport());
         avatar.setTeleporting(input.didM1());
 
         if (avatar.isHarvesting())
@@ -1084,7 +1083,7 @@ public class PlatformScene implements Screen{
 
         if (queuedTeleportPosition != null) {
             avatar.getObstacle().setPosition(queuedTeleportPosition);
-            avatar.setFearMeter(Math.max(0,avatar.getFearMeter() - 1));
+            //avatar.setFearMeter(Math.max(0,avatar.getFearMeter() - TELEPORT_COST));
             queuedTeleportPosition = null; // Clear after applying
         }
 
@@ -1117,15 +1116,15 @@ public class PlatformScene implements Screen{
         camera.unproject(crosshairTemp);
         Vector2 crosshairWorld = new Vector2(crosshairTemp.x / units, crosshairTemp.y / units);
 
-        // Check if mouse is on a surface (from second function)
-        final boolean[] isOnSurface = {false};
+        final boolean[] isInsideSurface = {false};
+        // Check if trying to teleport into a surface
         world.QueryAABB(new QueryCallback() {
                             @Override
                             public boolean reportFixture(Fixture fixture) {
                                 Object userData = fixture.getBody().getUserData();
                                 if (userData instanceof Surface) {
                                     if (fixture.testPoint(crosshairWorld)) {
-                                        isOnSurface[0] = true;
+                                        isInsideSurface[0] = true;
                                         return false; // Stop the query
                                     }
                                 }
@@ -1134,8 +1133,8 @@ public class PlatformScene implements Screen{
                         }, crosshairWorld.x - 0.1f, crosshairWorld.y - 0.1f,
             crosshairWorld.x + 0.1f, crosshairWorld.y + 0.1f);
 
-        if (isOnSurface[0]) {
-            System.out.println("Cannot place teleporter: Mouse is directly on a surface!");
+        if (isInsideSurface[0]) {
+            System.out.println("Cannot place teleport in a surface");
             return;
         }
 
@@ -1143,15 +1142,15 @@ public class PlatformScene implements Screen{
         Vector2 rayEnd = new Vector2(crosshairWorld.x, 0);
         PlatformRayCast callback = new PlatformRayCast();
         world.rayCast(callback, rayStart, rayEnd);
+
         if (callback.getPlatformFixture() == null) {
             System.out.println("Player is not shadowed, cannot teleport");
             return;
         }
 
-        // Use raycast to find platform below cursor (from second function)
+        // Use raycast to find platform below cursor
         rayStart = new Vector2(crosshairWorld.x, crosshairWorld.y);
         rayEnd = new Vector2(crosshairWorld.x, 0);
-
         world.rayCast(callback, rayStart, rayEnd);
 
         if (callback.getPlatformFixture() == null) {
@@ -1159,19 +1158,21 @@ public class PlatformScene implements Screen{
             return;
         }
 
-        Surface platform = (Surface)callback.getPlatformFixture().getBody().getUserData();
+        System.out.println("Hitpoint Count: " + callback.getHitPointCount());
+        if (callback.getHitPointCount()%2 == 1){
+            System.out.println("Cannot teleport inside of surface");
+            return;
+        }
         Vector2 hitPoint = callback.getHitPoint();
-        Vector2 initialPosition = new Vector2(crosshairWorld.x, hitPoint.y + 0.75f);
-
-        // Position the teleporter above the platform
-        Vector2 teleporterPosition = new Vector2(crosshairWorld.x, hitPoint.y + 0.75f);
+        Vector2 initialPosition = new Vector2(crosshairWorld.x, crosshairWorld.y + 0.75f);
+        Vector2 teleporterPosition = new Vector2(crosshairWorld.x, crosshairWorld.y + 0.75f);
 
         // Calculate distance in world coordinates
         float worldDistance = playerPosition.dst(teleporterPosition);
-        float maxDistance = avatar.getTeleportRangeRadius() / units; // In world units
+        float maxTeleportRange = avatar.getTeleportRangeRadius() / units;
 
-        // Check if destination is within range
-        if (worldDistance > maxDistance) {
+        // Check if destination is outside range
+        if (worldDistance > maxTeleportRange) {
             Vector2 direction = new Vector2(
                 initialPosition.x - playerPosition.x,
                 initialPosition.y - playerPosition.y
@@ -1179,29 +1180,29 @@ public class PlatformScene implements Screen{
 
             // Clamp position to max distance
             teleporterPosition = new Vector2(
-                playerPosition.x + direction.x * maxDistance,
-                playerPosition.y + direction.y * maxDistance
+                playerPosition.x + direction.x * maxTeleportRange,
+                playerPosition.y + direction.y * maxTeleportRange
             );
-
-            // Use new raycast to find platform below the clamped position
-            rayStart = new Vector2(teleporterPosition.x, teleporterPosition.y);
-            rayEnd = new Vector2(teleporterPosition.x, 0);
-
-            PlatformRayCast clampedCallback = new PlatformRayCast();
-            world.rayCast(clampedCallback, rayStart, rayEnd);
-
-
-            if (clampedCallback.getPlatformFixture() != null) {
-                Vector2 clampedHitPoint = clampedCallback.getHitPoint();
-                teleporterPosition.y = clampedHitPoint.y + 0.75f;
-            } else {
-                System.out.println("No platform found at clamped position");
-                return;
-            }
         }
 
-        avatar.setFearMeter(Math.max(0, avatar.getFearMeter() - TELEPORT_COST));
-        queuedTeleportPosition = crosshairWorld;
+        // Raycast to check if the clamped position is above a surface
+        Vector2 rayStartForClamped = new Vector2(teleporterPosition.x, teleporterPosition.y);
+        Vector2 rayEndForClamped = new Vector2(teleporterPosition.x, 0);
+        PlatformRayCast clampedCallback = new PlatformRayCast();
+        world.rayCast(clampedCallback, rayStartForClamped, rayEndForClamped);
+
+        if (clampedCallback.getPlatformFixture() != null) {
+            Vector2 clampedHitPoint = clampedCallback.getHitPoint();
+            // Ensure the teleporter position is above the surface
+            if (teleporterPosition.y <= clampedHitPoint.y) {
+                teleporterPosition.y = clampedHitPoint.y + 0.75f; // Adjust to be above the surface
+            }
+        } else {
+            System.out.println("No platform found at clamped position");
+            return;
+        }
+
+        queuedTeleportPosition = teleporterPosition;
     }
 
     /**
@@ -1211,10 +1212,20 @@ public class PlatformScene implements Screen{
         InputController input = InputController.getInstance();
 
         float units = height/bounds.height;
-        Vector2 mousePosition = input.getCrossHair();
+        Vector2 crosshairScreen = input.getMouse();
+
+        // Unproject the crosshair screen position to get world coordinates
+        Vector3 crosshairTemp = new Vector3(
+            crosshairScreen.x,
+            crosshairScreen.y,
+            0
+        );
+        camera.unproject(crosshairTemp);
+        Vector2 crosshairWorld = new Vector2(crosshairTemp.x / units, crosshairTemp.y / units);
+
         JsonValue bulletjv = constants.get("bullet");
         Obstacle player = avatar.getObstacle();
-        Vector2 shootAngle = mousePosition.sub(player.getPosition());
+        Vector2 shootAngle = crosshairWorld.sub(player.getPosition());
         shootAngle.nor();
         Texture texture = directory.getEntry("platform-bullet", Texture.class);
         Bullet bullet = new Bullet(units, bulletjv, player.getPosition(), shootAngle.nor());
