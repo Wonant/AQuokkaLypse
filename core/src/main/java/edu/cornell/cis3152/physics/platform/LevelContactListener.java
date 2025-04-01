@@ -28,6 +28,7 @@ public class LevelContactListener implements ContactListener {
      */
     @Override
     public void beginContact(Contact contact) {
+        System.out.println("Collision DETECTION");
         Fixture fix1 = contact.getFixtureA();
         Fixture fix2 = contact.getFixtureB();
 
@@ -274,12 +275,24 @@ public class LevelContactListener implements ContactListener {
             System.out.println("Enemy stopped seeing player");
         }
 
-        if((dreamWalkerScene.getAvatar().getScareSensorName().equals(fd1) && (bd2 instanceof CuriosityCritter)) ||
-            (dreamWalkerScene.getAvatar().getScareSensorName().equals(fd2) && (bd1 instanceof CuriosityCritter)))
-        {
-            dreamWalkerScene.removeHarvestedEnemy(null);
-            dreamWalkerScene.getAvatar().setHarvesting(false);
 
+        if( (dreamWalkerScene.getAvatar().getScareSensorName().equals(fd1) && bd2 instanceof Enemy)
+            || (dreamWalkerScene.getAvatar().getScareSensorName().equals(fd2) && bd1 instanceof Enemy) ){
+
+            Enemy harvestedEnemy;
+            // if the enemy is not a Mind Maintenance
+            if (!(bd2 instanceof MindMaintenance) && !(bd1 instanceof MindMaintenance)) {
+                if (dreamWalkerScene.getAvatar().getScareSensorName().equals(fd1) && fd2 != "walk_sensor" && fd2 != "follow_sensor" && fd2 != "vision_sensor" )
+                {
+                    harvestedEnemy = (Enemy) bd2;
+                    dreamWalkerScene.removeHarvestedEnemy(harvestedEnemy);
+                } else if (dreamWalkerScene.getAvatar().getScareSensorName().equals(fd2) && fd1 != "walk_sensor" && fd1 != "follow_sensor" && fd1 != "vision_sensor")
+                {
+                    harvestedEnemy = (Enemy) bd1;
+                    dreamWalkerScene.removeHarvestedEnemy(harvestedEnemy);
+                }
+            }
+            dreamWalkerScene.getAvatar().setHarvesting(false);
         }
 
 
@@ -309,17 +322,6 @@ public class LevelContactListener implements ContactListener {
                 System.out.println("Dream Dweller lost sight of player");
             }
         }
-
-        if((dreamWalkerScene.getAvatar().getScareSensorName().equals(fd1) && (bd2 instanceof DreamDweller)) ||
-            (dreamWalkerScene.getAvatar().getScareSensorName().equals(fd2) && (bd1 instanceof DreamDweller)))
-        {
-            dreamWalkerScene.removeHarvestedD(null);
-            dreamWalkerScene.getAvatar().setHarvesting(false);
-
-        }
-
-
-
 
         if ((dreamWalkerScene.getAvatar().getSensorName().equals(fd2) && bd1 instanceof Surface) ||
             (dreamWalkerScene.getAvatar().getSensorName().equals(fd1) && bd2 instanceof Surface)) {

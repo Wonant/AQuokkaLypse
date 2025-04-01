@@ -178,14 +178,14 @@ public class PlatformScene implements Screen{
     private Vector2 queuedTeleportPosition = null;
 
 
-    private Enemy queuedHarvestedEnemy = null;
+    private PooledList<Enemy> queuedHarvestedEnemy = new PooledList<Enemy>();
     private Teleporter currentTeleporter = null;
 
     protected PooledList<Surface> shadowPlatformQueue = new PooledList<Surface>();
-    private DreamDweller queuedHarvestedEnemyD = null;
     private HashMap<DreamDweller, Sprite> visionCones3;
     private HashMap<Teleporter, Float> teleporterCreationTimes = new HashMap<>();
     private float timeElapsed = 0f;
+    private String mapkey  = "platform-constants";
 
 
     /*==============================ContactListener Getters/Setters===============================*/
@@ -201,15 +201,11 @@ public class PlatformScene implements Screen{
     //CHANGE: QUEUE OF ENEMIES ADDED EACH COLLISION. HARVEST SHOULD REMOVE ALL IN QUEUE.
     public void performHarvest(Enemy enemy)
     {
-        queuedHarvestedEnemy = enemy;
+        queuedHarvestedEnemy.add(enemy);
     }
 
-    public void removeHarvestedEnemy(Enemy enemy) {queuedHarvestedEnemy = null;}
+    public void removeHarvestedEnemy(Enemy enemy) {queuedHarvestedEnemy.remove(enemy);}
 
-    public void removeHarvestedD(DreamDweller enemy)
-    {
-        queuedHarvestedEnemyD = null;
-    }
 
 
     /**
@@ -314,6 +310,7 @@ public class PlatformScene implements Screen{
     public void setSpriteBatch(SpriteBatch batch) {
         this.batch = batch;
     }
+    /*============================================================================================*/
 
     /**
      * Disposes of all (non-static) resources allocated to this mode.
@@ -392,274 +389,7 @@ public class PlatformScene implements Screen{
         return horiz && vert;
     }
 
-
     /**
-     * Processes the physics for this frame
-     *
-     * Once the update phase is over, but before we draw, we are ready to
-     * process physics. The primary method is the step() method in world. This
-     * implementation works for all applications and should not need to be
-     * overwritten.
-     *
-     * @param dt    Number of seconds since last animation frame
-     */
-    public void postUpdate(float dt) {
-        // Add any objects created by actions
-        while (!addQueue.isEmpty()) {
-            addSprite(addQueue.poll());
-        }
-
-        // Turn the physics engine crank.
-        // NORMALLY we would use a fixed step, not dt
-        // But that is harder and a topic of the advanced class
-        world.step(dt,WORLD_VELOC,WORLD_POSIT);
-
-        // Garbage collect the deleted objects.
-        // Note how we use the linked list nodes to delete O(1) in place.
-        // This is O(n) without copying.
-        Iterator<PooledList<ObstacleSprite>.Entry> iterator = sprites.entryIterator();
-        while (iterator.hasNext()) {
-            PooledList<ObstacleSprite>.Entry entry = iterator.next();
-            ObstacleSprite sprite = entry.getValue();
-            Obstacle obj = sprite.getObstacle();
-            if (obj.isRemoved()) {
-                obj.deactivatePhysics(world);
-                entry.remove();
-            } else {
-                // Note that update is called last!
-                obj.update(dt);
-            }
-        }
-    }
-
-    /**
-     * Draws the physics objects to the screen
-     *
-     * For simple worlds, this method is enough by itself. It will need to be
-     * overriden if the world needs fancy backgrounds or the like.
-     *
-     * The method draws all objects in the order that they were added.
-     *
-     * @param dt    Number of seconds since last animation frame
-     */
-    public void draw(float dt) {
-        // Clear the screen (color is homage to the XNA years)
-        ScreenUtils.clear(0.39f, 0.58f, 0.93f, 1.0f);
-
-        // This shows off how powerful our new SpriteBatch is
-        batch.begin(camera);
-
-        background = directory.getEntry("background-technical", Texture.class);
-        float parallaxFactor = 0.4f;
-
-        float bgX = camera.position.x * parallaxFactor - background.getWidth() / 2f;
-        float bgY = camera.position.y * parallaxFactor - background.getHeight() / 2f;
-
-        batch.draw(background, bgX, bgY, background.getWidth(), background.getHeight() * 2);
-
-        dreamShardCountText.setText("Dream Shards: " + (totalGoals - collectedGoals));
-        dreamShardCountText.layout();
-
-        if (drawScareEffect)
-        {
-            if(drawScareCooldown <= drawScareLimit)
-            {
-                drawScareEffect();
-                drawScareCooldown++;
-            } else {
-                drawScareCooldown = 0;
-                drawScareEffect = false;
-            }
-        }
-
-
-        // Draw the meshes (images)
-        for(ObstacleSprite obj : sprites) {
-            obj.draw(batch);
-        }
-
-
-
-        if (debug) {
-            // Draw the outlines
-            for (ObstacleSprite obj : sprites) {
-                obj.drawDebug( batch );
-            }
-        }
-
-        // Draw a final message
-
-
-        //batch.setColor(foregroundColor);
-        //batch.draw(foregroundTexture, 0, 0, width, height);
-
-        batch.end();
-    }
-
-    private void drawUI() {
-        uiCamera.update();
-        batch.setProjectionMatrix(uiCamera.combined);
-        batch.begin();
-        float scaleFactor = 0.5f;
-        float originalWidth = crosshairTexture.getRegionWidth();
-        float originalHeight = crosshairTexture.getRegionHeight();
-        float scaledWidth = originalWidth * scaleFactor;
-        float scaledHeight = originalHeight * scaleFactor;
-
-        float crossX = Gdx.input.getX() - scaledWidth / 2;
-        float crossY = Gdx.graphics.getHeight() - Gdx.input.getY() - scaledHeight / 2;
-
-        batch.drawText(dreamShardCountText, 11, height - 50);
-
-        batch.draw(crosshairTexture, crossX, crossY, scaledWidth, scaledHeight);
-
-        if (fearMeterTexture != null && avatar != null) {
-            int fearLevel = avatar.getFearMeter();
-            int maxFear = avatar.getMaxFearMeter();
-            float meterWidth = 150 * ((float) fearLevel / maxFear);
-            float meterHeight = 20;
-            float meterX = 20;
-            float meterY = 20;
-
-            float outlineThickness = 2;
-            batch.setColor(Color.RED);
-            batch.draw(fearMeterTexture, meterX - outlineThickness, meterY - outlineThickness,
-                meterWidth + 2 * outlineThickness, meterHeight + 2 * outlineThickness);
-
-            batch.draw(fearMeterTexture, meterX, meterY, meterWidth, meterHeight);
-
-            batch.setColor(Color.WHITE);
-        }
-
-        if (complete && !failed) {
-            batch.drawText(goodMessage, width/2, height/2);
-        } else if (failed) {
-            batch.drawText(badMessage, width/2, height/2);
-        }
-
-        batch.end();
-    }
-
-    /** Draws Simple fear meter bar
-     *
-     *
-     */
-    private void drawFearMeter() {
-        int fearLevel = avatar.getFearMeter();
-        int maxFear = avatar.getMaxFearMeter();
-        float meterWidth = 150 * ((float) fearLevel / maxFear);
-        float meterHeight = 20;
-
-        float x = 20; // Offset from the left
-        float y = height - meterHeight - 20;
-
-        float outlineThickness = 2;
-
-
-        batch.setColor(Color.BLACK);
-        batch.draw(fearMeterTexture, x - outlineThickness, y - outlineThickness,
-            meterWidth + 2 * outlineThickness, meterHeight + 2 * outlineThickness);
-
-
-        batch.setColor(Color.RED);
-        batch.draw(fearMeterTexture, x, y, meterWidth, meterHeight);
-        batch.setColor(Color.WHITE);
-    }
-
-    private void drawScareEffect(){
-        float u = avatar.getObstacle().getPhysicsUnits();
-        float size = scareEffectTexture.getRegionWidth() * 0.5f;
-        float size2 = scareEffectTexture.getRegionHeight() * 0.5f;
-
-
-        batch.draw(scareEffectTexture, avatar.getObstacle().getX() * u - size * 0.42f, avatar.getObstacle().getY() * u - size2 *0.57f, size, size2);
-    }
-
-    /**
-     * Called when the Screen is resized.
-     *
-     * This can happen at any point during a non-paused state but will never
-     * happen before a call to show().
-     *
-     * @param width  The new width in pixels
-     * @param height The new height in pixels
-     */
-    public void resize(int width, int height) {
-        this.width  = width;
-        this.height = height;
-        if (camera == null) {
-            camera = new OrthographicCamera();
-        }
-        camera.setToOrtho( false, width, height );
-        scale.x = width/bounds.width;
-        scale.y = height/bounds.height;
-        reset();
-    }
-
-    /**
-     * Called when the Screen should render itself.
-     *
-     * We defer to the other methods update() and draw().  However, it is VERY
-     * important that we only quit AFTER a draw.
-     *
-     * @param delta Number of seconds since last animation frame
-     */
-    public void render(float delta) {
-        if (active) {
-            if (preUpdate(delta)) {
-                update(delta);
-                postUpdate(delta);
-            }
-            draw(delta);
-            float units = height / bounds.height;
-
-            // TA feedback was to make it a little less smooth
-            // if the camera is far from being directly over the player, we can try to increase the change
-
-            // 2 / (1 + e^(-5(x-0.5)))
-
-
-
-            Vector3 position = this.camera.position;
-            Vector3 playerPosition = new Vector3(this.avatar.getObstacle().getX() * units, this.avatar.getObstacle().getY() * units, 0);
-
-
-            Vector3 diff = new Vector3(position).sub(playerPosition);
-            float dis = diff.len();
-            if (dis > 220.0) {
-                diff.nor().scl(250);
-                position.lerp(new Vector3((playerPosition).add(diff)), 0.1f);
-            }
-
-            float lerp = 3.0f;
-            position.x += (this.avatar.getObstacle().getX() * units - position.x) * lerp * delta;
-            position.y += (this.avatar.getObstacle().getY() * units - position.y) * lerp * delta;
-            camera.position.set(position);
-            camera.zoom = 0.8f;
-            clampCamera();
-            camera.update();
-
-
-            drawUI();
-        }
-    }
-
-    private void clampCamera() {
-        float units = height / bounds.height; // conversion factor: pixels per physics unit
-        float halfViewportWidth = camera.viewportWidth / 2;
-        float halfViewportHeight = camera.viewportHeight / 2;
-
-        // Convert world bounds to screen coordinates
-        float minX = bounds.x * units + halfViewportWidth;
-        float maxX = (bounds.x + bounds.width) * units - halfViewportWidth;
-        float minY = bounds.y * units + halfViewportHeight;
-        float maxY = (bounds.y + bounds.height) * units - halfViewportHeight;
-
-        camera.position.x = MathUtils.clamp(camera.position.x, minX-100, maxX+100);
-        camera.position.y = MathUtils.clamp(camera.position.y, minY-50, maxY+50);
-    }
-
-    /**g
      * Called when the Screen is resumed from a paused state.
      *
      * This is usually when it regains focus.
@@ -692,7 +422,6 @@ public class PlatformScene implements Screen{
     public void setScreenListener(ScreenListener listener) {
         this.listener = listener;
     }
-    private String mapkey  = "platform-constants";
 
     /**
      * Creates and initialize a new instance of the platformer game
@@ -947,6 +676,19 @@ public class PlatformScene implements Screen{
     }
 
     /**
+     * Called when the Screen is paused.
+     *
+     * We need this method to stop all sounds when we pause.
+     * Pausing happens when we switch game modes.
+     */
+    public void pause() {
+        SoundEffectManager sounds = SoundEffectManager.getInstance();
+        sounds.stop("plop");
+        sounds.stop("fire");
+        sounds.stop("jump");
+    }
+
+    /**
      * Returns whether to process the update loop
      *
      * At the start of the update loop, we check if it is time
@@ -958,7 +700,7 @@ public class PlatformScene implements Screen{
      * @return whether to process the update loop
      */
     public boolean preUpdate(float dt) {
-
+        System.out.println("PREUPDATE");
         InputController input = InputController.getInstance();
         input.sync(bounds, scale);
         if (listener == null) {
@@ -1019,6 +761,7 @@ public class PlatformScene implements Screen{
      * @param dt    Number of seconds since last animation frame
      */
     public void update(float dt) {
+        System.out.println("UPDATE");
         InputController input = InputController.getInstance();
 
 
@@ -1039,18 +782,14 @@ public class PlatformScene implements Screen{
         if (avatar.isHarvesting())
         {
             drawScareEffect = true;
-            if (queuedHarvestedEnemy != null)
+            if (!queuedHarvestedEnemy.isEmpty())
             {
-                if (!queuedHarvestedEnemy.getObstacle().isRemoved()) {
-                    queuedHarvestedEnemy.getObstacle().markRemoved(true);
-                    queuedHarvestedEnemy = null;
-                    avatar.setFearMeter(avatar.getFearMeter() + 3);
-                }
-            } else if (queuedHarvestedEnemyD != null) {
-                if (!queuedHarvestedEnemyD.getObstacle().isRemoved()) {
-                    queuedHarvestedEnemyD.getObstacle().markRemoved(true);
-                    queuedHarvestedEnemyD = null;
-                    avatar.setFearMeter(avatar.getFearMeter() + 5);
+                for (Enemy harvest_enemy : queuedHarvestedEnemy) {
+                    if (!harvest_enemy.getObstacle().isRemoved()) {
+                        harvest_enemy.getObstacle().markRemoved(true);
+                        avatar.setFearMeter(avatar.getFearMeter() + 3);
+                    }
+                    removeHarvestedEnemy(harvest_enemy);
                 }
             }
         }
@@ -1248,16 +987,271 @@ public class PlatformScene implements Screen{
     }
 
     /**
-     * Called when the Screen is paused.
+     * Processes the physics for this frame
      *
-     * We need this method to stop all sounds when we pause.
-     * Pausing happens when we switch game modes.
+     * Once the update phase is over, but before we draw, we are ready to
+     * process physics. The primary method is the step() method in world. This
+     * implementation works for all applications and should not need to be
+     * overwritten.
+     *
+     * @param dt    Number of seconds since last animation frame
      */
-    public void pause() {
-        SoundEffectManager sounds = SoundEffectManager.getInstance();
-        sounds.stop("plop");
-        sounds.stop("fire");
-        sounds.stop("jump");
+    public void postUpdate(float dt) {
+        // Add any objects created by actions
+        System.out.println("POSTUPDATE");
+        while (!addQueue.isEmpty()) {
+            addSprite(addQueue.poll());
+        }
+
+        // Turn the physics engine crank.
+        // NORMALLY we would use a fixed step, not dt
+        // But that is harder and a topic of the advanced class
+        world.step(dt,WORLD_VELOC,WORLD_POSIT);
+
+        // Garbage collect the deleted objects.
+        // Note how we use the linked list nodes to delete O(1) in place.
+        // This is O(n) without copying.
+        Iterator<PooledList<ObstacleSprite>.Entry> iterator = sprites.entryIterator();
+        while (iterator.hasNext()) {
+            PooledList<ObstacleSprite>.Entry entry = iterator.next();
+            ObstacleSprite sprite = entry.getValue();
+            Obstacle obj = sprite.getObstacle();
+            if (obj.isRemoved()) {
+                obj.deactivatePhysics(world);
+                entry.remove();
+            } else {
+                // Note that update is called last!
+                obj.update(dt);
+            }
+        }
+    }
+
+    /**
+     * Called when the Screen is resized.
+     *
+     * This can happen at any point during a non-paused state but will never
+     * happen before a call to show().
+     *
+     * @param width  The new width in pixels
+     * @param height The new height in pixels
+     */
+    public void resize(int width, int height) {
+        this.width  = width;
+        this.height = height;
+        if (camera == null) {
+            camera = new OrthographicCamera();
+        }
+        camera.setToOrtho( false, width, height );
+        scale.x = width/bounds.width;
+        scale.y = height/bounds.height;
+        reset();
+    }
+
+    /**
+     * Called when the Screen should render itself.
+     *
+     * We defer to the other methods update() and draw().  However, it is VERY
+     * important that we only quit AFTER a draw.
+     *
+     * @param delta Number of seconds since last animation frame
+     */
+    public void render(float delta) {
+        if (active) {
+            if (preUpdate(delta)) {
+                update(delta);
+                postUpdate(delta);
+            }
+            draw(delta);
+            float units = height / bounds.height;
+
+            // TA feedback was to make it a little less smooth
+            // if the camera is far from being directly over the player, we can try to increase the change
+
+            // 2 / (1 + e^(-5(x-0.5)))
+
+
+
+            Vector3 position = this.camera.position;
+            Vector3 playerPosition = new Vector3(this.avatar.getObstacle().getX() * units, this.avatar.getObstacle().getY() * units, 0);
+
+
+            Vector3 diff = new Vector3(position).sub(playerPosition);
+            float dis = diff.len();
+            if (dis > 220.0) {
+                diff.nor().scl(250);
+                position.lerp(new Vector3((playerPosition).add(diff)), 0.1f);
+            }
+
+            float lerp = 3.0f;
+            position.x += (this.avatar.getObstacle().getX() * units - position.x) * lerp * delta;
+            position.y += (this.avatar.getObstacle().getY() * units - position.y) * lerp * delta;
+            camera.position.set(position);
+            camera.zoom = 0.8f;
+            clampCamera();
+            camera.update();
+
+
+            drawUI();
+        }
+    }
+
+    private void clampCamera() {
+        float units = height / bounds.height; // conversion factor: pixels per physics unit
+        float halfViewportWidth = camera.viewportWidth / 2;
+        float halfViewportHeight = camera.viewportHeight / 2;
+
+        // Convert world bounds to screen coordinates
+        float minX = bounds.x * units + halfViewportWidth;
+        float maxX = (bounds.x + bounds.width) * units - halfViewportWidth;
+        float minY = bounds.y * units + halfViewportHeight;
+        float maxY = (bounds.y + bounds.height) * units - halfViewportHeight;
+
+        camera.position.x = MathUtils.clamp(camera.position.x, minX-100, maxX+100);
+        camera.position.y = MathUtils.clamp(camera.position.y, minY-50, maxY+50);
+    }
+
+    /**
+     * Draws the physics objects to the screen
+     *
+     * For simple worlds, this method is enough by itself. It will need to be
+     * overriden if the world needs fancy backgrounds or the like.
+     *
+     * The method draws all objects in the order that they were added.
+     *
+     * @param dt    Number of seconds since last animation frame
+     */
+    public void draw(float dt) {
+        System.out.println("DRAW");
+        // Clear the screen (color is homage to the XNA years)
+        ScreenUtils.clear(0.39f, 0.58f, 0.93f, 1.0f);
+
+        // This shows off how powerful our new SpriteBatch is
+        batch.begin(camera);
+
+        background = directory.getEntry("background-technical", Texture.class);
+        float parallaxFactor = 0.4f;
+
+        float bgX = camera.position.x * parallaxFactor - background.getWidth() / 2f;
+        float bgY = camera.position.y * parallaxFactor - background.getHeight() / 2f;
+
+        batch.draw(background, bgX, bgY, background.getWidth(), background.getHeight() * 2);
+
+        dreamShardCountText.setText("Dream Shards: " + (totalGoals - collectedGoals));
+        dreamShardCountText.layout();
+
+        if (drawScareEffect)
+        {
+            if(drawScareCooldown <= drawScareLimit)
+            {
+                drawScareEffect();
+                drawScareCooldown++;
+            } else {
+                drawScareCooldown = 0;
+                drawScareEffect = false;
+            }
+        }
+
+
+        // Draw the meshes (images)
+        for(ObstacleSprite obj : sprites) {
+            obj.draw(batch);
+        }
+
+
+
+        if (debug) {
+            // Draw the outlines
+            for (ObstacleSprite obj : sprites) {
+                obj.drawDebug( batch );
+            }
+        }
+
+        // Draw a final message
+
+
+        //batch.setColor(foregroundColor);
+        //batch.draw(foregroundTexture, 0, 0, width, height);
+
+        batch.end();
+    }
+
+    private void drawUI() {
+        uiCamera.update();
+        batch.setProjectionMatrix(uiCamera.combined);
+        batch.begin();
+        float scaleFactor = 0.5f;
+        float originalWidth = crosshairTexture.getRegionWidth();
+        float originalHeight = crosshairTexture.getRegionHeight();
+        float scaledWidth = originalWidth * scaleFactor;
+        float scaledHeight = originalHeight * scaleFactor;
+
+        float crossX = Gdx.input.getX() - scaledWidth / 2;
+        float crossY = Gdx.graphics.getHeight() - Gdx.input.getY() - scaledHeight / 2;
+
+        batch.drawText(dreamShardCountText, 11, height - 50);
+
+        batch.draw(crosshairTexture, crossX, crossY, scaledWidth, scaledHeight);
+
+        if (fearMeterTexture != null && avatar != null) {
+            int fearLevel = avatar.getFearMeter();
+            int maxFear = avatar.getMaxFearMeter();
+            float meterWidth = 150 * ((float) fearLevel / maxFear);
+            float meterHeight = 20;
+            float meterX = 20;
+            float meterY = 20;
+
+            float outlineThickness = 2;
+            batch.setColor(Color.RED);
+            batch.draw(fearMeterTexture, meterX - outlineThickness, meterY - outlineThickness,
+                meterWidth + 2 * outlineThickness, meterHeight + 2 * outlineThickness);
+
+            batch.draw(fearMeterTexture, meterX, meterY, meterWidth, meterHeight);
+
+            batch.setColor(Color.WHITE);
+        }
+
+        if (complete && !failed) {
+            batch.drawText(goodMessage, width/2, height/2);
+        } else if (failed) {
+            batch.drawText(badMessage, width/2, height/2);
+        }
+
+        batch.end();
+    }
+
+    /** Draws Simple fear meter bar
+     *
+     *
+     */
+    private void drawFearMeter() {
+        int fearLevel = avatar.getFearMeter();
+        int maxFear = avatar.getMaxFearMeter();
+        float meterWidth = 150 * ((float) fearLevel / maxFear);
+        float meterHeight = 20;
+
+        float x = 20; // Offset from the left
+        float y = height - meterHeight - 20;
+
+        float outlineThickness = 2;
+
+
+        batch.setColor(Color.BLACK);
+        batch.draw(fearMeterTexture, x - outlineThickness, y - outlineThickness,
+            meterWidth + 2 * outlineThickness, meterHeight + 2 * outlineThickness);
+
+
+        batch.setColor(Color.RED);
+        batch.draw(fearMeterTexture, x, y, meterWidth, meterHeight);
+        batch.setColor(Color.WHITE);
+    }
+
+    private void drawScareEffect(){
+        float u = avatar.getObstacle().getPhysicsUnits();
+        float size = scareEffectTexture.getRegionWidth() * 0.5f;
+        float size2 = scareEffectTexture.getRegionHeight() * 0.5f;
+
+
+        batch.draw(scareEffectTexture, avatar.getObstacle().getX() * u - size * 0.42f, avatar.getObstacle().getY() * u - size2 *0.57f, size, size2);
     }
 }
 
