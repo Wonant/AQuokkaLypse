@@ -1,5 +1,5 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<map version="1.10" tiledversion="1.11.2" orientation="orthogonal" renderorder="right-down" width="60" height="20" tilewidth="32" tileheight="32" infinite="0" nextlayerid="7" nextobjectid="35">
+<map version="1.10" tiledversion="1.11.2" orientation="orthogonal" renderorder="right-down" width="60" height="20" tilewidth="32" tileheight="32" infinite="0" nextlayerid="8" nextobjectid="38">
  <tileset firstgid="1" source="../tilesets/dreamwalker_alpha_temple_assets_1.tsx"/>
  <group id="5" name="Group Layer 1">
   <layer id="3" name="Tile Layer 2" width="60" height="20" opacity="0.9">
@@ -76,21 +76,119 @@
 </data>
  </layer>
  <objectgroup id="6" name="CollisionLayer">
-  <object id="7" x="832.005" y="288.991" width="417.031" height="30.3389"/>
-  <object id="8" x="351.211" y="350.697" width="319.329" height="31.3673"/>
-  <object id="9" x="319.951" y="384.247" width="65.0618" height="32.1482"/>
-  <object id="10" x="288.568" y="416.778" width="63.1482" height="31.3828"/>
-  <object id="11" x="256.803" y="448.926" width="63.1482" height="31"/>
-  <object id="15" x="1.65125" y="480.515" width="478.038" height="32.1995"/>
-  <object id="16" x="1088.73" y="257.254" width="62.5" height="30.1339"/>
-  <object id="17" x="1119.42" y="224.33" width="64.1741" height="31.808"/>
-  <object id="18" x="1151.79" y="191.964" width="64.1741" height="31.808"/>
-  <object id="20" x="1183.59" y="160.156" width="64.1741" height="31.25"/>
-  <object id="21" x="1215.96" y="127.232" width="415.179" height="31.25"/>
-  <object id="22" x="1184.43" y="351.827" width="476.797" height="31.8395"/>
-  <object id="23" x="1663.64" y="384.761" width="64.3793" height="30.6748"/>
-  <object id="24" x="1792.4" y="287.813" width="64.0006" height="32.1897"/>
-  <object id="25" x="480.289" y="288.728" width="31.464" height="63.5449"/>
-  <object id="26" x="639.891" y="319.946" width="32.3349" height="30.6331"/>
+  <object id="7" x="832.005" y="288.991" width="417.031" height="30.3389">
+   <properties>
+    <property name="isStair" type="bool" value="false"/>
+   </properties>
+  </object>
+  <object id="8" x="383.566" y="351.895" width="286.734" height="31.3673">
+   <properties>
+    <property name="isStair" type="bool" value="false"/>
+   </properties>
+  </object>
+  <object id="9" x="319.951" y="384.247" width="65.0618" height="32.1482">
+   <properties>
+    <property name="isStair" type="bool" value="true"/>
+   </properties>
+  </object>
+  <object id="10" x="288.568" y="416.778" width="63.1482" height="31.3828">
+   <properties>
+    <property name="isStair" type="bool" value="true"/>
+   </properties>
+  </object>
+  <object id="11" x="256.803" y="448.926" width="63.1482" height="31">
+   <properties>
+    <property name="isStair" type="bool" value="true"/>
+   </properties>
+  </object>
+  <object id="15" x="1.65125" y="480.515" width="478.038" height="32.1995">
+   <properties>
+    <property name="isStair" type="bool" value="false"/>
+   </properties>
+  </object>
+  <object id="16" x="1088.73" y="257.254" width="62.5" height="30.1339">
+   <properties>
+    <property name="isStair" type="bool" value="true"/>
+   </properties>
+  </object>
+  <object id="17" x="1119.42" y="224.33" width="64.1741" height="31.808">
+   <properties>
+    <property name="isStair" type="bool" value="true"/>
+   </properties>
+  </object>
+  <object id="18" x="1151.79" y="191.964" width="64.1741" height="31.808">
+   <properties>
+    <property name="isStair" type="bool" value="true"/>
+   </properties>
+  </object>
+  <object id="20" x="1183.59" y="160.156" width="64.1741" height="31.25">
+   <properties>
+    <property name="isStair" type="bool" value="true"/>
+   </properties>
+  </object>
+  <object id="21" x="1248.01" y="127.546" width="384.435" height="31.25">
+   <properties>
+    <property name="isStair" type="bool" value="false"/>
+   </properties>
+  </object>
+  <object id="22" x="1184.43" y="351.827" width="476.797" height="31.8395">
+   <properties>
+    <property name="isStair" type="bool" value="false"/>
+   </properties>
+  </object>
+  <object id="23" x="1663.64" y="384.761" width="64.3793" height="30.6748">
+   <properties>
+    <property name="isStair" type="bool" value="false"/>
+   </properties>
+  </object>
+  <object id="24" x="1792.4" y="287.813" width="64.0006" height="32.1897">
+   <properties>
+    <property name="isStair" type="bool" value="false"/>
+   </properties>
+  </object>
+  <object id="25" x="480.289" y="288.728" width="31.464" height="63.5449">
+   <properties>
+    <property name="isStair" type="bool" value="false"/>
+   </properties>
+  </object>
+  <object id="26" x="639.891" y="319.946" width="32.3349" height="30.6331">
+   <properties>
+    <property name="isStair" type="bool" value="false"/>
+   </properties>
+  </object>
+  <object id="36" x="352.51" y="352.992" width="31.1038" height="30.3805">
+   <properties>
+    <property name="isStair" type="bool" value="true"/>
+   </properties>
+  </object>
+  <object id="37" x="1215.99" y="128.87" width="31.5654" height="31.25">
+   <properties>
+    <property name="isStair" type="bool" value="true"/>
+   </properties>
+  </object>
  </objectgroup>
+ <layer id="7" name="Foreground" width="60" height="20" opacity="0.7" offsetx="1500" offsety="0" parallaxx="2">
+  <data encoding="csv">
+0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,
+0,0,0,0,0,0,0,0,0,0,23,24,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,
+0,0,0,0,0,0,0,0,0,0,42,43,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,
+0,0,0,0,0,0,0,0,0,0,64,76,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,
+0,68,0,0,0,0,0,0,0,0,83,95,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,
+0,87,0,0,0,0,0,0,0,0,102,114,0,0,0,0,0,0,0,0,0,0,0,0,23,27,28,29,24,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,
+0,106,0,0,0,0,0,0,0,0,121,133,0,0,0,0,0,0,0,0,0,0,0,0,42,46,47,48,43,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,
+0,125,0,0,0,0,0,0,0,0,140,152,0,0,0,0,0,0,0,0,0,0,0,0,64,0,0,0,76,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,
+0,144,0,0,0,72,0,0,0,0,140,152,0,0,0,0,0,0,0,0,0,0,0,0,83,0,0,0,95,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,
+0,91,0,0,0,110,0,0,0,0,140,152,0,0,0,0,0,0,0,0,0,0,0,0,102,0,0,0,114,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,
+0,91,0,0,0,129,0,0,0,0,140,152,0,0,0,0,0,0,0,0,0,0,0,0,121,0,0,0,133,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,
+0,91,0,0,0,148,0,0,0,0,140,152,0,0,0,0,0,0,0,0,0,0,0,0,140,0,0,0,152,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,
+0,91,72,0,0,148,0,0,0,0,140,152,0,0,0,0,0,0,0,0,0,0,0,0,140,0,0,0,152,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,152,0,0,0,0,0,0,0,0,0,0,0,
+0,91,110,0,0,148,0,0,0,0,140,152,0,0,0,0,0,0,0,0,0,0,0,0,140,0,0,0,152,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,
+0,91,110,0,0,148,0,0,0,0,140,152,0,0,0,0,0,0,0,0,0,0,0,0,140,0,0,0,152,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,
+0,91,110,0,0,148,0,0,0,0,140,152,0,0,0,0,0,0,0,0,0,0,0,0,140,0,0,0,152,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,
+0,91,91,0,0,148,0,0,0,0,140,152,0,0,0,0,0,0,0,0,0,0,0,0,140,0,0,0,152,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,
+0,91,110,0,0,148,0,0,0,0,140,152,0,0,0,0,0,0,0,0,0,0,0,0,140,0,0,0,152,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,
+0,110,129,0,0,148,0,0,0,0,140,152,0,0,0,0,0,0,0,0,0,0,0,0,140,0,0,0,152,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,
+0,129,148,0,0,148,0,0,0,0,140,152,152,0,0,0,0,0,0,0,0,0,0,0,140,0,0,0,152,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0
+</data>
+ </layer>
 </map>

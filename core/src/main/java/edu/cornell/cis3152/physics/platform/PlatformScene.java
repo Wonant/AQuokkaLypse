@@ -34,21 +34,15 @@ import edu.cornell.gdiac.assets.AssetDirectory;
 import edu.cornell.gdiac.util.*;
 import edu.cornell.gdiac.graphics.*;
 import edu.cornell.gdiac.physics2.*;
-import com.badlogic.gdx.Input;
 import com.badlogic.gdx.graphics.g2d.TextureRegion;
 import com.badlogic.gdx.math.*;
 import com.badlogic.gdx.utils.*;
-import com.badlogic.gdx.audio.*;
-import com.badlogic.gdx.graphics.*;
-import com.badlogic.gdx.physics.box2d.*;
 
 import edu.cornell.cis3152.physics.InputController;
 //import edu.cornell.cis3152.physics.rocket.Box;
-import edu.cornell.gdiac.assets.AssetDirectory;
 //import edu.cornell.cis3152.physics.PhysicsScene;
 import edu.cornell.gdiac.audio.SoundEffect;
 import edu.cornell.gdiac.audio.SoundEffectManager;
-import edu.cornell.gdiac.physics2.*;
 
 /**
  * The game scene for the platformer game.
@@ -160,7 +154,7 @@ public class PlatformScene implements Screen{
 
     private LevelContactListener levelContactListener;
     /** Reference to the goalDoor (for collision detection) */
-    private Door goalDoor;
+    private Shard goalShard;
     private int totalGoals;
     private int collectedGoals;
     private TextLayout dreamShardCountText;
@@ -191,7 +185,7 @@ public class PlatformScene implements Screen{
     private float timeElapsed = 0f;
 
     /** tiled map + map info */
-    private MapInfo map;
+    private TiledMapInfo tiledMap;
 
 
     /*==============================ContactListener Getters/Setters===============================*/
@@ -340,7 +334,7 @@ public class PlatformScene implements Screen{
         world = null;
         batch = null;
         fearMeterTexture.dispose();
-        background.dispose();
+        tiledMap.disposeMap();
     }
 
 
@@ -506,16 +500,34 @@ public class PlatformScene implements Screen{
         uiCamera.update();
         batch.setProjectionMatrix(uiCamera.combined);
         batch.begin();
-        float scaleFactor = 0.5f;
+        float scaleFactor = 0.2f;
         float originalWidth = crosshairTexture.getRegionWidth();
         float originalHeight = crosshairTexture.getRegionHeight();
         float scaledWidth = originalWidth * scaleFactor;
         float scaledHeight = originalHeight * scaleFactor;
 
-        float crossX = Gdx.input.getX() - scaledWidth / 2;
-        float crossY = Gdx.graphics.getHeight() - Gdx.input.getY() - scaledHeight / 2;
+        float mouseX = Gdx.input.getX();
+        float mouseY = Gdx.graphics.getHeight() - Gdx.input.getY();
 
         batch.drawText(dreamShardCountText, 11, height - 50);
+
+        float units = TiledMapInfo.PIXELS_PER_WORLD_METER;
+        Vector3 playerWorldPos = new Vector3(avatar.getObstacle().getX() * units,
+            avatar.getObstacle().getY() * units,
+            0);
+        camera.project(playerWorldPos);
+
+        float teleportRadiusScreen = avatar.getTeleportRangeRadius() + 50f; // Because drawTeleportRadius uses it directly with u.
+
+        Vector2 delta = new Vector2(mouseX - playerWorldPos.x, mouseY - playerWorldPos.y);
+        if (delta.len() > teleportRadiusScreen) {
+            delta.nor().scl(teleportRadiusScreen);
+            mouseX = playerWorldPos.x + delta.x;
+            mouseY = playerWorldPos.y + delta.y;
+        }
+
+        float crossX = mouseX - scaledWidth/2;
+        float crossY = mouseY - scaledHeight/2;
 
         batch.draw(crosshairTexture, crossX, crossY, scaledWidth, scaledHeight);
 
@@ -546,32 +558,6 @@ public class PlatformScene implements Screen{
         batch.end();
     }
 
-    /** Draws Simple fear meter bar
-     *
-     *
-     */
-    private void drawFearMeter() {
-        int fearLevel = avatar.getFearMeter();
-        int maxFear = avatar.getMaxFearMeter();
-        float meterWidth = 150 * ((float) fearLevel / maxFear);
-        float meterHeight = 20;
-
-        float x = 20; // Offset from the left
-        float y = height - meterHeight - 20;
-
-        float outlineThickness = 2;
-
-
-        batch.setColor(Color.BLACK);
-        batch.draw(fearMeterTexture, x - outlineThickness, y - outlineThickness,
-            meterWidth + 2 * outlineThickness, meterHeight + 2 * outlineThickness);
-
-
-        batch.setColor(Color.RED);
-        batch.draw(fearMeterTexture, x, y, meterWidth, meterHeight);
-        batch.setColor(Color.WHITE);
-    }
-
     private void drawScareEffect(){
         float u = avatar.getObstacle().getPhysicsUnits();
         float size = scareEffectTexture.getRegionWidth() * 0.5f;
@@ -597,8 +583,8 @@ public class PlatformScene implements Screen{
             camera = new OrthographicCamera();
         }
         camera.setToOrtho( false, width, height );
-        scale.x = width/bounds.width;
-        scale.y = height/bounds.height;
+        scale.x = 1;
+        scale.y = 1;
         reset();
     }
 
@@ -615,13 +601,8 @@ public class PlatformScene implements Screen{
             // tiled world
 
 
-            // box2d
-            if (preUpdate(delta)) {
-                update(delta);
-                postUpdate(delta);
-            }
-            draw(delta);
-            float units = height / bounds.height;
+            // camera interpolation
+            float units = TiledMapInfo.PIXELS_PER_WORLD_METER;
 
             // TA feedback was to make it a little less smooth
             // if the camera is far from being directly over the player, we can try to increase the change
@@ -636,15 +617,11 @@ public class PlatformScene implements Screen{
                 float dx = worldMouse.x - camera.position.x;
                 float dy = worldMouse.y - camera.position.y;
 
-                // Define a dead zone threshold in world units.
-                // For example, 25% of the viewport width/height.
                 float thresholdX = camera.viewportWidth * 0.25f;
                 float thresholdY = camera.viewportHeight * 0.25f;
 
                 float moveX = 0, moveY = 0;
-                // Only move if the mouse is outside the dead zone.
                 if (Math.abs(dx) > thresholdX) {
-                    // Move by the amount beyond the threshold.
                     moveX = dx - Math.signum(dx) * thresholdX;
                 }
                 if (Math.abs(dy) > thresholdY) {
@@ -680,25 +657,34 @@ public class PlatformScene implements Screen{
             }
 
 
-            map.render(camera);
+
+            // box2d
+            if (preUpdate(delta)) {
+                update(delta);
+                postUpdate(delta);
+            }
+            draw(delta);
+
+            tiledMap.renderDefault(camera);
+
 
             drawUI();
         }
     }
 
     private void clampCamera() {
-        float units = height / bounds.height; // conversion factor: pixels per physics unit
+        float units = TiledMapInfo.PIXELS_PER_WORLD_METER;
         float halfViewportWidth = camera.viewportWidth / 2;
         float halfViewportHeight = camera.viewportHeight / 2;
 
         // Convert world bounds to screen coordinates
         float minX = bounds.x * units + halfViewportWidth;
         float maxX = (bounds.x + bounds.width) * units - halfViewportWidth;
-        float minY = bounds.y * units + halfViewportHeight;
-        float maxY = (bounds.y + bounds.height) * units - halfViewportHeight;
+        float maxY = bounds.y * units + halfViewportHeight;
+        float minY = (bounds.y + bounds.height) * units - halfViewportHeight;
 
         camera.position.x = MathUtils.clamp(camera.position.x, minX-100, maxX+100);
-        camera.position.y = MathUtils.clamp(camera.position.y, minY-50, maxY+50);
+        camera.position.y = MathUtils.clamp(camera.position.y, minY+100, maxY-50);
     }
 
     /**g
@@ -826,6 +812,7 @@ public class PlatformScene implements Screen{
 
         world = new World(gravity,false);
         world.setContactListener(levelContactListener);
+
         setComplete(false);
         setFailure(false);
         populateLevel();
@@ -836,10 +823,10 @@ public class PlatformScene implements Screen{
      */
     private void populateLevel() {
         // can change for testing
-        map = new MapInfo("maps/dreamwalker_alpha_testmap1.tmx");
+        tiledMap = new TiledMapInfo("maps/dreamwalker_alpha_testmap1.tmx");
         aiManager = new AIControllerManager(avatar, directory);
 
-        float units = height/bounds.height;
+        float units = TiledMapInfo.PIXELS_PER_WORLD_METER;
         System.out.println("units: " + units);
 
         // Add level goal
@@ -859,13 +846,13 @@ public class PlatformScene implements Screen{
             float y = goalpos.get(i).getFloat(1);
             System.out.println("Y.");
 
-            Door goalDoor = new Door(units, goal, x, y);
-            goalDoor.setTexture(texture);
-            goalDoor.getObstacle().setName("goal_" + i);
-            addSprite(goalDoor);
+            Shard goalShard = new Shard(units, goal, x, y);
+            goalShard.setTexture(texture);
+            goalShard.getObstacle().setName("goal_" + i);
+            addSprite(goalShard);
         }
 
-        MapLayer collisionLayer = map.getMap().getLayers().get("CollisionLayer");
+        MapLayer collisionLayer = tiledMap.get().getLayers().get("CollisionLayer");
         int id = 0;
         for (MapObject o : collisionLayer.getObjects()) {
             if (o instanceof RectangleMapObject) {
@@ -881,16 +868,24 @@ public class PlatformScene implements Screen{
                 float worldWidth = width/units;
 
                 // tiles * pixel per tile
-                float mapPixelHeight = map.getMap().getProperties().get("height", Integer.class) * MapInfo.PIXELS_PER_WORLD_METER;
+                float mapPixelHeight = tiledMap.get().getProperties().get("height", Integer.class) * TiledMapInfo.PIXELS_PER_WORLD_METER;
                 float worldY = y / units;
                 float worldHeight = height / units;
 
-                Surface platform = new Surface(worldX, worldY, worldHeight, worldWidth, MapInfo.PIXELS_PER_WORLD_METER, constants.get("platforms"), true);
-                platform.getObstacle().setName("Platform " + id);
+                Surface platform = new Surface(worldX, worldY, worldHeight, worldWidth, TiledMapInfo.PIXELS_PER_WORLD_METER, constants.get("platforms"), true);
+
                 platform.setDebugColor(Color.BLUE);
+
+
+                if (o.getProperties().get("isStair", Boolean.class)) {
+                    platform.getObstacle().setName("stair " + id);
+                } else {
+                    platform.getObstacle().setName("platform " + id);
+                }
+                System.out.println(platform.getObstacle().getName());
                 addSprite(platform);
                 System.out.println("platform added!");
-
+                id++;
             }
         }
 
@@ -1159,7 +1154,7 @@ public class PlatformScene implements Screen{
 
         aiManager.update(dt);
 
-        avatar.applyForce();
+        avatar.applyForce(world);
         if (avatar.isJumping()) {
             /* This jump sound is annoying
             SoundEffectManager sounds = SoundEffectManager.getInstance();
@@ -1170,7 +1165,7 @@ public class PlatformScene implements Screen{
 
     private void teleport() {
         InputController input = InputController.getInstance();
-        float units = height / bounds.height;
+        float units = TiledMapInfo.PIXELS_PER_WORLD_METER;
 
         Vector2 playerPosition = avatar.getObstacle().getPosition();
 
@@ -1186,6 +1181,16 @@ public class PlatformScene implements Screen{
         camera.unproject(crosshairTemp);
         Vector2 crosshairWorld = new Vector2(crosshairTemp.x / units, crosshairTemp.y / units);
 
+        // clamp
+        Vector2 delta = new Vector2(crosshairWorld).sub(playerPosition);
+        // Convert teleport range from (screen or arbitrary) units to world units.
+        float teleportRangeWorld = avatar.getTeleportRangeRadius() / units;
+        if (delta.len() > teleportRangeWorld) {
+            delta.nor().scl(teleportRangeWorld);
+            crosshairWorld = new Vector2(playerPosition).add(delta);
+        }
+
+        Vector2 realTeleportPos = crosshairWorld.cpy();
 
 
         final boolean[] isInsideSurface = {false};
@@ -1195,7 +1200,7 @@ public class PlatformScene implements Screen{
                             public boolean reportFixture(Fixture fixture) {
                                 Object userData = fixture.getBody().getUserData();
                                 if (userData instanceof Surface) {
-                                    if (fixture.testPoint(crosshairWorld)) {
+                                    if (fixture.testPoint(realTeleportPos)) {
                                         isInsideSurface[0] = true;
                                         return false; // Stop the query
                                     }
@@ -1283,7 +1288,7 @@ public class PlatformScene implements Screen{
     private void createBullet() {
         InputController input = InputController.getInstance();
 
-        float units = height/bounds.height;
+        float units = TiledMapInfo.PIXELS_PER_WORLD_METER;
         Vector2 crosshairScreen = input.getMouse();
 
         // Unproject the crosshair screen position to get world coordinates

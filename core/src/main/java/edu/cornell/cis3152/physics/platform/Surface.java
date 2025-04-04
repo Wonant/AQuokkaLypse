@@ -44,9 +44,9 @@ import edu.cornell.gdiac.physics2.PolygonObstacle;
  */
 public class Surface extends ObstacleSprite {
 
-    private boolean shadowed;
+    protected boolean shadowed;
 
-    private float width;
+    protected float width;
 
     public boolean isShadowed() {
         return shadowed;
@@ -58,6 +58,10 @@ public class Surface extends ObstacleSprite {
 
     public float getWidth(){
         return width;
+    }
+
+    public Surface() {
+        super();
     }
 
     /**
@@ -144,7 +148,7 @@ public class Surface extends ObstacleSprite {
         // mesh. The attribute tile is used to define how we scale/stretch
         // the texture to fit to the polygon. Try experimenting with this in
         // the JSON to see what happens.
-        poly.scl( MapInfo.PIXELS_PER_WORLD_METER );
+        poly.scl( TiledMapInfo.PIXELS_PER_WORLD_METER );
         mesh.set(poly,tile,tile);
 
     }

@@ -294,7 +294,7 @@ public class AIControllerManager {
                     }
                     if (data.state == CritterFSM.AWARE_FEAR) {
 
-                        float fleeSpeed = 1.5f;
+                        float fleeSpeed = 3f;
                         if (playerPos.x < critterPos.x) {
                             data.horizontal = fleeSpeed;
                             data.movingRight = !data.movingRight;
@@ -314,7 +314,7 @@ public class AIControllerManager {
 
                 if (data.state == CritterFSM.AWARE_FEAR) {
 
-                    float fleeSpeed = 1.5f;
+                    float fleeSpeed = 3f;
                     if (playerPos.x < critterPos.x) {
                         data.horizontal = fleeSpeed;
                         data.movingRight = !data.movingRight;
@@ -394,7 +394,7 @@ public class AIControllerManager {
                 } else {
                     data.movingRight = random.nextBoolean();
                 }
-                data.horizontal = data.movingRight ? 1.0f : -1.0f;
+                data.horizontal = data.movingRight ? 2.0f : -2.0f;
                 break;
 
             case ALERTED:

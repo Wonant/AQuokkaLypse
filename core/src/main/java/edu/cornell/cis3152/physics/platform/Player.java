@@ -133,6 +133,11 @@
 
 
 
+        /** raycasting for stair interpolation */
+        private float stepRayLength;
+        private PlayerVisionRaycast playerVisionRaycast;
+        private Vector2 debugRayStart;
+        private Vector2 debugRayEnd;
 
 
         /**
@@ -482,6 +487,10 @@
             // actually smaller than the image, making a tighter hitbox. You can
             // see this when you enable debug mode.
             mesh.set(-sizeWidth/2.0f,-sizeHeight/2.0f,sizeWidth,sizeHeight);
+
+            stepRayLength = height/2.5f;
+
+            playerVisionRaycast = new PlayerVisionRaycast(PlayerVisionRaycast.VisionMode.STAIR_CHECK, stepRayLength * units);
         }
 
         /**
@@ -556,14 +565,21 @@
          *
          * This method should be called after the force attribute is set.
          */
-        public void applyForce() {
+        public void applyForce(World world) {
             if (!obstacle.isActive()) {
                 return;
             }
 
+            if (isPlatformStep(world, stepRayLength)) {
+                System.out.println("seen a step");
+            }
+
+
             Vector2 pos = obstacle.getPosition();
             float vx = obstacle.getVX();
             Body body = obstacle.getBody();
+
+
 
             // Don't want to be moving. Damp out player motion
             if (getMovement() == 0f) {
@@ -585,6 +601,39 @@
             }
 
             //smoothStairClimb();
+        }
+
+        public boolean isPlatformStep(World world, float raylength) {
+            Vector2 start = (isFacingRight()) ?
+                obstacle.getBody().getPosition().cpy().add(width/2 + 0.1f, 0) :
+                obstacle.getBody().getPosition().cpy().add(-width/2 - 0.1f, 0);
+            Vector2 end = start.cpy().add(0, -raylength);
+
+
+            debugRayStart = start;
+            debugRayEnd = end;
+
+            world.rayCast(playerVisionRaycast, start, end);
+
+            if (playerVisionRaycast.getHitFixture() == null) {
+                return false;
+            } else if (playerVisionRaycast.fixtureIsStair) {
+                Vector2 stairHit = new Vector2(playerVisionRaycast.getHitPoint());
+
+
+                if (isGrounded && Math.abs(movement) > 0) {
+                    float targetCenterY = stairHit.y + height/2;
+                    Body body = obstacle.getBody();
+                    Vector2 pos = body.getPosition();
+                    body.setTransform(stairHit.x, targetCenterY, body.getAngle());
+
+                    debugRayEnd = stairHit;
+                }
+            }
+
+            playerVisionRaycast.reset();
+
+            return true;
         }
 
         /**
@@ -635,47 +684,6 @@
 
         }
 
-        public void smoothStairClimb() {
-            if (!isGrounded() || Math.abs(getMovement()) < 0.1f) {
-                return;
-            }
-
-            Body body = obstacle.getBody();
-            Vector2 pos = obstacle.getPosition();
-            World world = body.getWorld();
-
-            float sensorWidth = width * 0.8f;
-            float sensorHeight = height * 0.2f;  // adjust this to maximum step height
-            float recastOffset = sensorHeight + 0.2f; // offset from bottom of player
-
-            float horizontalOffset = isFacingRight() ? width / 2 : -width / 2;
-
-            Vector2 sensorCenter = new Vector2(pos.x + horizontalOffset, pos.y - height / 2 + recastOffset);
-            final boolean[] stepClear = { true };
-
-            world.QueryAABB(new QueryCallback(){
-                                @Override
-                                public boolean reportFixture(Fixture fixture) {
-                                    Object userData = fixture.getUserData();
-                                    // Adjust the condition as needed to recognize your wall/platform fixtures.
-                                    if (userData != null && userData.toString().startsWith("platform")) {
-                                        stepClear[0] = false;
-                                        return false; // stop the query early
-                                    }
-                                    return true;
-                                }
-                            },
-                sensorCenter.x - sensorWidth / 2,
-                sensorCenter.y - sensorHeight / 2,
-                sensorCenter.x + sensorWidth / 2,
-                sensorCenter.y + sensorHeight / 2);
-
-            if (stepClear[0]) {
-                float climbSpeed = 0.05f;  // change this value for faster or slower climbing
-                body.setTransform(pos.x, pos.y + climbSpeed, body.getAngle());
-            }
-        }
-
         @Override
         public void draw(SpriteBatch batch) {
             if (faceRight) {
@@ -695,6 +703,7 @@
             drawSensorDebug(batch, sensorScareOutline, sensorScareColor);
             drawTeleportRadius(batch);
             //drawRecastSensor(batch);
+            drawRayDebug(batch);
         }
 
         public void drawRecastSensor(SpriteBatch batch) {
@@ -731,6 +740,30 @@
             batch.setColor(Color.WHITE);
         }
 
+        public void drawRayDebug(SpriteBatch batch) {
+            if (debugRayStart != null && debugRayEnd != null) {
+                float u = obstacle.getPhysicsUnits();
+                Vector2 localStart = new Vector2(debugRayStart).sub(obstacle.getPosition());
+                Vector2 localEnd = new Vector2(debugRayEnd).sub(obstacle.getPosition());
+
+                PathFactory factory = new PathFactory();
+                Path2 rayOutline = new Path2();
+                factory.makeLine(localStart.x * u, localStart.y * u,
+                    localEnd.x * u, localEnd.y * u, rayOutline);
+
+                batch.setTexture(Texture2D.getBlank());
+                batch.setColor(Color.PURPLE);
+                transform.idt();
+                float a = obstacle.getAngle();
+                Vector2 p = obstacle.getPosition();
+                transform.preRotate((float)(a * 180.0f / Math.PI));
+                transform.preTranslate(p.x * u, p.y * u);
+                batch.outline(rayOutline, transform);
+
+
+            }
+        }
+
         public void drawSensorDebug (SpriteBatch batch, Path2 outline, Color color)
         {
             if (outline!= null) {
@@ -741,12 +774,10 @@
                 float a = obstacle.getAngle();
                 float u = obstacle.getPhysicsUnits();
 
-                // transform is an inherited cache variable
                 transform.idt();
                 transform.preRotate( (float) (a * 180.0f / Math.PI) );
                 transform.preTranslate( p.x * u, p.y * u );
 
-                //
                 batch.outline( outline, transform );
             }
         }

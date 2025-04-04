@@ -21,7 +21,6 @@ import java.util.HashMap;
 import java.util.Iterator;
 import com.badlogic.gdx.*;
 import com.badlogic.gdx.graphics.*;
-import com.badlogic.gdx.graphics.g2d.BitmapFont;
 import com.badlogic.gdx.math.Rectangle;
 import com.badlogic.gdx.math.Vector2;
 import com.badlogic.gdx.physics.box2d.*;
@@ -31,21 +30,14 @@ import edu.cornell.gdiac.assets.AssetDirectory;
 import edu.cornell.gdiac.util.*;
 import edu.cornell.gdiac.graphics.*;
 import edu.cornell.gdiac.physics2.*;
-import com.badlogic.gdx.Input;
 import com.badlogic.gdx.graphics.g2d.TextureRegion;
 import com.badlogic.gdx.math.*;
 import com.badlogic.gdx.utils.*;
-import com.badlogic.gdx.audio.*;
-import com.badlogic.gdx.graphics.*;
-import com.badlogic.gdx.physics.box2d.*;
 
 import edu.cornell.cis3152.physics.InputController;
 //import edu.cornell.cis3152.physics.rocket.Box;
-import edu.cornell.gdiac.assets.AssetDirectory;
 //import edu.cornell.cis3152.physics.PhysicsScene;
-import edu.cornell.gdiac.audio.SoundEffect;
 import edu.cornell.gdiac.audio.SoundEffectManager;
-import edu.cornell.gdiac.physics2.*;
 
 import static edu.cornell.cis3152.physics.platform.PlatformScene.STUN_COST;
 import static edu.cornell.cis3152.physics.platform.PlatformScene.TELEPORT_COST;
@@ -132,7 +124,7 @@ public class Arena implements ContactListener, Screen{
     private HashMap<CuriosityCritter, Sprite> visionCones;
     private AIControllerManager aiManager;
     /** Reference to the goalDoor (for collision detection) */
-    private Door goalDoor;
+    private Shard goalShard;
 
     /** Mark set to handle more sophisticated collision callbacks */
     protected ObjectSet<Fixture> sensorFixtures;
@@ -749,10 +741,10 @@ public class Arena implements ContactListener, Screen{
             float y = goalpos.get(i).getFloat(1);
             System.out.println("Y.");
 
-            Door goalDoor = new Door(units, goal, x, y);
-            goalDoor.setTexture(texture);
-            goalDoor.getObstacle().setName("goal_" + i);
-            addSprite(goalDoor);
+            Shard goalShard = new Shard(units, goal, x, y);
+            goalShard.setTexture(texture);
+            goalShard.getObstacle().setName("goal_" + i);
+            addSprite(goalShard);
         }
 
         texture = directory.getEntry( "shared-test", Texture.class );
@@ -962,7 +954,7 @@ public class Arena implements ContactListener, Screen{
         aiManager.update(dt);
 
 
-        avatar.applyForce();
+        avatar.applyForce(world);
         if (avatar.isJumping()) {
             SoundEffectManager sounds = SoundEffectManager.getInstance();
             //sounds.play("jump", jumpSound, volume);
@@ -1208,11 +1200,11 @@ public class Arena implements ContactListener, Screen{
             ObstacleSprite bd1 = (ObstacleSprite)body1.getUserData();
             ObstacleSprite bd2 = (ObstacleSprite)body2.getUserData();
             // Check for win condition
-            if ((bd1 == avatar && bd2 instanceof Door) || (bd2 == avatar && bd1 instanceof Door)) {
-                Door collectedDoor = (bd1 instanceof Door) ? (Door) bd1 : (Door) bd2;
+            if ((bd1 == avatar && bd2 instanceof Shard) || (bd2 == avatar && bd1 instanceof Shard)) {
+                Shard collectedShard = (bd1 instanceof Shard) ? (Shard) bd1 : (Shard) bd2;
 
-                if (!collectedDoor.getObstacle().isRemoved()) {
-                    collectedDoor.getObstacle().markRemoved(true);
+                if (!collectedShard.getObstacle().isRemoved()) {
+                    collectedShard.getObstacle().markRemoved(true);
                     collectedGoals++;
 
 
@@ -1293,7 +1285,7 @@ public class Arena implements ContactListener, Screen{
 
 
             // Test bullet collision with world
-            if (bd1.getName().equals("bullet") && bd2 != avatar && !(bd2 instanceof Door)) {
+            if (bd1.getName().equals("bullet") && bd2 != avatar && !(bd2 instanceof Shard)) {
                 // if it hits a curiosity critter
                 if (bd2 instanceof CuriosityCritter){
                     // make sure it hits the body of the critter
@@ -1366,7 +1358,7 @@ public class Arena implements ContactListener, Screen{
 
             }
 
-            if (bd2.getName().equals("bullet") && bd1 != avatar && !(bd1 instanceof Door)) {
+            if (bd2.getName().equals("bullet") && bd1 != avatar && !(bd1 instanceof Shard)) {
                 // if it hits a curiosity critter
                 if (bd1 instanceof CuriosityCritter){
                     // make sure it hits the body of the critter
