@@ -56,6 +56,7 @@ import edu.cornell.gdiac.physics2.*;
  * chance to define a response.
  */
 public class PlatformScene implements Screen{
+    int count = 0;
     // SOME EXIT CODES FOR GDXROOT
     /** Exit code for quitting the game */
     public static final int EXIT_QUIT = 0;
@@ -94,6 +95,7 @@ public class PlatformScene implements Screen{
     public static final int WORLD_VELOC = 6;
     /** Number of position iterations for the constraint solvers */
     public static final int WORLD_POSIT = 2;
+
 
     /** All the objects in the world. */
     protected PooledList<ObstacleSprite> sprites  = new PooledList<ObstacleSprite>();
@@ -138,6 +140,8 @@ public class PlatformScene implements Screen{
     private SoundEffect fireSound;
     /** The weapon pop sound. We only want to play once. */
     private SoundEffect plopSound;
+    private SoundEffect teleportSound;
+
     /** The default sound volume */
     private float volume;
 
@@ -509,6 +513,35 @@ public class PlatformScene implements Screen{
         float crossX = Gdx.input.getX() - scaledWidth / 2;
         float crossY = Gdx.graphics.getHeight() - Gdx.input.getY() - scaledHeight / 2;
 
+        float units = height / bounds.height;
+        Vector2 playerPosition = avatar.getObstacle().getPosition().scl(units);
+        InputController input = InputController.getInstance();
+        Vector2 mouse = input.getMouse();
+        Vector3 mousePosition = new Vector3(mouse.x, mouse.y, 0);
+        camera.unproject(mousePosition);
+        mouse = new Vector2(mousePosition.x, mousePosition.y);
+        float distance = mouse.dst(playerPosition);
+        float range = avatar.getTeleportRangeRadius();
+
+        if(count == 60){
+            System.out.println("RANGE " + range);
+            System.out.println("DISTANCE " + distance);
+            System.out.println("CROSSHAIR " + mousePosition);
+            System.out.println("PLAYER " + playerPosition);
+            count = 0;
+        }
+        count++;
+
+        if (distance > range){
+            Vector2 direction = mouse.sub(playerPosition);
+            direction = direction.nor().scl(range);
+            Vector2 clamped = playerPosition.cpy().add(direction);
+            crossX = clamped.x;
+            crossY = clamped.y;
+        }
+
+
+
         batch.drawText(dreamShardCountText, 11, height - 50);
 
         batch.draw(crosshairTexture, crossX, crossY, scaledWidth, scaledHeight);
@@ -750,6 +783,8 @@ public class PlatformScene implements Screen{
         shadowSensorFixtures = new ObjectSet<Fixture>();
 
         // Pull out sounds
+        teleportSound = directory.getEntry( "teleport", SoundEffect.class );
+
         jumpSound = directory.getEntry( "platform-jump", SoundEffect.class );
         fireSound = directory.getEntry( "platform-pew", SoundEffect.class );
         plopSound = directory.getEntry( "platform-plop", SoundEffect.class );
@@ -1021,16 +1056,16 @@ public class PlatformScene implements Screen{
     public void update(float dt) {
         InputController input = InputController.getInstance();
 
-
         avatar.setStunning(input.didStun());
         avatar.setHarvesting(input.didSecondary());
         avatar.setTeleporting(input.didM1());
+
+        SoundEffectManager sounds = SoundEffectManager.getInstance();
 
         // Process actions in object model
         avatar.setMovement(input.getHorizontal() *avatar.getForce());
 
         if (avatar.isGrounded()) avatar.setJumping(input.didPrimary());
-
 
         avatar.setStunning(input.didStun());
         avatar.setHarvesting(input.didSecondary());
@@ -1071,13 +1106,6 @@ public class PlatformScene implements Screen{
         if (avatar.isTeleporting() && avatar.getFearMeter() > TELEPORT_COST)
         {
             teleport();
-        }
-
-
-        if(avatar.isTakingDamage())
-        {
-            avatar.setFearMeter(avatar.getFearMeter() - 1);
-            avatar.setTakingDamage(false);
         }
 
 
@@ -1134,7 +1162,7 @@ public class PlatformScene implements Screen{
             crosshairWorld.x + 0.1f, crosshairWorld.y + 0.1f);
 
         if (isInsideSurface[0]) {
-            System.out.println("Cannot place teleport in a surface");
+            System.out.println("Cannot place teleport into a surface");
             return;
         }
 
@@ -1159,16 +1187,18 @@ public class PlatformScene implements Screen{
         }
 
         System.out.println("Hitpoint Count: " + callback.getHitPointCount());
+        /*
         if (callback.getHitPointCount()%2 == 1){
             System.out.println("Cannot teleport inside of surface");
             return;
-        }
+        }*/
+
         Vector2 hitPoint = callback.getHitPoint();
-        Vector2 initialPosition = new Vector2(crosshairWorld.x, crosshairWorld.y + 0.75f);
-        Vector2 teleporterPosition = new Vector2(crosshairWorld.x, crosshairWorld.y + 0.75f);
+        Vector2 initialPosition = new Vector2(crosshairWorld.x, crosshairWorld.y);
+        Vector2 teleportPosition = new Vector2(crosshairWorld.x, crosshairWorld.y);
 
         // Calculate distance in world coordinates
-        float worldDistance = playerPosition.dst(teleporterPosition);
+        float worldDistance = playerPosition.dst(teleportPosition);
         float maxTeleportRange = avatar.getTeleportRangeRadius() / units;
 
         // Check if destination is outside range
@@ -1179,30 +1209,26 @@ public class PlatformScene implements Screen{
             ).nor();
 
             // Clamp position to max distance
-            teleporterPosition = new Vector2(
+            teleportPosition = new Vector2(
                 playerPosition.x + direction.x * maxTeleportRange,
                 playerPosition.y + direction.y * maxTeleportRange
             );
         }
 
         // Raycast to check if the clamped position is above a surface
-        Vector2 rayStartForClamped = new Vector2(teleporterPosition.x, teleporterPosition.y);
-        Vector2 rayEndForClamped = new Vector2(teleporterPosition.x, 0);
+        Vector2 rayStartForClamped = new Vector2(teleportPosition.x, teleportPosition.y);
+        Vector2 rayEndForClamped = new Vector2(teleportPosition.x, 0);
         PlatformRayCast clampedCallback = new PlatformRayCast();
         world.rayCast(clampedCallback, rayStartForClamped, rayEndForClamped);
 
-        if (clampedCallback.getPlatformFixture() != null) {
-            Vector2 clampedHitPoint = clampedCallback.getHitPoint();
-            // Ensure the teleporter position is above the surface
-            if (teleporterPosition.y <= clampedHitPoint.y) {
-                teleporterPosition.y = clampedHitPoint.y + 0.75f; // Adjust to be above the surface
-            }
-        } else {
+        if (clampedCallback.getPlatformFixture() == null) {
             System.out.println("No platform found at clamped position");
             return;
         }
 
-        queuedTeleportPosition = teleporterPosition;
+        queuedTeleportPosition = teleportPosition;
+        SoundEffectManager sounds = SoundEffectManager.getInstance();
+        sounds.play("teleport", teleportSound, volume);
     }
 
     /**

@@ -94,6 +94,7 @@
         private int takeDamageCooldown;
         /** Whether we are actively taking damage */
         private boolean isTakingDamage;
+        private static final int ENEMY_DAMAGE = 1;
 
         /** The current horizontal movement of the character */
         private float   movement;
@@ -132,7 +133,11 @@
         private String sensorScareName;
 
 
-
+        public Vector2 getPosition(){
+            Vector2 p = obstacle.getPosition();
+            float middle = p.x + width / 2.0f;
+            return new Vector2(middle, p.y);
+        }
 
 
         /**
@@ -625,7 +630,8 @@
 
             if (isTakingDamage())
             {
-                setFearMeter(fearMeter - 1);
+                setFearMeter(fearMeter - ENEMY_DAMAGE);
+
                 takeDamageCooldown = takeDamageLimit;
 
             } else {

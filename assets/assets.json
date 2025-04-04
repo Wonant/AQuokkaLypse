@@ -137,6 +137,7 @@
         "arena1" : "arena/arena1.json"
     },
     "soundfx" : {
+        "teleport"          : "platform/teleport.wav",
         "rocket-bump"       : "rocket/bump.wav",
         "rocket-mainburn"   : "rocket/afterburner.wav",
         "rocket-leftburn"   : "rocket/sideburner-left.wav",
