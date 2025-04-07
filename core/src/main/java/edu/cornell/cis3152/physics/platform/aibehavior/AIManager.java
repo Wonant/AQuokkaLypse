@@ -6,10 +6,7 @@ import edu.cornell.cis3152.physics.platform.*;
 
 import com.badlogic.gdx.ai.btree.BehaviorTree;
 
-import java.util.ArrayList;
-import java.util.HashSet;
-import java.util.Hashtable;
-import java.util.Random;
+import java.util.*;
 
 /**
  * Class for managing all the AI entities in one place
@@ -56,9 +53,21 @@ public class AIManager {
         totalEntities++;
     }
 
+    public void unregister(Enemy e) {
+        for (Iterator<BehaviorLoop<Enemy>> it = entities.iterator(); it.hasNext(); ) {
+            BehaviorLoop<Enemy> loop = it.next();
+            if (loop.getBehaviorTree().getObject() == e) {
+                it.remove();
+                totalEntities--;
+                break;
+            }
+        }
+    }
+
     public void update(float dt) {
         for (BehaviorLoop<Enemy> behavior : entities) {
             behavior.update(dt);
+            System.out.println("Enemy in state " + behavior.getInfo());
         }
     }
 

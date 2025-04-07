@@ -28,6 +28,8 @@
     import edu.cornell.gdiac.math.PathFactory;
     import edu.cornell.gdiac.physics2.*;
 
+    import static edu.cornell.cis3152.physics.platform.CollisionFiltering.*;
+
     /**
      * Player's avatar for the platform game.
      *
@@ -491,7 +493,25 @@
             stepRayLength = height/2.5f;
 
             playerVisionRaycast = new PlayerVisionRaycast(PlayerVisionRaycast.VisionMode.STAIR_CHECK, stepRayLength * units);
+
+
         }
+
+        public void setFilter() {
+            for (Fixture fixture : obstacle.getBody().getFixtureList()) {
+                Object ud = fixture.getUserData();
+                if (ud != null && ud.equals("player_sensor")) {
+                    continue;
+                }
+                // Otherwise, assume this is the collision capsule fixture.
+                Filter filter = fixture.getFilterData();
+                filter.categoryBits = CATEGORY_PLAYER;
+                // Player should collide with scenery but not with enemies.
+                filter.maskBits = CATEGORY_SCENERY;
+                fixture.setFilterData(filter);
+            }
+        }
+
 
         /**
          * Creates the sensor for Player.
@@ -520,11 +540,18 @@
             sensorShape.setAsBox(w, h, sensorCenter, 0.0f);
             sensorDef.shape = sensorShape;
 
+
+
             // Ground sensor to represent our feet
             Body body = obstacle.getBody();
             Fixture sensorFixture = body.createFixture( sensorDef );
             sensorName = "player_sensor";
             sensorFixture.setUserData(sensorName);
+
+            Filter sensorFilter = sensorFixture.getFilterData();
+            sensorFilter.categoryBits = CollisionFiltering.CATEGORY_PLAYER;    // or a dedicated sensor category
+            sensorFilter.maskBits = CollisionFiltering.CATEGORY_SCENERY;       // so it collides with the ground
+            sensorFixture.setFilterData(sensorFilter);
 
             // Finally, we need a debug outline
             float u = obstacle.getPhysicsUnits();

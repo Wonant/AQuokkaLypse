@@ -17,12 +17,16 @@ import com.badlogic.gdx.graphics.Color;
 import com.badlogic.gdx.math.Vector2;
 import com.badlogic.gdx.math.Vector3;
 import com.badlogic.gdx.physics.box2d.BodyDef;
+import com.badlogic.gdx.physics.box2d.Filter;
+import com.badlogic.gdx.physics.box2d.Fixture;
 import com.badlogic.gdx.utils.JsonValue;
 import edu.cornell.gdiac.assets.ParserUtils;
 import edu.cornell.gdiac.graphics.SpriteBatch;
 import edu.cornell.gdiac.physics2.Obstacle;
 import edu.cornell.gdiac.physics2.ObstacleSprite;
 import edu.cornell.gdiac.physics2.WheelObstacle;
+
+import static edu.cornell.cis3152.physics.platform.CollisionFiltering.*;
 
 /**
  * A bullet fired by Traci
@@ -81,6 +85,16 @@ public class Bullet extends ObstacleSprite {
         // physics body, we want (0,0) to be in the center of the mesh. So
         // the method call below is (x,y,w,h) where x, y is the bottom left.
         mesh.set( -radius, -radius, 2 * radius, 2 * radius );
+    }
+
+    public void setFilter() {
+        for(Fixture bulletFixture : getObstacle().getBody().getFixtureList()) {
+            Filter bulletFilter = bulletFixture.getFilterData();
+            bulletFilter.categoryBits = CATEGORY_BULLET;
+            bulletFilter.maskBits = CATEGORY_SCENERY | CATEGORY_ENEMY; // Collide with walls/scenery
+            bulletFixture.setFilterData(bulletFilter);
+        }
+
     }
 
 }

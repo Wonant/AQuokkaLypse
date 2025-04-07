@@ -4,6 +4,7 @@ package edu.cornell.cis3152.physics;
 import com.badlogic.gdx.graphics.Texture;
 import com.badlogic.gdx.math.MathUtils;
 import com.badlogic.gdx.math.Vector2;
+import com.badlogic.gdx.physics.box2d.World;
 import com.sun.tools.javac.Main;
 import edu.cornell.cis3152.physics.platform.CuriosityCritter;
 import edu.cornell.cis3152.physics.platform.Enemy;
@@ -17,17 +18,18 @@ import java.util.*;
 
 public class AIControllerManager {
 
-    // unless we have a very large amount of enemies on screen, O(n) for checks is fine. but if its slow change (don't use List).
     private List<EnemyAI> entities;
     private Player player;
     private Random random;
     private AssetDirectory asset_directory;
+    private World world;
 
-    public AIControllerManager(Player player, AssetDirectory directory) {
+    public AIControllerManager(Player player, AssetDirectory directory, World world) {
         entities = new ArrayList<>();
         random = new Random();
         asset_directory = directory;
         this.player = player;
+        this.world = world;
     }
 
     public void setPlayer(Player player) {

@@ -38,6 +38,7 @@ import edu.cornell.gdiac.physics2.ObstacleSprite;
  */
 public class Shard extends ObstacleSprite {
     private boolean pickedUp;
+    private int id;
 
 
     /**
@@ -49,8 +50,10 @@ public class Shard extends ObstacleSprite {
      * @param units     The physics units
      * @param settings  The door physics constants
      */
-    public Shard(float units, JsonValue settings, float x, float y) {
+    public Shard(float units, JsonValue settings, float x, float y, int id) {
         super();
+
+        this.id = id;
 
         float s = settings.getFloat( "size" );
         float size = s*units;

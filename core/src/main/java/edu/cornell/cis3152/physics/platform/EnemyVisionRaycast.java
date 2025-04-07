@@ -10,6 +10,20 @@ import com.badlogic.gdx.physics.box2d.RayCastCallback;
  * This is used primarily for line-of-sight checks in enemy vision systems.
  */
 public class EnemyVisionRaycast implements RayCastCallback {
+
+    public enum VisionMode {STAIR_CHECK, WALL_CHECK, PLAYER_CHECK, FALL_CHECK}
+
+    private VisionMode mode;
+
+    private Fixture hitFixture = null;
+    private Vector2 hitPoint = new Vector2();
+    private float closestFraction = 1f;
+    public boolean fixtureIsStair;
+
+    private Vector2 posAboveStair = new Vector2();
+
+    private float stepHeightThreshold;
+
     /** Whether the ray has hit a blocking object */
     private boolean blocked;
 
@@ -46,6 +60,11 @@ public class EnemyVisionRaycast implements RayCastCallback {
         this(sourceBody, targetBody, new Body[0]);
     }
 
+    public EnemyVisionRaycast(VisionMode mode, float stepHeightThreshold) {
+        this.mode = mode;
+        this.stepHeightThreshold = stepHeightThreshold;
+    }
+
     /**
      * Returns whether the ray hit a blocking object.
      *
@@ -60,43 +79,108 @@ public class EnemyVisionRaycast implements RayCastCallback {
      */
     public void reset() {
         blocked = false;
+        hitFixture = null;
+        hitPoint.set(0, 0);
+        closestFraction = 1f;
     }
 
     @Override
     public float reportRayFixture(Fixture fixture, Vector2 point, Vector2 normal, float fraction) {
-        // Skip sensors as they don't block vision
-        if (fixture.isSensor()) {
-            return 1; // Continue checking
-        }
+        if (mode == VisionMode.STAIR_CHECK) {
+            Object userData = fixture.getBody().getUserData();
+            if (userData instanceof Surface) {
+                Surface surface = (Surface) userData;
+                String name = surface.getObstacle().getName();
+                System.out.println("Distance from start ray to first surface: " + (point.y - surface.getObstacle().getY()));
+                if (name.startsWith("stair")) {
 
-        // Skip the source body (the one casting the ray)
-        if (fixture.getBody() == sourceBody) {
-            return 1; // Continue checking
-        }
-
-        // Skip the target body (the one we're checking visibility for)
-        if (fixture.getBody() == targetBody) {
-            return 1; // Continue checking
-        }
-
-        // Skip any additional bodies that should be ignored
-        for (Body body : ignoreBodies) {
-            if (fixture.getBody() == body) {
-                return 1; // Continue checking
+                    posAboveStair.set(point).add(normal.cpy().nor());
+                    System.out.println("Position above stair" + posAboveStair);
+                    hitFixture = fixture;
+                    closestFraction = fraction;
+                    fixtureIsStair = true;
+                    hitPoint.set(point);
+                    return 0;
+                }
             }
         }
-
-        // Skip fixtures with specific user data (e.g., "player" or other special tags)
-        if (fixture.getUserData() != null) {
-            String userData = fixture.getUserData().toString();
-            if (userData.contains("player") || userData.contains("ignore_vision")) {
-                return 1; // Continue checking
+        else if (mode == VisionMode.FALL_CHECK) {
+            if (fixture.isSensor()) return 1;
+            if (fixture.getBody().getUserData() instanceof Surface) {
+                hitFixture = fixture;
+                hitPoint.set(point);
+                return 0;
             }
+            return 1;
+        }
+        else if (mode == VisionMode.WALL_CHECK) {
+            if (fixture.isSensor()) return 1;
+            Object userData = fixture.getBody().getUserData();
+            if (fixture.getBody().getUserData() instanceof Surface) {
+                // If the y component of the normal is small, the collision is nearly horizontal,
+                Surface surface = (Surface) userData;
+                if (Math.abs(normal.y) < 0.5f && !surface.getObstacle().getName().startsWith("stair")) {
+                    hitFixture = fixture;
+                    hitPoint.set(point);
+                    return 0; // Stop the ray; wall found.
+                }
+            }
+            return 1;
         }
 
-        // If we hit something else (like a wall), vision is blocked
-        blocked = true;
-        return 0; // Stop checking
+        else {
+            // Skip sensors as they don't block vision
+            if (fixture.isSensor()) {
+                return 1; // Continue checking
+            }
+
+            // Skip the source body (the one casting the ray)
+            if (fixture.getBody() == sourceBody) {
+                return 1; // Continue checking
+            }
+
+            // Skip the target body (the one we're checking visibility for)
+            if (fixture.getBody() == targetBody) {
+                return 1; // Continue checking
+            }
+
+            // Skip any additional bodies that should be ignored
+            for (Body body : ignoreBodies) {
+                if (fixture.getBody() == body) {
+                    return 1; // Continue checking
+                }
+            }
+
+            // Skip fixtures with specific user data (e.g., "player" or other special tags)
+            if (fixture.getUserData() != null) {
+                String userData = fixture.getUserData().toString();
+                if (userData.contains("player") || userData.contains("ignore_vision")) {
+                    return 1; // Continue checking
+                }
+            }
+
+            // If we hit something else (like a wall), vision is blocked
+            blocked = true;
+            return 0; // Stop checking
+        }
+        return 1f;
     }
+
+    public void setMode(EnemyVisionRaycast.VisionMode mode) {
+        this.mode = mode;
+    }
+
+    public Fixture getHitFixture() {
+        return hitFixture;
+    }
+
+    public Vector2 getHitPoint() {
+        return hitPoint;
+    }
+
+    public float getClosestFraction() {
+        return closestFraction;
+    }
+
 }
 

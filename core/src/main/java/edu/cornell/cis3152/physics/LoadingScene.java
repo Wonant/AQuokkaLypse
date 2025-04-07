@@ -29,7 +29,7 @@ import com.badlogic.gdx.math.Affine2;
 import com.badlogic.gdx.math.Vector2;
 import com.badlogic.gdx.utils.JsonValue;
 import com.badlogic.gdx.utils.ScreenUtils;
-import edu.cornell.cis3152.physics.platform.Arena;
+import edu.cornell.cis3152.physics.platform.PlatformScene;
 import edu.cornell.gdiac.graphics.*;
 import edu.cornell.gdiac.assets.*;
 import edu.cornell.gdiac.graphics.SpriteBatch;
@@ -315,7 +315,7 @@ public class LoadingScene implements Screen, InputProcessor {
 
             // We are are ready, notify our listener
             if (isReady() && listener != null) {
-                listener.exitScreen(this, Arena.EXIT_ARENA);
+                listener.exitScreen(this, PlatformScene.EXIT_NEXT);
             }
         }
     }

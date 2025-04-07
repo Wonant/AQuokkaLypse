@@ -18,6 +18,8 @@
 
 import com.badlogic.gdx.graphics.Color;
 import com.badlogic.gdx.physics.box2d.BodyDef;
+import com.badlogic.gdx.physics.box2d.Filter;
+import com.badlogic.gdx.physics.box2d.Fixture;
 import com.badlogic.gdx.utils.JsonValue;
 import edu.cornell.gdiac.assets.ParserUtils;
 import edu.cornell.gdiac.graphics.SpriteBatch;
@@ -25,6 +27,8 @@ import edu.cornell.gdiac.math.Poly2;
 import edu.cornell.gdiac.math.PolyTriangulator;
 import edu.cornell.gdiac.physics2.ObstacleSprite;
 import edu.cornell.gdiac.physics2.PolygonObstacle;
+
+import static edu.cornell.cis3152.physics.platform.CollisionFiltering.*;
 
 /**
  * A class representing a tiled surface (wall or platform)
@@ -151,6 +155,17 @@ public class Surface extends ObstacleSprite {
         poly.scl( TiledMapInfo.PIXELS_PER_WORLD_METER );
         mesh.set(poly,tile,tile);
 
+
+    }
+
+    public void setFilter() {
+        for(Fixture fixture : getObstacle().getBody().getFixtureList()) {
+            Filter filter = fixture.getFilterData();
+            filter.categoryBits = CATEGORY_SCENERY;
+            // Scenery collides with players and enemies.
+            filter.maskBits = CATEGORY_PLAYER | CATEGORY_ENEMY | CATEGORY_BULLET;
+            fixture.setFilterData(filter);
+        }
     }
 
     @Override

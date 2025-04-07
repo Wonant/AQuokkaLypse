@@ -30,6 +30,7 @@ import com.badlogic.gdx.math.Vector2;
 import com.badlogic.gdx.physics.box2d.*;
 import com.badlogic.gdx.utils.JsonValue;
 import com.badlogic.gdx.utils.ScreenUtils;
+import edu.cornell.cis3152.physics.platform.aibehavior.AIManager;
 import edu.cornell.gdiac.assets.AssetDirectory;
 import edu.cornell.gdiac.util.*;
 import edu.cornell.gdiac.graphics.*;
@@ -150,13 +151,14 @@ public class PlatformScene implements Screen{
     private Sprite visionCone;
 
     /** manages ai control for all entities */
-    private AIControllerManager aiManager;
+    private AIControllerManager aiCManager;
+    private AIManager aiManager;
 
     private LevelContactListener levelContactListener;
     /** Reference to the goalDoor (for collision detection) */
     private Shard goalShard;
-    private int totalGoals;
-    private int collectedGoals;
+    private int totalShards;
+    private int collectedShards;
     private TextLayout dreamShardCountText;
 
     /** Mark set to handle more sophisticated collision callbacks */
@@ -184,6 +186,8 @@ public class PlatformScene implements Screen{
     private HashMap<Teleporter, Float> teleporterCreationTimes = new HashMap<>();
     private float timeElapsed = 0f;
 
+    private ArrayList<Vector2> shardPos;
+
     /** tiled map + map info */
     private TiledMapInfo tiledMap;
 
@@ -192,9 +196,14 @@ public class PlatformScene implements Screen{
 
     public Player getAvatar() { return avatar;}
 
-    public void incrementGoal() {collectedGoals++;}
+    public void incrementGoal() {
+        collectedShards++;}
 
-    public boolean checkCollectedAllGoals() {return collectedGoals == totalGoals;}
+    public int getTotalShards() {
+        return totalShards;
+    }
+
+    public boolean checkCollectedAllGoals() {return collectedShards == totalShards;}
 
     public void setCurrentTeleporter(Teleporter tele) {currentTeleporter = tele; }
 
@@ -361,6 +370,10 @@ public class PlatformScene implements Screen{
         assert inBounds(sprite) : "Sprite is not in bounds";
         sprites.add(sprite);
         sprite.getObstacle().activatePhysics(world);
+        if (sprite instanceof Bullet) {
+            Bullet bullet = (Bullet) sprite;
+            bullet.setFilter();
+        }
     }
 
     /**
@@ -407,6 +420,7 @@ public class PlatformScene implements Screen{
         // Add any objects created by actions
         while (!addQueue.isEmpty()) {
             addSprite(addQueue.poll());
+
         }
 
         // Turn the physics engine crank.
@@ -457,7 +471,7 @@ public class PlatformScene implements Screen{
 
         batch.draw(background, bgX, bgY, background.getWidth(), background.getHeight() * 2);
 
-        dreamShardCountText.setText("Dream Shards: " + (totalGoals - collectedGoals));
+        dreamShardCountText.setText("Dream Shards: " + (totalShards - collectedShards));
         dreamShardCountText.layout();
 
         if (drawScareEffect)
@@ -789,6 +803,8 @@ public class PlatformScene implements Screen{
         uiCamera = new OrthographicCamera(Gdx.graphics.getWidth(), Gdx.graphics.getHeight());
         uiCamera.setToOrtho(false, Gdx.graphics.getWidth(), Gdx.graphics.getHeight());
         uiCamera.update();
+
+
     }
 
     /**
@@ -824,7 +840,9 @@ public class PlatformScene implements Screen{
     private void populateLevel() {
         // can change for testing
         tiledMap = new TiledMapInfo("maps/dreamwalker_alpha_testmap1.tmx");
-        aiManager = new AIControllerManager(avatar, directory);
+        aiManager = new AIManager("behaviors/critter.tree", "behaviors/dweller.tree","behaviors/maintenance.tree");
+
+        shardPos = new ArrayList<>();
 
         float units = TiledMapInfo.PIXELS_PER_WORLD_METER;
         System.out.println("units: " + units);
@@ -834,8 +852,8 @@ public class PlatformScene implements Screen{
 
         JsonValue goal = constants.get("goal");
         JsonValue goalpos = goal.get("pos");
-        totalGoals = goalpos.size;
-        collectedGoals = 0;
+        totalShards = goalpos.size;
+        collectedShards = 0;
 
         System.out.println(goalpos);
         System.out.println(goalpos.size);
@@ -846,7 +864,9 @@ public class PlatformScene implements Screen{
             float y = goalpos.get(i).getFloat(1);
             System.out.println("Y.");
 
-            Shard goalShard = new Shard(units, goal, x, y);
+            Shard goalShard = new Shard(units, goal, x, y, i);
+            shardPos.add(i, new Vector2(x, y));
+
             goalShard.setTexture(texture);
             goalShard.getObstacle().setName("goal_" + i);
             addSprite(goalShard);
@@ -884,6 +904,7 @@ public class PlatformScene implements Screen{
                 }
                 System.out.println(platform.getObstacle().getName());
                 addSprite(platform);
+                platform.setFilter();
                 System.out.println("platform added!");
                 id++;
             }
@@ -928,7 +949,9 @@ public class PlatformScene implements Screen{
         avatar = new Player(units, constants.get("player"));
         avatar.setTexture(texture);
         addSprite(avatar);
+
         // Have to do after body is created
+        avatar.setFilter();
         avatar.createSensor();
 
         avatar.createScareSensor();
@@ -942,10 +965,12 @@ public class PlatformScene implements Screen{
 
         for (int i = 0; i < critterspos.size; i++) {
             texture = directory.getEntry( "curiosity-critter-active", Texture.class );
-            critter = new CuriosityCritter(units, constants.get("curiosity-critter"), critterspos.get(i).asFloatArray());
+            critter = new CuriosityCritter(units, constants.get("curiosity-critter"), critterspos.get(i).asFloatArray(), this);
             critter.setTexture(texture);
             addSprite(critter);
+
             // Have to do after body is created
+            critter.setFilter();
             critter.createSensor();
             critter.createVisionSensor();
 
@@ -1005,10 +1030,14 @@ public class PlatformScene implements Screen{
         }
 
         if (dreamShardCountText != null) {
-            dreamShardCountText.setText("Dream Shards: " + (totalGoals - collectedGoals));
+            dreamShardCountText.setText("Dream Shards: " + (totalShards - collectedShards));
             dreamShardCountText.layout();
         }
 
+    }
+
+    public Vector2 getShardPos(int index) {
+        return shardPos.get(index);
     }
 
     /**
@@ -1163,6 +1192,10 @@ public class PlatformScene implements Screen{
         }
     }
 
+    public AIManager getAiManager() {
+        return aiManager;
+    }
+
     private void teleport() {
         InputController input = InputController.getInstance();
         float units = TiledMapInfo.PIXELS_PER_WORLD_METER;
@@ -1310,7 +1343,7 @@ public class PlatformScene implements Screen{
         addQueuedObject(bullet);
 
         SoundEffectManager sounds = SoundEffectManager.getInstance();
-        sounds.play("fire", fireSound, volume);
+        //sounds.play("fire", fireSound, volume);
     }
 
     /**

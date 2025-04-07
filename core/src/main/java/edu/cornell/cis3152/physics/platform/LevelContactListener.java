@@ -60,6 +60,15 @@ public class LevelContactListener implements ContactListener {
                 }
             }
 
+            if (("follow_sensor".equals(fd1) && (bd2 instanceof Player)) ||
+                ("follow_sensor".equals(fd2) && (bd1 instanceof Player))) {
+                if (bd1 instanceof CuriosityCritter) {
+                    ((CuriosityCritter) bd1).playerInFollowRange = true;
+                } else if (bd2 instanceof CuriosityCritter){
+                    ((CuriosityCritter) bd2).playerInFollowRange = true;
+                }
+            }
+
             // Check if an enemy's walk sensor detects a wall or another enemy
             if (("walk_sensor".equals(fd1) && (bd2 instanceof Surface || bd2 instanceof Enemy)) ||
                 ("walk_sensor".equals(fd2) && (bd2 instanceof Surface || bd2 instanceof Enemy))) {
@@ -206,10 +215,12 @@ public class LevelContactListener implements ContactListener {
                     {
                         harvestedEnemy = (Enemy) bd2;
                         dreamWalkerScene.performHarvest(harvestedEnemy);
+                        dreamWalkerScene.getAiManager().unregister(harvestedEnemy);
                     } else if (dreamWalkerScene.getAvatar().getScareSensorName().equals(fd2) && fd1 != "walk_sensor" && fd1 != "follow_sensor" && fd1 != "vision_sensor")
                     {
                         harvestedEnemy = (Enemy) bd1;
                         dreamWalkerScene.performHarvest(harvestedEnemy);
+                        dreamWalkerScene.getAiManager().unregister(harvestedEnemy);
                     }
                 }
                 dreamWalkerScene.getAvatar().setHarvesting(true);

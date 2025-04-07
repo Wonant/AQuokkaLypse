@@ -19,7 +19,7 @@ import edu.cornell.gdiac.util.*;
 import edu.cornell.gdiac.assets.*;
 import edu.cornell.gdiac.graphics.*;
 
-import edu.cornell.cis3152.physics.platform.Arena;
+
 
 public class GDXRoot extends Game implements ScreenListener {
     /** AssetDirectory to load game assets (textures, sounds, etc.) */
@@ -128,13 +128,6 @@ public class GDXRoot extends Game implements ScreenListener {
             // Go back to the previous Arena
             current = (current + controllers.length - 1) % controllers.length;
             setScreen(controllers[current]);
-        }
-        else if (exitCode == Arena.EXIT_ARENA) {
-            // Create a new Arena with a fixed map key ("arena")
-            Arena arena = new Arena(directory, "arena");
-            arena.setScreenListener(this);
-            arena.setSpriteBatch(batch);
-            setScreen(arena);
         }
         else if (exitCode == PlatformScene.EXIT_QUIT) {
             // Quit the application

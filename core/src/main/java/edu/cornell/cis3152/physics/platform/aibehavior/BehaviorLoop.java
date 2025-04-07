@@ -2,6 +2,7 @@ package edu.cornell.cis3152.physics.platform.aibehavior;
 
 import com.badlogic.gdx.ai.GdxAI;
 import com.badlogic.gdx.ai.btree.BehaviorTree;
+import com.badlogic.gdx.ai.btree.Task;
 
 public class BehaviorLoop<E> {
     private BehaviorTree<E> tree;
@@ -42,6 +43,28 @@ public class BehaviorLoop<E> {
     }
 
     /** getters and setters */
+
+    public String getInfo() {
+        Task<E> running = getRunningTask(tree);
+        return (running != null) ? running.getClass().getSimpleName() : "None";
+    }
+
+    /**
+     * Recursively searches for the deepest task with status RUNNING.
+     */
+    private Task<E> getRunningTask(Task<E> task) {
+        if(task.getStatus() == Task.Status.RUNNING) {
+            for (int i = 0; i < task.getChildCount(); i++) {
+                Task<E> child = task.getChild(i);
+                Task<E> runningChild = getRunningTask(child);
+                if (runningChild != null) {
+                    return runningChild;
+                }
+            }
+            return task;
+        }
+        return null;
+    }
 
     public BehaviorTree<E> getBehaviorTree() {
         return tree;
