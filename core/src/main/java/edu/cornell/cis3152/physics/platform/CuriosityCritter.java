@@ -15,6 +15,8 @@ import edu.cornell.gdiac.math.Path2;
 import edu.cornell.gdiac.math.PathFactory;
 import edu.cornell.gdiac.physics2.*;
 
+import static edu.cornell.cis3152.physics.platform.CollisionFiltering.*;
+
 public class CuriosityCritter extends Enemy {
     /** Json constants for parameters */
     private final JsonValue data;
@@ -30,8 +32,8 @@ public class CuriosityCritter extends Enemy {
     private int jumpLimit;
     private int shotLimit;
 
-    private float movement;
-    private boolean facingRight;
+
+
     private int jumpCooldown;
     private boolean isJumping;
     private int shootCooldown;
@@ -43,7 +45,9 @@ public class CuriosityCritter extends Enemy {
     private Color sensorColor;
     private String sensorName;
 
+    // why use forces? why dynamic body? these guys shouldn't have any physical collisions
     // Caches for force calculation and affine transform for sprite flipping
+    private final Vector2 velocityCache = new Vector2();
     private final Vector2 forceCache = new Vector2();
     private final Affine2 flipCache = new Affine2();
 
@@ -51,6 +55,8 @@ public class CuriosityCritter extends Enemy {
     private Fixture followSensor;
     private float headOffset = 2.0f;
     private Fixture walkSensor;
+
+    private PathFactory factory = new PathFactory();
 
 
     /** game logic stuff */
@@ -71,19 +77,20 @@ public class CuriosityCritter extends Enemy {
     private Path2 visionTriggerOutline; //
     private Path2 visionFollowOutline;
     private Path2 walkSensorOutline;
+    private Path2 wallSensorOutline;
 
-    public float getMovement() {
-        return movement;
-    }
-    public void setMovement(float value) {
-        movement = value;
-        // Change facing direction based on input
-        if (movement < 0) {
-            facingRight = false;
-        } else if (movement > 0) {
-            facingRight = true;
-        }
-    }
+    private boolean hasShard;
+    // where to move the shard(ideally) in world positions if this critter is carrying it
+    // movement target in world coordinates
+    private Vector2 worldTarget;
+
+    public Shard heldShard;
+
+    public boolean playerInFollowRange = false;
+
+
+
+
 
     public float getVisionAngle() {
         return visionAngle;
@@ -92,14 +99,6 @@ public class CuriosityCritter extends Enemy {
     public void setVisionAngle(float theta) {
         float desiredAngle = theta * MathUtils.degreesToRadians; // Convert to radians
         headBody.setTransform(headBody.getPosition(), desiredAngle);
-    }
-
-    public boolean isShooting() {
-        return isShooting && shootCooldown <= 0;
-    }
-
-    public void setShooting(boolean value) {
-        isShooting = value;
     }
 
     public boolean isJumping() {
@@ -140,12 +139,15 @@ public class CuriosityCritter extends Enemy {
     }
 
 
-    public CuriosityCritter(float units, JsonValue data, float[] points) {
+    public CuriosityCritter(float units, JsonValue data, float[] points, PlatformScene scene) {
+        super();
         this.data = data;
         // Read initial position and overall size from JSON.
         float x = points[0];
         float y = points[1];
         float s = data.getFloat("size");
+
+        this.scene = scene;
 
         float size = s * units;
 
@@ -167,6 +169,7 @@ public class CuriosityCritter extends Enemy {
         obstacle.setFixedRotation(true);
         obstacle.setPhysicsUnits(units);
         obstacle.setUserData(this);
+        obstacle.setBodyType(BodyDef.BodyType.DynamicBody);
         obstacle.setName("critter");
 
         // Set debugging colors
@@ -178,7 +181,7 @@ public class CuriosityCritter extends Enemy {
         force      = data.getFloat("force", 0);
         jump_force = data.getFloat("jump_force", 0);
 
-        isGrounded  = false;
+        isGrounded  = true;
         isShooting  = false;
         isJumping   = false;
         facingRight   = true;
@@ -187,9 +190,25 @@ public class CuriosityCritter extends Enemy {
         //deg
         visionAngle = 0;
 
+        stepRayLength = height/2.5f;
+        enemyVisionRaycast = new EnemyVisionRaycast(EnemyVisionRaycast.VisionMode.STAIR_CHECK, stepRayLength);
+
 
         mesh.set(-drawWidth/1.5f, -drawHeight/1.6f, drawWidth*1.5f, drawHeight*1.5f);
+
+
     }
+
+    public void setFilter() {
+        for (Fixture fixture : obstacle.getBody().getFixtureList()) {
+            Filter filter = fixture.getFilterData();
+            filter.categoryBits = CATEGORY_ENEMY;
+            // Only collide with scenery. (Assuming scenery fixtures are set to CATEGORY_SCENERY.)
+            filter.maskBits = CATEGORY_SCENERY | CATEGORY_BULLET;
+            fixture.setFilterData(filter);
+        }
+    }
+
     public void setActiveTexture(AssetDirectory directory){
         Texture texture = directory.getEntry( "curiosity-critter-active", Texture.class );
         this.setTexture(texture);
@@ -226,7 +245,6 @@ public class CuriosityCritter extends Enemy {
 
         // Create a debug outline for the sensor so you can see it in debug mode
         float u = obstacle.getPhysicsUnits();
-        PathFactory factory = new PathFactory();
         sensorOutline = new Path2();
         factory.makeRect((sensorCenter.x - w / 2) * u, (sensorCenter.y - h / 2) * u, w * u, h * u, sensorOutline);
         sensorShape.dispose();
@@ -238,7 +256,7 @@ public class CuriosityCritter extends Enemy {
         float u = obstacle.getPhysicsUnits();
 
         // Create the harvest outline (for visualization)
-        PathFactory factory = new PathFactory();
+
         harvestOutline = new Path2();
 
         factory.makeRoundedRect(-harvestWidth/2 * u, -harvestHeight/2 * u,
@@ -262,6 +280,7 @@ public class CuriosityCritter extends Enemy {
         harvestShape.dispose();
     }
 
+    // traversal sensors
 
 
     // vision following
@@ -298,7 +317,7 @@ public class CuriosityCritter extends Enemy {
     public void createVisionSensor() {
         createHeadBody();
         attachHead();
-        float coneWidth = 4.0f;
+        float coneWidth = 2.0f;
         float coneLength = 4.4f;
         Vector2[] vertices = new Vector2[3];
         vertices[0] = new Vector2(-coneWidth/2, coneLength);
@@ -315,7 +334,7 @@ public class CuriosityCritter extends Enemy {
         visionSensor.setUserData("vision_sensor");
 
 
-        PathFactory factory = new PathFactory();
+
         visionTriggerOutline = new Path2();
         float u = obstacle.getPhysicsUnits();
         visionTriggerOutline = factory.makeTriangle(
@@ -324,7 +343,7 @@ public class CuriosityCritter extends Enemy {
             0, 0);
 
         // follow sensor
-        coneWidth *= 1.8f;
+        coneWidth = 6.4f;
         coneLength *= 3.0f / 4.4f;
 
         vertices[0] = new Vector2((-coneWidth)/2, coneLength);
@@ -344,29 +363,56 @@ public class CuriosityCritter extends Enemy {
             coneWidth/2 * u, coneLength * u,
             0, -3f);
 
-        //walk sensor
-        coneWidth = 0.4f;
-        coneLength = 2.5f;
-        vertices[0] = new Vector2(-coneWidth/2, coneLength);
-        vertices[1] = new Vector2(coneWidth/2, coneLength);
-        vertices[2] = new Vector2(0, 0);
+        //walk/wall sensor
+//        coneWidth = 5f;
+//        coneLength = 0.5f;
+//        vertices[0] = new Vector2(-coneWidth/2, coneLength);
+//        vertices[1] = new Vector2(coneWidth/2, coneLength);
+//        vertices[2] = new Vector2(0, 0);
+//
+//        visionShape.set(vertices);
+//
+//        FixtureDef walkDef = new FixtureDef();
+//        walkDef.shape = visionShape;
+//        walkDef.isSensor = true;
+//
+//        walkSensor = headBody.createFixture(walkDef);
+//        walkSensor.setUserData("walk_sensor");
+//
+//        walkSensorOutline = new Path2();
+//        walkSensorOutline = factory.makeTriangle(
+//            -coneWidth/2 * u, coneLength * u,
+//            coneWidth/2 * u, coneLength * u,
+//            0, 0);
+//
+//        visionShape.dispose();
+    }
 
-        visionShape.set(vertices);
 
-        FixtureDef walkDef = new FixtureDef();
-        walkDef.shape = visionShape;
-        walkDef.isSensor = true;
+    public void setHorizontalVelocity() {
+        if (!obstacle.isActive()) {
+            return;
+        }
 
-        walkSensor = headBody.createFixture(walkDef);
-        walkSensor.setUserData("walk_sensor");
+        Vector2 pos = obstacle.getPosition();
+        float vx = obstacle.getVX();
+        float vy = obstacle.getVY();
+        Body body = obstacle.getBody();
 
-        walkSensorOutline = new Path2();
-        walkSensorOutline = factory.makeTriangle(
-            -coneWidth/2 * u, coneLength * u,
-            coneWidth/2 * u, coneLength * u,
-            0, 0);
 
-        visionShape.dispose();
+        if (getMovement() == 0f) {
+            velocityCache.set(0, vy);
+            body.setLinearVelocity(velocityCache);
+        }
+
+        if (Math.abs(vx) >= getMaxSpeed()) {
+            obstacle.setVX(Math.signum(vx) * getMaxSpeed());
+        } else {
+            velocityCache.set(getMovement(), vy);
+            body.setLinearVelocity(velocityCache);
+        }
+
+
     }
 
     /**
@@ -378,31 +424,130 @@ public class CuriosityCritter extends Enemy {
             return;
         }
 
+        World world = getObstacle().getBody().getWorld();
+
+        if (isPlatformStep(world, stepRayLength)) {
+            System.out.println("Critter's seen a step");
+        }
+
         Vector2 pos = obstacle.getPosition();
         float vx = obstacle.getVX();
         Body body = obstacle.getBody();
 
-        // Apply damping when no horizontal input is provided
-        if (getMovement() == 0f) {
-            float slowFactor = 2.0f; // Adjust this to fine-tune slowdown speed
-            forceCache.set(-slowFactor * vx, 0);
-            body.applyForce(forceCache, pos, true);
-        }
+        //horizontal input will be determined by velocity changes
 
-        // Clamp horizontal velocity to the maximum speed
         if (Math.abs(vx) >= getMaxSpeed()) {
             obstacle.setVX(Math.signum(vx) * getMaxSpeed());
         } else {
-            forceCache.set(getMovement(), 0);
-            body.applyForce(forceCache, pos, true);
+            setHorizontalVelocity();
         }
 
-        // Apply a vertical impulse if a jump is initiated
+        // jumping can be force
+
         if (isJumping()) {
             forceCache.set(0, jump_force);
             body.applyLinearImpulse(forceCache, pos, true);
         }
     }
+
+    public boolean isPlatformStep(World world, float raylength) {
+        Vector2 start = (isFacingRight()) ?
+            obstacle.getBody().getPosition().cpy().add(width/2 + 0.1f, height/2) :
+            obstacle.getBody().getPosition().cpy().add(-width/2 - 0.1f, height/2);
+        Vector2 end = start.cpy().add(0, -raylength);
+
+
+        debugRayStart = start;
+        debugRayEnd = end;
+
+
+        world.rayCast(enemyVisionRaycast, start, end);
+
+        if (enemyVisionRaycast.getHitFixture() == null) {
+            return false;
+        } else if (!enemyVisionRaycast.fixtureIsStair) {
+            return false;
+        } else {
+            Vector2 stairHit = new Vector2(enemyVisionRaycast.getHitPoint());
+
+            if (isGrounded && Math.abs(movement) > 0) {
+                float targetCenterY = stairHit.y + height/2;
+                Body body = obstacle.getBody();
+                Vector2 pos = body.getPosition();
+                body.setTransform(stairHit.x, targetCenterY, body.getAngle());
+
+                debugRayEnd = stairHit;
+            }
+
+        }
+
+        enemyVisionRaycast.reset();
+
+        return true;
+    }
+
+    public boolean canContinue() {
+        World world = obstacle.getBody().getWorld();
+        Vector2 pos = obstacle.getPosition();
+
+        float groundRayLength = stepRayLength * 4.5f;
+        float wallRayLength = width * 0.5f;
+
+        Vector2 groundStart = (facingRight) ? new Vector2(pos.x + width, pos.y) :
+           new Vector2(pos.x - width, pos.y);
+        Vector2 wallStart = (facingRight) ? new Vector2(pos.x + width/2, pos.y) :
+            new Vector2(pos.x - width/2, pos.y);
+
+        Vector2 groundEnd = groundStart.cpy().add(0, -groundRayLength);
+        EnemyVisionRaycast wallVisionRaycast =
+            new EnemyVisionRaycast(EnemyVisionRaycast.VisionMode.WALL_CHECK, stepRayLength);
+        EnemyVisionRaycast groundVisionRaycast =
+            new EnemyVisionRaycast(EnemyVisionRaycast.VisionMode.FALL_CHECK, stepRayLength);
+        world.rayCast(groundVisionRaycast, groundStart, groundEnd);
+        boolean groundExists = (groundVisionRaycast.getHitFixture() != null);
+        groundVisionRaycast.reset();
+
+        Vector2 wallEnd = new Vector2();
+        if (isFacingRight()) {
+            wallEnd.set(wallStart).add(wallRayLength, 0);
+        } else {
+            wallEnd.set(wallStart).sub(wallRayLength, 0);
+        }
+        world.rayCast(wallVisionRaycast, wallStart, wallEnd);
+        boolean wallExists = (wallVisionRaycast.getHitFixture() != null);
+        wallVisionRaycast.reset();
+
+        return groundExists && !wallExists;
+    }
+
+
+    public void setTarget() {
+
+    }
+
+    public void giveShard(Shard shard) {
+        if (heldShard != null) {
+            dropShard();
+        }
+        heldShard = shard;
+        hasShard = true;
+
+        // compute target
+
+    }
+
+    public Shard dropShard() {
+        Shard s = heldShard;
+        heldShard = null;
+        return s;
+    }
+
+
+    public void targetShard() {
+
+    }
+
+
 
 
     @Override
@@ -444,6 +589,28 @@ public class CuriosityCritter extends Enemy {
             batch.setTextureRegion(sprite);
             batch.drawMesh(mesh, transform, false);
             batch.setTexture((Texture) null);
+        }
+    }
+
+    public void drawRayDebug(SpriteBatch batch) {
+        if (debugRayStart != null && debugRayEnd != null) {
+            float u = obstacle.getPhysicsUnits();
+            Vector2 localStart = new Vector2(debugRayStart).sub(obstacle.getPosition());
+            Vector2 localEnd = new Vector2(debugRayEnd).sub(obstacle.getPosition());
+
+            PathFactory factory = new PathFactory();
+            Path2 rayOutline = new Path2();
+            factory.makeLine(localStart.x * u, localStart.y * u,
+                localEnd.x * u, localEnd.y * u, rayOutline);
+
+            batch.setTexture(Texture2D.getBlank());
+            batch.setColor(Color.PURPLE);
+            transform.idt();
+            float a = obstacle.getAngle();
+            Vector2 p = obstacle.getPosition();
+            transform.preRotate((float)(a * 180.0f / Math.PI));
+            transform.preTranslate(p.x * u, p.y * u);
+            batch.outline(rayOutline, transform);
         }
     }
 
@@ -529,6 +696,55 @@ public class CuriosityCritter extends Enemy {
 
             batch.setColor(Color.WHITE);
         }
+        if (wallSensorOutline != null) {
+            batch.setTexture(Texture2D.getBlank());
+            batch.setColor(Color.PINK);
+            transform.idt();
+            float u = obstacle.getPhysicsUnits();
+
+            transform.preTranslate(obstacle.getX() * u, obstacle.getY() * u);
+            batch.outline(wallSensorOutline, transform);
+            batch.setColor(Color.WHITE);
+        }
+        drawRayDebug(batch);
+        drawFallCheckDebug(batch);
+    }
+
+    public void drawFallCheckDebug(SpriteBatch batch) {
+        // Get the world and critter position.
+        World world = obstacle.getBody().getWorld();
+        Vector2 pos = obstacle.getBody().getPosition();
+
+        // Use the same ray length as in canContinue.
+        float groundRayLength = stepRayLength * 4.5f;
+        Vector2 groundStart = new Vector2();
+        if (isFacingRight()) {
+            groundStart.set(pos.x + width, pos.y);
+        } else {
+            groundStart.set(pos.x - width, pos.y);
+        }
+        // Ray goes downward from groundStart.
+        Vector2 groundEnd = groundStart.cpy().add(0, -groundRayLength);
+
+        // Convert world coordinates to screen units using your physics unit conversion.
+        float u = obstacle.getPhysicsUnits();
+        Path2 fallRayPath = new Path2();
+        PathFactory factory = new PathFactory();
+        factory.makeLine(groundStart.x * u, groundStart.y * u,
+            groundEnd.x * u, groundEnd.y * u, fallRayPath);
+
+        // Draw the fall check ray in a distinct color (yellow in this example)
+        batch.setTexture(Texture2D.getBlank());
+        batch.setColor(Color.PURPLE);
+        // For simplicity, we use an identity transform here.
+        Affine2 transform = new Affine2();
+        transform.idt();
+        batch.outline(fallRayPath, transform);
+    }
+
+
+    public Vector2 getWorldTarget() {
+        return worldTarget;
     }
 
     public Body getHeadBody() {

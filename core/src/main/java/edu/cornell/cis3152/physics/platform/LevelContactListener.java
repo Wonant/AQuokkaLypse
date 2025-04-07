@@ -44,19 +44,28 @@ public class LevelContactListener implements ContactListener {
             ObstacleSprite bd1 = (ObstacleSprite)body1.getUserData();
             ObstacleSprite bd2 = (ObstacleSprite)body2.getUserData();
             // Check for collision with dream shard
-            if ((bd1 == dreamWalkerScene.getAvatar() && bd2 instanceof Door)
-                || (bd2 == dreamWalkerScene.getAvatar() && bd1 instanceof Door
+            if ((bd1 == dreamWalkerScene.getAvatar() && bd2 instanceof Shard)
+                || (bd2 == dreamWalkerScene.getAvatar() && bd1 instanceof Shard
                 && !(dreamWalkerScene.getAvatar().getScareSensorName().equals(fd1) || dreamWalkerScene.getAvatar().getScareSensorName().equals(fd2)) )) {
-                Door collectedDoor = (bd1 instanceof Door) ? (Door) bd1 : (Door) bd2;
+                Shard collectedShard = (bd1 instanceof Shard) ? (Shard) bd1 : (Shard) bd2;
 
-                if (!collectedDoor.getObstacle().isRemoved()) {
-                    collectedDoor.getObstacle().markRemoved(true);
+                if (!collectedShard.getObstacle().isRemoved()) {
+                    collectedShard.getObstacle().markRemoved(true);
                     dreamWalkerScene.incrementGoal();
 
 
                     if (dreamWalkerScene.checkCollectedAllGoals()) {
                         dreamWalkerScene.setComplete(true);
                     }
+                }
+            }
+
+            if (("follow_sensor".equals(fd1) && (bd2 instanceof Player)) ||
+                ("follow_sensor".equals(fd2) && (bd1 instanceof Player))) {
+                if (bd1 instanceof CuriosityCritter) {
+                    ((CuriosityCritter) bd1).playerInFollowRange = true;
+                } else if (bd2 instanceof CuriosityCritter){
+                    ((CuriosityCritter) bd2).playerInFollowRange = true;
                 }
             }
 
@@ -102,7 +111,7 @@ public class LevelContactListener implements ContactListener {
             // BULLET COLLISION CASES
 
             // Test bullet collision with world
-            if (bd1.getName().equals("bullet") && bd2 != dreamWalkerScene.getAvatar() && !(bd2 instanceof Door)) {
+            if (bd1.getName().equals("bullet") && bd2 != dreamWalkerScene.getAvatar() && !(bd2 instanceof Shard)) {
                 // if it hits an eenemy
                 if (bd2 instanceof Enemy) {
                     // make sure it hits the body of the enemy, and not any sensors
@@ -138,7 +147,7 @@ public class LevelContactListener implements ContactListener {
             }
 
             // Test bullet collision with world
-            if (bd2.getName().equals("bullet") && bd1 != dreamWalkerScene.getAvatar() && !(bd1 instanceof Door)) {
+            if (bd2.getName().equals("bullet") && bd1 != dreamWalkerScene.getAvatar() && !(bd1 instanceof Shard)) {
                 // if it hits an enemy
                 if (bd1 instanceof Enemy) {
                     // make sure it hits the body of the enemy, and not any sensors
@@ -206,10 +215,12 @@ public class LevelContactListener implements ContactListener {
                     {
                         harvestedEnemy = (Enemy) bd2;
                         dreamWalkerScene.performHarvest(harvestedEnemy);
+                        dreamWalkerScene.getAiManager().unregister(harvestedEnemy);
                     } else if (dreamWalkerScene.getAvatar().getScareSensorName().equals(fd2) && fd1 != "walk_sensor" && fd1 != "follow_sensor" && fd1 != "vision_sensor")
                     {
                         harvestedEnemy = (Enemy) bd1;
                         dreamWalkerScene.performHarvest(harvestedEnemy);
+                        dreamWalkerScene.getAiManager().unregister(harvestedEnemy);
                     }
                 }
                 dreamWalkerScene.getAvatar().setHarvesting(true);
