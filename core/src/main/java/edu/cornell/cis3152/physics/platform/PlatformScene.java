@@ -152,7 +152,7 @@ public class PlatformScene implements Screen{
     private int prev_debug;
     private Sprite visionCone;
 
-
+    private PooledList<Enemy> enemies = new PooledList<>();
     private AIControllerManager aiManager;
     private LevelContactListener levelContactListener;
     /** Reference to the goalDoor (for collision detection) */
@@ -186,6 +186,11 @@ public class PlatformScene implements Screen{
     private HashMap<DreamDweller, Sprite> visionCones3;
     private HashMap<Teleporter, Float> teleporterCreationTimes = new HashMap<>();
     private float timeElapsed = 0f;
+
+    protected PooledList<ShieldWall> shieldWalls = new PooledList<ShieldWall>();
+
+    // global game units
+    float units;
 
 
     /*==============================ContactListener Getters/Setters===============================*/
@@ -611,7 +616,6 @@ public class PlatformScene implements Screen{
                 postUpdate(delta);
             }
             draw(delta);
-            float units = height / bounds.height;
 
             // TA feedback was to make it a little less smooth
             // if the camera is far from being directly over the player, we can try to increase the change
@@ -645,7 +649,6 @@ public class PlatformScene implements Screen{
     }
 
     private void clampCamera() {
-        float units = height / bounds.height; // conversion factor: pixels per physics unit
         float halfViewportWidth = camera.viewportWidth / 2;
         float halfViewportHeight = camera.viewportHeight / 2;
 
@@ -761,6 +764,7 @@ public class PlatformScene implements Screen{
         uiCamera = new OrthographicCamera(Gdx.graphics.getWidth(), Gdx.graphics.getHeight());
         uiCamera.setToOrtho(false, Gdx.graphics.getWidth(), Gdx.graphics.getHeight());
         uiCamera.update();
+        units = height / bounds.height;
     }
 
     /**
@@ -793,7 +797,6 @@ public class PlatformScene implements Screen{
      * Lays out the game geography.
      */
     private void populateLevel() {
-        float units = height/bounds.height;
 
         // Add level goal
         Texture texture = directory.getEntry( "shared-goal", Texture.class );
@@ -883,7 +886,7 @@ public class PlatformScene implements Screen{
             // Have to do after body is created
             critter.createSensor();
             critter.createVisionSensor();
-
+            enemies.add(critter);
             aiManager.register(critter);
             texture = directory.getEntry("vision_cone", Texture.class);
             visionConeRegion = new TextureRegion(texture);
@@ -907,7 +910,7 @@ public class PlatformScene implements Screen{
             // Have to do after body is created
             maintenance.createSensor();
             maintenance.createVisionSensor();
-
+            enemies.add(maintenance);
             aiManager.register(maintenance);
             texture = directory.getEntry("vision_cone", Texture.class);
             visionConeRegion = new TextureRegion(texture);
@@ -927,7 +930,7 @@ public class PlatformScene implements Screen{
             // Have to do after body is created
             dreamDweller.createSensor();
             dreamDweller.createVisionSensor();
-
+            enemies.add(dreamDweller);
             aiManager.register(dreamDweller);
             texture = directory.getEntry("vision_cone", Texture.class);
             visionConeRegion = new TextureRegion(texture);
@@ -1021,6 +1024,34 @@ public class PlatformScene implements Screen{
     public void update(float dt) {
         InputController input = InputController.getInstance();
 
+        for (Enemy e: enemies){
+            if (e instanceof MindMaintenance && ((MindMaintenance) e).isShooting()){
+                Vector2 position = e.getObstacle().getPosition();
+                float direction = 1;
+                if (avatar.getObstacle().getPosition().x < position.x){
+                    direction = -1;
+                }
+                JsonValue bulletjv = constants.get("bullet");
+                Texture texture = directory.getEntry("platform-bullet", Texture.class);
+
+                ShieldWall wall = new ShieldWall(units, bulletjv, position, direction);
+                shieldWalls.add(wall);
+                wall.setTexture(texture);
+
+
+                addQueuedObject(wall);
+            }
+        }
+
+        for(ShieldWall s: shieldWalls){
+            s.update();
+
+            if (Math.abs(s.getV()) < 0.05){
+                removeBullet(s);
+                shieldWalls.remove(s);
+            }
+
+        }
 
         avatar.setStunning(input.didStun());
         avatar.setHarvesting(input.didSecondary());
@@ -1100,7 +1131,6 @@ public class PlatformScene implements Screen{
 
     private void teleport() {
         InputController input = InputController.getInstance();
-        float units = height / bounds.height;
 
         Vector2 playerPosition = avatar.getObstacle().getPosition();
 
@@ -1211,7 +1241,6 @@ public class PlatformScene implements Screen{
     private void createBullet() {
         InputController input = InputController.getInstance();
 
-        float units = height/bounds.height;
         Vector2 crosshairScreen = input.getMouse();
 
         // Unproject the crosshair screen position to get world coordinates
@@ -1227,11 +1256,16 @@ public class PlatformScene implements Screen{
         Obstacle player = avatar.getObstacle();
         Vector2 shootAngle = crosshairWorld.sub(player.getPosition());
         shootAngle.nor();
+        float direction = 1;
+        if (crosshairWorld.x * units < player.getPosition().x){
+            direction = -1;
+        }
+        System.out.println("Direction = " + crosshairWorld.x + " " + player.getPosition().x);
         Texture texture = directory.getEntry("platform-bullet", Texture.class);
+
         Bullet bullet = new Bullet(units, bulletjv, player.getPosition(), shootAngle.nor());
         bullet.setTexture(texture);
         addQueuedObject(bullet);
-
         SoundEffectManager sounds = SoundEffectManager.getInstance();
         sounds.play("fire", fireSound, volume);
     }

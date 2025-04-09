@@ -11,6 +11,7 @@ import edu.cornell.cis3152.physics.platform.MindMaintenance;
 import edu.cornell.cis3152.physics.platform.Player;
 import edu.cornell.cis3152.physics.platform.DreamDweller;
 
+import edu.cornell.cis3152.physics.platform.ShieldWall;
 import edu.cornell.gdiac.assets.AssetDirectory;
 import edu.cornell.gdiac.graphics.SpriteBatch;
 import java.util.*;
@@ -199,17 +200,17 @@ public class AIControllerManager {
         // iterate through the enemies
         for (EnemyAI enemy : entities) {
             if (enemy.enemy.getClass() == CuriosityCritter.class){
-                CritterAI critter = (CritterAI) enemy;
-                updateCritter(critter, dt);
+                CritterAI critterAI = (CritterAI) enemy;
+                updateCritter(critterAI, dt);
 
             }
             else if (enemy.enemy.getClass() == MindMaintenance.class){
-                MaintenanceAI maintenance = (MaintenanceAI) enemy;
-                updateMaintenance(maintenance, dt);
+                MaintenanceAI maintenanceAI = (MaintenanceAI) enemy;
+                updateMaintenance(maintenanceAI, dt);
             }
             else if (enemy.enemy.getClass() == DreamDweller.class) {
-                DwellerAI dweller = (DwellerAI) enemy;
-                updateDweller(dweller, dt);
+                DwellerAI dwellerAI = (DwellerAI) enemy;
+                updateDweller(dwellerAI, dt);
             }
         }
     }
@@ -455,6 +456,8 @@ public class AIControllerManager {
                 //            System.out.println(playerPos.x + " " + critterPos.x);
                 //d If the critter sees the player, transition to ALERTED
                 if (seesPlayer) {
+                    data.maintenance.setShooting(true);
+
                     data.stateTimer = 0; //reset for all states
                     if (data.state == MaintenanceFSM.CHASING) {
 
@@ -490,6 +493,9 @@ public class AIControllerManager {
                     }
 
                 }
+                else{
+                    data.maintenance.setShooting(false);
+                }
             }
         }
 
@@ -498,6 +504,7 @@ public class AIControllerManager {
             if (data.stateTimer > data.stateDuration) {
                 transitionMaintenanceState(data, MaintenanceFSM.IDLE_LOOK);
             }
+            /*
             else{
                 float chaseSpeed = 10f;
                 if (playerPos.x < maintenancePos.x) {
@@ -512,6 +519,8 @@ public class AIControllerManager {
                     data.maintenance.applyForce();
                 }
             }
+
+             */
         }
 
         if (data.state == MaintenanceFSM.START) {

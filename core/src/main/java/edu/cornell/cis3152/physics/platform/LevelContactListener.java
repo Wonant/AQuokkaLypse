@@ -41,8 +41,17 @@ public class LevelContactListener implements ContactListener {
         Object bodyDataB = fix2.getBody().getUserData();
 
         try {
+
             ObstacleSprite bd1 = (ObstacleSprite)body1.getUserData();
             ObstacleSprite bd2 = (ObstacleSprite)body2.getUserData();
+
+            if (bd1 instanceof ShieldWall || bd2 instanceof ShieldWall){
+                System.out.println("Contact detected with Shield Wall");
+                System.out.println(bd1.getClass());
+                System.out.println(bd2.getClass());
+                System.out.println();
+            }
+
             // Check for collision with dream shard
             if ((bd1 == dreamWalkerScene.getAvatar() && bd2 instanceof Door)
                 || (bd2 == dreamWalkerScene.getAvatar() && bd1 instanceof Door
@@ -173,6 +182,7 @@ public class LevelContactListener implements ContactListener {
                 }
 
             }
+
 
             // See if we have landed on the ground.
             if ((dreamWalkerScene.getAvatar().getSensorName().equals(fd2) && bd1 instanceof Surface) ||
