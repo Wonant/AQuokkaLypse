@@ -74,10 +74,14 @@ public class CuriosityCritter extends Enemy {
     /** used to draw the harvest hitbox, which differs from the physical hitbox */
     private Path2 harvestOutline;
 
+    // in radians
+    private float followAngle;
     private Path2 visionTriggerOutline; //
     private Path2 visionFollowOutline;
     private Path2 walkSensorOutline;
     private Path2 wallSensorOutline;
+    private Vector2 debugLookStart = new Vector2();
+    private Vector2 debugLookEnd = new Vector2();
 
     private boolean hasShard;
     // where to move the shard(ideally) in world positions if this critter is carrying it
@@ -87,6 +91,9 @@ public class CuriosityCritter extends Enemy {
     public Shard heldShard;
 
     public boolean playerInFollowRange = false;
+    private boolean safeToWalk;
+
+
 
 
 
@@ -138,6 +145,10 @@ public class CuriosityCritter extends Enemy {
         return facingRight;
     }
 
+    public boolean getSafeToWalk() {
+        return safeToWalk;
+    }
+
 
     public CuriosityCritter(float units, JsonValue data, float[] points, PlatformScene scene) {
         super();
@@ -158,10 +169,12 @@ public class CuriosityCritter extends Enemy {
         float drawHeight = size;
 
         // may want to change what kind of physical obstacle this is
-        obstacle = new CapsuleObstacle(x, y, width, height);
+        obstacle = new BoxObstacle(x, y, width, height);
         // Optionally set a tolerance for collision detection (from JSON debug info)
         JsonValue debugInfo = data.get("debug");
-        ((CapsuleObstacle)obstacle).setTolerance( debugInfo.getFloat("tolerance", 0.5f) );
+        //((CapsuleObstacle)obstacle).setTolerance( debugInfo.getFloat("tolerance", 0.5f) );
+
+
 
         obstacle.setDensity(data.getFloat("density", 0));
         obstacle.setFriction(data.getFloat("friction", 0));
@@ -190,7 +203,7 @@ public class CuriosityCritter extends Enemy {
         //deg
         visionAngle = 0;
 
-        stepRayLength = height/2.5f;
+        stepRayLength = height;
         enemyVisionRaycast = new EnemyVisionRaycast(EnemyVisionRaycast.VisionMode.STAIR_CHECK, stepRayLength);
 
 
@@ -218,6 +231,8 @@ public class CuriosityCritter extends Enemy {
         Texture texture = directory.getEntry( "curiosity-critter-inactive", Texture.class );
         this.setTexture(texture);
     }
+
+
     /**
      * Creates a sensor fixture to detect ground contact.
      * This sensor prevents double-jumping by detecting when the player is on the ground.
@@ -317,41 +332,22 @@ public class CuriosityCritter extends Enemy {
     public void createVisionSensor() {
         createHeadBody();
         attachHead();
-        float coneWidth = 2.0f;
-        float coneLength = 4.4f;
+        float u = obstacle.getPhysicsUnits();
         Vector2[] vertices = new Vector2[3];
-        vertices[0] = new Vector2(-coneWidth/2, coneLength);
-        vertices[1] = new Vector2(coneWidth/2, coneLength);
-        vertices[2] = new Vector2(0, 0);
+
         PolygonShape visionShape = new PolygonShape();
-        visionShape.set(vertices);
 
         FixtureDef visionDef = new FixtureDef();
-        visionDef.shape = visionShape;
-        visionDef.isSensor = true;
-
-        visionSensor = headBody.createFixture(visionDef);
-        visionSensor.setUserData("vision_sensor");
-
-
-
-        visionTriggerOutline = new Path2();
-        float u = obstacle.getPhysicsUnits();
-        visionTriggerOutline = factory.makeTriangle(
-            -coneWidth/2 * u, coneLength * u,
-            coneWidth/2 * u, coneLength * u,
-            0, 0);
 
         // follow sensor
-        coneWidth = 6.4f;
-        coneLength *= 3.0f / 4.4f;
+        float coneWidth = 8.4f;
+        float coneLength = 6f;
 
         vertices[0] = new Vector2((-coneWidth)/2, coneLength);
         vertices[1] = new Vector2((coneWidth)/2, coneLength);
         vertices[2] = new Vector2(0, -3f);
 
         visionShape.set(vertices);
-        visionDef = new FixtureDef();
         visionDef.shape = visionShape;
         visionDef.isSensor = true;
 
@@ -363,29 +359,6 @@ public class CuriosityCritter extends Enemy {
             coneWidth/2 * u, coneLength * u,
             0, -3f);
 
-        //walk/wall sensor
-//        coneWidth = 5f;
-//        coneLength = 0.5f;
-//        vertices[0] = new Vector2(-coneWidth/2, coneLength);
-//        vertices[1] = new Vector2(coneWidth/2, coneLength);
-//        vertices[2] = new Vector2(0, 0);
-//
-//        visionShape.set(vertices);
-//
-//        FixtureDef walkDef = new FixtureDef();
-//        walkDef.shape = visionShape;
-//        walkDef.isSensor = true;
-//
-//        walkSensor = headBody.createFixture(walkDef);
-//        walkSensor.setUserData("walk_sensor");
-//
-//        walkSensorOutline = new Path2();
-//        walkSensorOutline = factory.makeTriangle(
-//            -coneWidth/2 * u, coneLength * u,
-//            coneWidth/2 * u, coneLength * u,
-//            0, 0);
-//
-//        visionShape.dispose();
     }
 
 
@@ -426,20 +399,22 @@ public class CuriosityCritter extends Enemy {
 
         World world = getObstacle().getBody().getWorld();
 
-        if (isPlatformStep(world, stepRayLength)) {
-            System.out.println("Critter's seen a step");
-        }
-
         Vector2 pos = obstacle.getPosition();
         float vx = obstacle.getVX();
         Body body = obstacle.getBody();
 
         //horizontal input will be determined by velocity changes
 
-        if (Math.abs(vx) >= getMaxSpeed()) {
-            obstacle.setVX(Math.signum(vx) * getMaxSpeed());
+        if (getMovement() == 0f) {
+            // Force a full stop horizontally
+            body.setLinearVelocity(0, body.getLinearVelocity().y);
         } else {
-            setHorizontalVelocity();
+            // Otherwise, set the horizontal velocity toward getMovement()
+            if (Math.abs(vx) >= getMaxSpeed()) {
+                obstacle.setVX(Math.signum(vx) * getMaxSpeed());
+            } else {
+                setHorizontalVelocity();
+            }
         }
 
         // jumping can be force
@@ -484,6 +459,57 @@ public class CuriosityCritter extends Enemy {
         enemyVisionRaycast.reset();
 
         return true;
+    }
+
+    public float getFollowAngle() {
+        return followAngle;
+    }
+
+    public void updateFollowSensor(Player player) {
+        Vector2 enemyPos = obstacle.getPosition();
+        Vector2 playerPos = player.getObstacle().getPosition();
+        Vector2 visionRef = new Vector2(enemyPos.x, enemyPos.y + 5.0f);
+        visionRef.sub(enemyPos).nor();
+        playerPos.sub(enemyPos).nor();
+        followAngle = MathUtils.atan2(playerPos.y,playerPos.x) - MathUtils.atan2(visionRef.y,visionRef.x);
+        headBody.setTransform(headBody.getPosition(), followAngle);
+    }
+
+    public void lookForPlayer() {
+        World world = obstacle.getBody().getWorld();
+        Player player = scene.getAvatar();
+
+
+        Vector2 pos = obstacle.getPosition();
+        float rayLength = 4f;
+        float followSensorAngle = MathUtils.atan2(player.getObstacle().getPosition().y - pos.y,
+            player.getObstacle().getPosition().x - pos.x);
+
+        Vector2 start = (facingRight) ? new Vector2(pos.x + width/2, pos.y + height/4) :
+            new Vector2(pos.x - width/2, pos.y + height/4);
+        //Vector2 end = (facingRight) ? new Vector2(pos.x + width + rayLength, pos.y + height/4) :
+            new Vector2(pos.x - width - rayLength, pos.y + height/4);
+        Vector2 end = new Vector2(
+            pos.x + rayLength * MathUtils.cos(followSensorAngle),
+            pos.y + rayLength * MathUtils.sin(followSensorAngle)
+        );
+
+        EnemyVisionRaycast playerRaycast = new EnemyVisionRaycast(EnemyVisionRaycast.VisionMode.PLAYER_CHECK, 4f);
+        world.rayCast(playerRaycast, start, end);
+
+        debugLookStart.set(start);
+        debugLookEnd.set(end);
+
+        if (playerRaycast.getHitPlayer() != null) {
+            setAwareOfPlayer(true);
+            debugLookEnd.set(playerRaycast.getHitPoint());
+            System.out.println("Seen the player");
+
+        } else if (playerRaycast.getHitFixture() != null) {
+            debugLookEnd.set(playerRaycast.getHitPoint());
+        }
+
+        playerRaycast.reset();
     }
 
     public boolean canContinue() {
@@ -550,14 +576,29 @@ public class CuriosityCritter extends Enemy {
 
 
 
+
     @Override
     public void update(float dt) {
+        lookForPlayer();
+        if (isPlatformStep(scene.world, stepRayLength)) {
+            System.out.println("Critter's seen a step");
+        }
+
+        if (!canContinue()) {
+            safeToWalk = false;
+            setMovement(0);
+            applyForce();
+        } else {
+            safeToWalk = true;
+        }
+        if (isAwareOfPlayer()) {
+            updateFollowSensor(scene.getAvatar());
+        }
         if (isJumping()) {
             jumpCooldown = jumpLimit;
         } else {
             jumpCooldown = Math.max(0, jumpCooldown - 1);
         }
-
         super.update(dt);
     }
 
@@ -592,11 +633,31 @@ public class CuriosityCritter extends Enemy {
         }
     }
 
+
     public void drawRayDebug(SpriteBatch batch) {
         if (debugRayStart != null && debugRayEnd != null) {
             float u = obstacle.getPhysicsUnits();
             Vector2 localStart = new Vector2(debugRayStart).sub(obstacle.getPosition());
             Vector2 localEnd = new Vector2(debugRayEnd).sub(obstacle.getPosition());
+
+            PathFactory factory = new PathFactory();
+            Path2 rayOutline = new Path2();
+            factory.makeLine(localStart.x * u, localStart.y * u,
+                localEnd.x * u, localEnd.y * u, rayOutline);
+
+            batch.setTexture(Texture2D.getBlank());
+            batch.setColor(Color.PURPLE);
+            transform.idt();
+            float a = obstacle.getAngle();
+            Vector2 p = obstacle.getPosition();
+            transform.preRotate((float)(a * 180.0f / Math.PI));
+            transform.preTranslate(p.x * u, p.y * u);
+            batch.outline(rayOutline, transform);
+        }
+        if (debugLookEnd != null && debugLookStart != null) {
+            float u = obstacle.getPhysicsUnits();
+            Vector2 localStart = new Vector2(debugLookStart).sub(obstacle.getPosition());
+            Vector2 localEnd = new Vector2(debugLookEnd).sub(obstacle.getPosition());
 
             PathFactory factory = new PathFactory();
             Path2 rayOutline = new Path2();

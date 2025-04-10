@@ -6,6 +6,7 @@ import com.badlogic.gdx.ai.btree.Task;
 import com.badlogic.gdx.ai.btree.annotation.TaskAttribute;
 import edu.cornell.cis3152.physics.platform.CuriosityCritter;
 import edu.cornell.cis3152.physics.platform.Enemy;
+import edu.cornell.cis3152.physics.platform.Player;
 
 public class RunTask extends LeafTask<Enemy> {
     @TaskAttribute(required = true)
@@ -19,15 +20,27 @@ public class RunTask extends LeafTask<Enemy> {
     @Override
     public void start() {
         elapsed = 0;
-        CuriosityCritter critter = (CuriosityCritter) getObject();
-        critter.setMovement(runSpeed);
-        critter.applyForce();
+        if (getObject() instanceof CuriosityCritter) {
+            CuriosityCritter critter = (CuriosityCritter) getObject();
+            critter.setMovement(runSpeed);
+            critter.applyForce();
+        }
     }
 
     @Override
     public Status execute() {
         float dt = Gdx.graphics.getDeltaTime();
         elapsed += dt;
+        if (getObject() instanceof CuriosityCritter) {
+            CuriosityCritter critter = (CuriosityCritter) getObject();
+            Player player = critter.getScene().getAvatar();
+            runSpeed = (player.getObstacle().getX() > critter.getObstacle().getX()) ? -runSpeed : runSpeed;
+            if (!critter.getSafeToWalk()) {
+                runSpeed = -runSpeed;
+            }
+            critter.setMovement(runSpeed);
+            critter.applyForce();
+        }
         return (elapsed >= duration) ? Status.SUCCEEDED : Status.RUNNING;
     }
 

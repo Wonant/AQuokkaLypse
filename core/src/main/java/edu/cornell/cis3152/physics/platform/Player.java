@@ -16,6 +16,8 @@
      */
     package edu.cornell.cis3152.physics.platform;
 
+    import com.badlogic.gdx.Gdx;
+    import com.badlogic.gdx.graphics.g2d.TextureRegion;
     import com.badlogic.gdx.math.*;
     import com.badlogic.gdx.graphics.*;
     import com.badlogic.gdx.physics.box2d.*;
@@ -68,6 +70,7 @@
         private int jumpCooldown;
         /** Whether we are actively jumping */
         private boolean isJumping;
+        private boolean lastJumping;
 
         /** Cooldown (in animation frames) for harvesting */
         private int harvestLimit;
@@ -140,6 +143,21 @@
         private PlayerVisionRaycast playerVisionRaycast;
         private Vector2 debugRayStart;
         private Vector2 debugRayEnd;
+        private boolean seenAStep;
+
+        /** animation */
+        private Animator walkingSprite;
+        private Animator idleSprite;
+        private Animator jumpSprite;
+        private AnimationState animationState;
+
+
+        private enum AnimationState {
+            WALK,
+            IDLE,
+            JUMP,
+            STAIR
+        }
 
 
         /**
@@ -230,6 +248,10 @@
          */
         public boolean isHarvesting() {
             return isHarvesting && harvestCooldown <= 0;
+        }
+
+        public float getHarvestCooldown() {
+            return harvestCooldown;
         }
 
         /**
@@ -434,12 +456,13 @@
             float sizeHeight = s*units*1.5f;
 
 
+
             // The capsule is smaller than the image
             // "inner" is the fraction of the original size for the capsule
             width = s*data.get("inner").getFloat(0);
             height = s*data.get("inner").getFloat(1);
-            obstacle = new CapsuleObstacle(x, y, width, height);
-            ((CapsuleObstacle)obstacle).setTolerance( debugInfo.getFloat("tolerance", 0.5f) );
+            obstacle = new BoxObstacle(x, y, width, height*0.9f);
+            //((CapsuleObstacle)obstacle).setTolerance( debugInfo.getFloat("tolerance", 0.5f) );
 
             obstacle.setDensity( data.getFloat( "density", 0 ) );
             obstacle.setFriction( data.getFloat( "friction", 0 ) );
@@ -495,6 +518,13 @@
             playerVisionRaycast = new PlayerVisionRaycast(PlayerVisionRaycast.VisionMode.STAIR_CHECK, stepRayLength * units);
 
 
+
+        }
+
+        public void createAnimators(Texture walkTexture, Texture idleTexture, Texture jumpTexture) {
+            walkingSprite = new Animator(walkTexture, 4, 5, 0.08f, 17);
+            idleSprite = new Animator(idleTexture, 6, 5, 0.08f, 30);
+            jumpSprite = new Animator(jumpTexture, 12, 5, 0.08f, 50, false);
         }
 
         public void setFilter() {
@@ -599,6 +629,9 @@
 
             if (isPlatformStep(world, stepRayLength)) {
                 System.out.println("seen a step");
+                seenAStep = true;
+            } else {
+                seenAStep = false;
             }
 
 
@@ -623,6 +656,7 @@
             }
 
             if (isJumping()) {
+                jumpSprite.reset();
                 forceCache.set(0, jump_force);
                 body.applyLinearImpulse(forceCache,pos,true);
             }
@@ -672,6 +706,22 @@
          */
         @Override
         public void update(float dt) {
+            // change character state
+
+            if (isGrounded) {
+                if (movement == 0) {
+                    animationState = AnimationState.IDLE;
+                } else {
+                    if (seenAStep) {
+                        animationState = AnimationState.STAIR;
+                    } else {
+                        animationState = AnimationState.WALK;
+                    }
+                }
+            } else {
+                animationState = AnimationState.JUMP;
+            }
+
             // Apply cooldowns
             if (isJumping()) {
                 jumpCooldown = jumpLimit;
@@ -713,12 +763,64 @@
 
         @Override
         public void draw(SpriteBatch batch) {
-            if (faceRight) {
-                flipCache.setToScaling( 1,1 );
-            } else {
-                flipCache.setToScaling( -1,1 );
+
+            TextureRegion frame = new TextureRegion();
+            float scale = 1f;
+            switch (animationState) {
+                case WALK:
+                    frame = walkingSprite.getCurrentFrame(Gdx.graphics.getDeltaTime());
+                    break;
+                case IDLE:
+                    frame = idleSprite.getCurrentFrame(Gdx.graphics.getDeltaTime());
+                    break;
+                case JUMP:
+                    if (!lastJumping && isJumping) {
+                        jumpSprite.reset();
+                    }
+                    scale = 1.3f;
+                    frame = jumpSprite.getCurrentFrame(Gdx.graphics.getDeltaTime());
+                    break;
+                default:
+                    frame = idleSprite.getCurrentFrame(Gdx.graphics.getDeltaTime());
+                    break;
             }
-            super.draw(batch,flipCache);
+
+            float u = obstacle.getPhysicsUnits();
+            // Determine drawing coordinates.
+            // Here we assume obstacle.getX() and getY() return the center position.
+            float posX = obstacle.getX() * u;
+            float posY = obstacle.getY() * u;
+            float drawWidth = width * u * 2f * scale;
+            float drawHeight = height * u * scale;
+
+            float originX = drawWidth / 2f;
+            float originY = drawHeight / 2f;
+
+            if (faceRight) {
+
+            } else {
+                frame.flip(true, false);
+            }
+
+            // Draw the current frame centered on the player's position.
+            batch.draw(frame,
+                posX - originX, // lower-left x position
+                posY - originY, // lower-left y position
+                originX,        // originX used for scaling and rotation
+                originY,        // originY
+                drawWidth,      // width
+                drawHeight,     // height
+                1f,             // scaleX
+                1f,             // scaleY
+                0f              // rotation (in degrees)
+            );
+
+//            if (faceRight) {
+//                flipCache.setToScaling( 1,1 );
+//            } else {
+//                flipCache.setToScaling( -1,1 );
+//            }
+//            super.draw(batch,flipCache);
 
         }
 
@@ -818,4 +920,5 @@
             batch.outline(teleportCircle);
             batch.setColor(Color.WHITE);
         }
+
     }

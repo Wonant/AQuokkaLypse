@@ -12,8 +12,13 @@ public class IdleTask extends LeafTask<CuriosityCritter> {
     @TaskAttribute
     public float speed;
 
+    @TaskAttribute(required = true)
+    public float duration;
+
     /** Internal timer tracking how long this task has been running */
     private float elapsed;
+
+
 
     @Override
     public void start() {
@@ -32,7 +37,7 @@ public class IdleTask extends LeafTask<CuriosityCritter> {
 
         if (getObject() instanceof CuriosityCritter) {
             CuriosityCritter critter = (CuriosityCritter) getObject();
-            if (!critter.canContinue()) {
+            if (!critter.getSafeToWalk()) {
                 speed = -speed;
                 critter.setMovement(speed);
                 critter.applyForce();
@@ -41,14 +46,14 @@ public class IdleTask extends LeafTask<CuriosityCritter> {
                 critter.applyForce();
             }
         }
-
-
+        if (elapsed > duration) {
+            return Status.SUCCEEDED;
+        }
         return Status.RUNNING;
     }
 
     @Override
     public void end() {
-        getObject().setMovement(0);
         if (getObject() instanceof CuriosityCritter) {
             CuriosityCritter critter = (CuriosityCritter) getObject();
             critter.setMovement(0);

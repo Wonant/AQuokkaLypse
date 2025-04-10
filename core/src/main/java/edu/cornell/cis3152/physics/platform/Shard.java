@@ -15,6 +15,8 @@
 
 import com.badlogic.gdx.graphics.Color;
 import com.badlogic.gdx.physics.box2d.BodyDef;
+import com.badlogic.gdx.physics.box2d.Filter;
+import com.badlogic.gdx.physics.box2d.Fixture;
 import com.badlogic.gdx.utils.JsonValue;
 import edu.cornell.gdiac.assets.ParserUtils;
 import edu.cornell.gdiac.physics2.BoxObstacle;
@@ -78,4 +80,15 @@ public class Shard extends ObstacleSprite {
         mesh.set(-size/2.0f,-size/2.0f,size,size);
     }
 
+    public void setFilter() {
+        for (Fixture fixture : getObstacle().getBody().getFixtureList()) {
+            // Because it's a sensor, we only want to detect collisions with the Player
+            Filter filter = fixture.getFilterData();
+            // Treat this shard as SCENERY for collision category
+            filter.categoryBits = CollisionFiltering.CATEGORY_SCENERY;
+            // Only collide with the player
+            filter.maskBits = CollisionFiltering.CATEGORY_PLAYER;
+            fixture.setFilterData(filter);
+        }
+    }
 }

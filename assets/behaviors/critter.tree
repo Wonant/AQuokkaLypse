@@ -8,16 +8,15 @@ import dreamShardNear:"edu.cornell.cis3152.physics.platform.aibehavior.tasks.Sha
 import fearMeterHigh:"edu.cornell.cis3152.physics.platform.aibehavior.tasks.FearMeterGuard"
 import inFollowRange:"edu.cornell.cis3152.physics.platform.aibehavior.tasks.FollowRangeGuard"
 import stareShard:"edu.cornell.cis3152.physics.platform.aibehavior.tasks.StareShardTask"
+import stunnedGuard:"edu.cornell.cis3152.physics.platform.aibehavior.tasks.StunnedGuardTask"
+import stunnedAction:"edu.cornell.cis3152.physics.platform.aibehavior.tasks.StunnedActionTask"
 
 root
     dynamicGuardSelector
+        (stunnedGuard) stunnedAction stunDuration:0.3
         (playerVisible) sequence
-            alerted
-            selector
-                (dreamShardNear) moveShard tolerance:0.1
-                (fearMeterHigh) run duration:2 runSpeed:2
+            alerted duration:0.05
+            dynamicGuardSelector
                 (inFollowRange) stare followSpeed:2
         selector
-            sequence
-                (dreamShardNear) stareShard duration:5 probability:0.5
-            idle speed:2
+            idle speed:2 duration:0.3

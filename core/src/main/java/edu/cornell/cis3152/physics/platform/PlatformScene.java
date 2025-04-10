@@ -12,6 +12,7 @@
  */
 package edu.cornell.cis3152.physics.platform;
 
+import com.badlogic.gdx.ai.GdxAI;
 import com.badlogic.gdx.graphics.g2d.Sprite;
 import com.badlogic.gdx.maps.MapLayer;
 import com.badlogic.gdx.maps.MapObject;
@@ -190,6 +191,8 @@ public class PlatformScene implements Screen{
 
     /** tiled map + map info */
     private TiledMapInfo tiledMap;
+
+
 
 
     /*==============================ContactListener Getters/Setters===============================*/
@@ -665,7 +668,7 @@ public class PlatformScene implements Screen{
                 position.x += (this.avatar.getObstacle().getX() * units - position.x) * lerp * delta;
                 position.y += (this.avatar.getObstacle().getY() * units - position.y) * lerp * delta;
                 camera.position.set(position);
-                camera.zoom = 0.8f;
+                camera.zoom = 0.7f;
                 clampCamera();
                 camera.update();
             }
@@ -697,7 +700,7 @@ public class PlatformScene implements Screen{
         float maxY = bounds.y * units + halfViewportHeight;
         float minY = (bounds.y + bounds.height) * units - halfViewportHeight;
 
-        camera.position.x = MathUtils.clamp(camera.position.x, minX-100, maxX+100);
+        camera.position.x = MathUtils.clamp(camera.position.x, minX-200, maxX+200);
         camera.position.y = MathUtils.clamp(camera.position.y, minY+100, maxY-50);
     }
 
@@ -840,8 +843,8 @@ public class PlatformScene implements Screen{
     private void populateLevel() {
         // can change for testing
         tiledMap = new TiledMapInfo("maps/dreamwalker_alpha_testmap1.tmx");
-        aiManager = new AIManager("behaviors/critter.tree", "behaviors/dweller.tree","behaviors/maintenance.tree");
-
+        aiManager = new AIManager("behaviors/critter.tree", "behaviors/dweller.tree","behaviors/maintenance.tree", directory);
+        aiManager.setPlayer(avatar);
         shardPos = new ArrayList<>();
 
         float units = TiledMapInfo.PIXELS_PER_WORLD_METER;
@@ -870,6 +873,7 @@ public class PlatformScene implements Screen{
             goalShard.setTexture(texture);
             goalShard.getObstacle().setName("goal_" + i);
             addSprite(goalShard);
+            goalShard.setFilter();
         }
 
         MapLayer collisionLayer = tiledMap.get().getLayers().get("CollisionLayer");
@@ -945,13 +949,17 @@ public class PlatformScene implements Screen{
 //        }
 
         // Create Player
-        texture = directory.getEntry( "platform-playerSprite", Texture.class );
+        texture = directory.getEntry( "player-walk", Texture.class );
         avatar = new Player(units, constants.get("player"));
-        avatar.setTexture(texture);
+        Texture idle = directory.getEntry("player-idle", Texture.class);
+        Texture jump = directory.getEntry("player-jump", Texture.class);
+
         addSprite(avatar);
 
+        avatar.createAnimators(texture, idle, jump);
         // Have to do after body is created
         avatar.setFilter();
+
         avatar.createSensor();
 
         avatar.createScareSensor();
@@ -1117,7 +1125,6 @@ public class PlatformScene implements Screen{
 
 
         avatar.setStunning(input.didStun());
-        avatar.setHarvesting(input.didSecondary());
         avatar.setTeleporting(input.didM1());
 
         // Process actions in object model
@@ -1139,14 +1146,17 @@ public class PlatformScene implements Screen{
                     queuedHarvestedEnemy.getObstacle().markRemoved(true);
                     queuedHarvestedEnemy = null;
                     avatar.setFearMeter(avatar.getFearMeter() + 3);
+                    aiManager.unregister(queuedHarvestedEnemy);
                 }
             } else if (queuedHarvestedEnemyD != null) {
                 if (!queuedHarvestedEnemyD.getObstacle().isRemoved()) {
                     queuedHarvestedEnemyD.getObstacle().markRemoved(true);
                     queuedHarvestedEnemyD = null;
                     avatar.setFearMeter(avatar.getFearMeter() + 5);
+                    aiManager.unregister(queuedHarvestedEnemyD);
                 }
             }
+            System.out.println(queuedHarvestedEnemy + " being harvested");
         }
 
         if (avatar.isStunning() && avatar.getFearMeter() > STUN_COST) {
@@ -1182,6 +1192,7 @@ public class PlatformScene implements Screen{
         }
 
         aiManager.update(dt);
+        GdxAI.getTimepiece().update(dt);
 
         avatar.applyForce(world);
         if (avatar.isJumping()) {

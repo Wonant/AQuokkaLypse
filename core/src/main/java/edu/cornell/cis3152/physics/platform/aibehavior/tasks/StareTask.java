@@ -7,6 +7,7 @@ import com.badlogic.gdx.ai.btree.Task;
 import com.badlogic.gdx.ai.btree.annotation.TaskAttribute;
 import edu.cornell.cis3152.physics.platform.CuriosityCritter;
 import edu.cornell.cis3152.physics.platform.Enemy;
+import edu.cornell.cis3152.physics.platform.Player;
 
 //staring and following the player, as long as in sensor range
 public class StareTask extends LeafTask<Enemy> {
@@ -14,14 +15,13 @@ public class StareTask extends LeafTask<Enemy> {
     @TaskAttribute(required = true)
     public float followSpeed;
 
+    private float slowFactor;
+
     private float elapsed;
 
     @Override
     public void start() {
         elapsed = 0;
-        CuriosityCritter critter = (CuriosityCritter) getObject();
-        critter.setMovement(followSpeed);
-        critter.applyForce();
     }
 
     @Override
@@ -36,8 +36,9 @@ public class StareTask extends LeafTask<Enemy> {
         float critterX = critter.getObstacle().getX();
         float playerX = critter.getScene().getAvatar().getObstacle().getX();
 
-        float movement = (playerX > critterX) ? followSpeed : -followSpeed;
+        float movement = (playerX - critterX) > 0.3 ? followSpeed : -followSpeed;
         critter.setMovement(movement);
+        critter.applyForce();
 
         return Status.RUNNING;
     }

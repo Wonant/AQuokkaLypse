@@ -1,6 +1,7 @@
 package edu.cornell.cis3152.physics.platform.aibehavior.tasks;
 
 import com.badlogic.gdx.Gdx;
+import com.badlogic.gdx.ai.GdxAI;
 import com.badlogic.gdx.ai.btree.LeafTask;
 import com.badlogic.gdx.ai.btree.Task;
 import com.badlogic.gdx.ai.btree.annotation.TaskAttribute;
@@ -9,7 +10,7 @@ import edu.cornell.cis3152.physics.platform.Enemy;
 
 public class AlertedTask extends LeafTask<Enemy> {
 
-    @TaskAttribute
+    @TaskAttribute(required = true)
     public float duration;  // Duration of the alert animation.
 
     private float elapsed;
@@ -20,14 +21,17 @@ public class AlertedTask extends LeafTask<Enemy> {
 
         if(getObject() instanceof CuriosityCritter) {
             CuriosityCritter critter = (CuriosityCritter) getObject();
+            critter.setMovement(0);
+            critter.applyForce();
             // play critter alerted anikmation/behavior
         }
     }
 
     @Override
     public Status execute() {
-        float dt = Gdx.graphics.getDeltaTime();
+        float dt = GdxAI.getTimepiece().getDeltaTime();
         elapsed += dt;
+        System.out.println("Alerted animation elapsed: " + elapsed);
         return (elapsed >= duration) ? Status.SUCCEEDED : Status.RUNNING;
     }
 

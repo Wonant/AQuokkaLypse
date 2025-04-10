@@ -20,7 +20,7 @@ public class BehaviorLoop<E> {
         this.step = step;
 
         //defaults
-        delay = 0.3f;
+        delay = 0.5f;
         runtime = 0;
     }
 
@@ -39,6 +39,7 @@ public class BehaviorLoop<E> {
             tree.step();
             step++;
             runtime = 0;
+            System.out.println("Enemy in state " + getInfo());
         }
     }
 

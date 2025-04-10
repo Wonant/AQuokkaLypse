@@ -27,22 +27,23 @@ public class MoveShardTask extends LeafTask<Enemy> {
 
     @Override
     public Status execute() {
-        if(getObject() instanceof CuriosityCritter) {
-            CuriosityCritter critter = (CuriosityCritter) getObject();
-            // Check if the critter is carrying a shard.
-            if(critter.heldShard == null) {
-                return Status.FAILED;
-            }
-            // Get the current position of the shard.
-            Vector2 shardPos = critter.getObstacle().getPosition();
-            // Compare with the critter's desired target position.
-            Vector2 target = critter.getWorldTarget();
-            if(shardPos.epsilonEquals(target, tolerance)) {
-                return Status.SUCCEEDED;
-            }
-            return Status.RUNNING;
-        }
-        return Status.FAILED;
+//        if(getObject() instanceof CuriosityCritter) {
+//            CuriosityCritter critter = (CuriosityCritter) getObject();
+//            // Check if the critter is carrying a shard.
+//            if(critter.heldShard == null) {
+//                return Status.FAILED;
+//            }
+//            // Get the current position of the shard.
+//            Vector2 shardPos = critter.getObstacle().getPosition();
+//            // Compare with the critter's desired target position.
+//            Vector2 target = critter.getWorldTarget();
+//            if(shardPos.epsilonEquals(target, tolerance)) {
+//                return Status.SUCCEEDED;
+//            }
+//            return Status.RUNNING;
+//        }
+//        return Status.FAILED;
+        return Status.SUCCEEDED;
     }
 
     @Override

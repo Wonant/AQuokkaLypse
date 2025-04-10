@@ -136,8 +136,8 @@ public class Surface extends ObstacleSprite {
         obstacle = new PolygonObstacle(points);
         obstacle.setBodyType( BodyDef.BodyType.StaticBody );
         obstacle.setDensity( settings.getFloat( "density", 0 ) );
-        obstacle.setFriction( settings.getFloat( "friction", 0 ) );
-        obstacle.setRestitution( settings.getFloat( "restitution", 0 ) );
+        obstacle.setFriction( settings.getFloat( "friction", 0.3f) );
+        obstacle.setRestitution( settings.getFloat( "restitution", 0.3f ) );
         obstacle.setPhysicsUnits( units );
         obstacle.setUserData( this );
 

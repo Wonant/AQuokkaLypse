@@ -12,6 +12,10 @@ public class LevelContactListener implements ContactListener {
 
     private final PlatformScene dreamWalkerScene;
 
+
+    private boolean playerSlowed = false;
+    private float originalPlayerMovement;
+
     public LevelContactListener(PlatformScene scene) {
         this.dreamWalkerScene = scene;
     }
@@ -66,6 +70,14 @@ public class LevelContactListener implements ContactListener {
                     ((CuriosityCritter) bd1).playerInFollowRange = true;
                 } else if (bd2 instanceof CuriosityCritter){
                     ((CuriosityCritter) bd2).playerInFollowRange = true;
+                }
+                if (!playerSlowed) {
+                    Player player = dreamWalkerScene.getAvatar();
+                    originalPlayerMovement = player.getMovement(); // store whatever it is now
+                    float newMovement = originalPlayerMovement * 0.5f;
+                    player.setMovement(newMovement);
+                    playerSlowed = true;
+                    System.out.println("Player movement slowed by critter follow sensor");
                 }
             }
 
@@ -204,10 +216,12 @@ public class LevelContactListener implements ContactListener {
                 }
             }
 
-            // if there is a collision between an enemy and the player's scare sensor
-            if( (dreamWalkerScene.getAvatar().getScareSensorName().equals(fd1) && bd2 instanceof Enemy)
-                || (dreamWalkerScene.getAvatar().getScareSensorName().equals(fd2) && bd1 instanceof Enemy) ){
+            // HARVESTING COLLISIONS
 
+            // if there is a collision between an enemy and the player's scare sensor
+            if(( (dreamWalkerScene.getAvatar().getScareSensorName().equals(fd1) && bd2 instanceof Enemy)
+                || (dreamWalkerScene.getAvatar().getScareSensorName().equals(fd2) && bd1 instanceof Enemy) )){
+                System.out.println("hi");
                 Enemy harvestedEnemy;
                 // if the enemy is not a Mind Maintenance
                 if (!(bd2 instanceof MindMaintenance) && !(bd1 instanceof MindMaintenance)) {
@@ -215,12 +229,12 @@ public class LevelContactListener implements ContactListener {
                     {
                         harvestedEnemy = (Enemy) bd2;
                         dreamWalkerScene.performHarvest(harvestedEnemy);
-                        dreamWalkerScene.getAiManager().unregister(harvestedEnemy);
+
                     } else if (dreamWalkerScene.getAvatar().getScareSensorName().equals(fd2) && fd1 != "walk_sensor" && fd1 != "follow_sensor" && fd1 != "vision_sensor")
                     {
                         harvestedEnemy = (Enemy) bd1;
                         dreamWalkerScene.performHarvest(harvestedEnemy);
-                        dreamWalkerScene.getAiManager().unregister(harvestedEnemy);
+
                     }
                 }
                 dreamWalkerScene.getAvatar().setHarvesting(true);
@@ -280,6 +294,12 @@ public class LevelContactListener implements ContactListener {
             }
             else {
                 ((Enemy) bodyDataB).setAwareOfPlayer(false);
+            }
+            if (playerSlowed) {
+                Player player = dreamWalkerScene.getAvatar();
+                player.setMovement(originalPlayerMovement); // revert
+                playerSlowed = false;
+                System.out.println("Player movement restored after follow sensor separation");
             }
             dreamWalkerScene.getAvatar().setTakingDamage(false);
             System.out.println("Enemy stopped seeing player");

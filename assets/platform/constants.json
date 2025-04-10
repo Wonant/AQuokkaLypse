@@ -13,7 +13,7 @@
     "restitution": 0.0
   },
   "goal" : {
-    "pos"       : [[21.0, 5.0], [29.0, 5.0], [55, 5]],
+    "pos"       : [[21.0, 10.0], [29.0, 12.0], [57, 13]],
     "size"      : 1.0,
     "density"   : 0.0,
     "friction"  : 0.0,
@@ -23,13 +23,13 @@
     "pos"       : [2.5, 7.0],
     "inner"     : [0.7, 1.45],
     "size"      : 1.5,
-    "force"     : 20.0,
+    "force"     : 25.0,
     "damping"   : 10.0,
-    "density"   : 0.5,
-    "friction"  : 0.0,
+    "density"   : 1.0,
+    "friction"  : 0.5,
     "maxspeed"  : 5.0,
     "maxfear"   : 10.0,
-    "jump_force": 8.0,
+    "jump_force": 20.0,
     "jump_cool" : 30,
     "shot_cool" : 40,
     "sensor": {
@@ -58,7 +58,7 @@
     }
   },
   "curiosity-critter" : {
-    "pos"       : [[15.5, 10.0]],
+    "pos"       : [[15.5, 10.0], [40.5, 17.0]],
     "inner"     : [0.7, 1.9],
     "size"      : 0.8,
     "force"     : 20.0,
@@ -78,7 +78,7 @@
     }
   },
   "mind-maintenance" : {
-    "pos"       : [[28.5, 3.0]],
+    "pos"       : [],
     "inner"     : [0.8, 3.5],
     "size"      : 0.8,
     "force"     : 20.0,
@@ -98,7 +98,7 @@
     }
   },
   "dream-dweller": {
-    "pos"       : [[50.5, 3.0]],
+    "pos"       : [],
     "inner"     : [2.0, 1.7],
     "size"      : 1.5,
     "force"     : 20.0,

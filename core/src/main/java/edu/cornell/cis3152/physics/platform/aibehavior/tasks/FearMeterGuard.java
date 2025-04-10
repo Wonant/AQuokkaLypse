@@ -13,7 +13,7 @@ public class FearMeterGuard extends LeafTask<Enemy> {
     @Override
     public Status execute() {
         // Replace the stub with your actual check.
-        if(getObject().getScene().getAvatar().getFearMeter() > getObject().getScene().getAvatar().getMaxFearMeter() / 2) {
+        if(getObject().getScene().getAvatar().getFearMeter() > getObject().getScene().getAvatar().getMaxFearMeter() * 0.75) {
             return Status.SUCCEEDED;
         }
         return Status.FAILED;

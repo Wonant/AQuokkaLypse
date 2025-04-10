@@ -20,6 +20,9 @@ public class EnemyVisionRaycast implements RayCastCallback {
     private float closestFraction = 1f;
     public boolean fixtureIsStair;
 
+    private Player hitPlayer = null;
+    private Vector2 hitPlayerPosition = null;
+
     private Vector2 posAboveStair = new Vector2();
 
     private float stepHeightThreshold;
@@ -127,6 +130,23 @@ public class EnemyVisionRaycast implements RayCastCallback {
             }
             return 1;
         }
+        else if (mode == VisionMode.PLAYER_CHECK) {
+            if (fixture.isSensor()) return 1;
+            Object userData = fixture.getBody().getUserData();
+            if (fixture.getBody().getUserData() instanceof Surface) {
+                //stop looking, don't really need to do much with the surface
+                hitPoint = point;
+                hitFixture = fixture;
+                return 0;
+            } else if (fixture.getBody().getUserData() instanceof Player) {
+                Player player = (Player) userData;
+                hitPlayer = player;
+                hitPlayerPosition = player.getObstacle().getPosition();
+                hitPoint = point;
+                return 0;
+            }
+            return 1;
+        }
 
         else {
             // Skip sensors as they don't block vision
@@ -164,6 +184,14 @@ public class EnemyVisionRaycast implements RayCastCallback {
             return 0; // Stop checking
         }
         return 1f;
+    }
+
+    public Player getHitPlayer() {
+        return hitPlayer;
+    }
+
+    public Vector2 getHitPlayerPosition() {
+        return hitPlayerPosition;
     }
 
     public void setMode(EnemyVisionRaycast.VisionMode mode) {
