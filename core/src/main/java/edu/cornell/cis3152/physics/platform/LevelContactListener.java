@@ -237,7 +237,7 @@ public class LevelContactListener implements ContactListener {
 
                     }
                 }
-                dreamWalkerScene.getAvatar().setHarvesting(true);
+                //dreamWalkerScene.getAvatar().setHarvesting(true);
 
             }
 

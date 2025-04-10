@@ -63,6 +63,9 @@
         private float maxspeed;
         /** The impulse for the character jump */
         private float jump_force;
+        /** The impulse for the character dash */
+        private float dash_force;
+
 
         /** Cooldown (in animation frames) for jumping */
         private int jumpLimit;
@@ -480,6 +483,7 @@
             damping = data.getFloat("damping", 0);
             force = data.getFloat("force", 0);
             jump_force = data.getFloat( "jump_force", 0 );
+            dash_force = data.getFloat("dash_force", 0);
             jumpLimit = data.getInt( "jump_cool", 0 );
             harvestLimit = 60;
             stunLimit = data.getInt( "shot_cool", 0 );
@@ -653,6 +657,15 @@
             } else {
                 forceCache.set(getMovement(),0);
                 body.applyForce(forceCache,pos,true);
+            }
+
+            if (isHarvesting()){
+                float direction = -1;
+                if (isFacingRight()){
+                    direction = 1;
+                }
+                forceCache.set(direction * dash_force,0);
+                body.applyLinearImpulse(forceCache,pos,true);
             }
 
             if (isJumping()) {
