@@ -88,6 +88,14 @@ public class LevelContactListener implements ContactListener {
                 }
             }
 
+            if((bodyDataA instanceof ShieldWall || bodyDataB instanceof ShieldWall)
+                && (bodyDataA instanceof Player || bodyDataB instanceof Player)
+                && !(dreamWalkerScene.getAvatar().getScareSensorName().equals(fd1) || dreamWalkerScene.getAvatar().getScareSensorName().equals(fd2))) {
+
+                dreamWalkerScene.getAvatar().setTakingDamage(true);
+
+            }
+
             // If there is a collision between a vision sensor and the player
             if ( ("vision_sensor".equals(fd1) || "vision_sensor".equals(fd2))
                 && (bodyDataA instanceof Player || bodyDataB instanceof Player)
@@ -95,16 +103,19 @@ public class LevelContactListener implements ContactListener {
 
                 // Check if the vision sensor belongs to an "un-stunned" enemy, and if
                 // so update the enemy's awareness and apply damage to player
-                if ( bodyDataA instanceof Enemy && !((Enemy) bodyDataA).isStunned() ) {
+                if ( bodyDataA instanceof Enemy && !((Enemy) bodyDataA).isStunned()) {
                     ((Enemy) bodyDataA).setAwareOfPlayer(true);
                     System.out.println(bodyDataA.getClass() + " saw player!");
-                    dreamWalkerScene.getAvatar().setTakingDamage(true);
+                    if (!(bodyDataA instanceof MindMaintenance)) {
+                        dreamWalkerScene.getAvatar().setTakingDamage(true);
+                    }
                 }
                 else if ( bodyDataB instanceof Enemy && !((Enemy) bodyDataB).isStunned() )  {
                     System.out.println(bodyDataB.getClass() + " saw player!");
                     ((Enemy) bodyDataB).setAwareOfPlayer(true);
-                    dreamWalkerScene.getAvatar().setTakingDamage(true);
-
+                    if(!(bodyDataB instanceof MindMaintenance)){
+                        dreamWalkerScene.getAvatar().setTakingDamage(true);
+                    }
                 }
             }
 
@@ -272,6 +283,14 @@ public class LevelContactListener implements ContactListener {
             }
         }
 
+        // stop taking damage when player stops touching shieldwall
+        if((bodyDataA instanceof ShieldWall || bodyDataB instanceof ShieldWall)
+            && (bodyDataA instanceof Player || bodyDataB instanceof Player)
+            && !(dreamWalkerScene.getAvatar().getScareSensorName().equals(fd1) || dreamWalkerScene.getAvatar().getScareSensorName().equals(fd2))) {
+
+            dreamWalkerScene.getAvatar().setTakingDamage(false);
+
+        }
 
         if (("follow_sensor".equals(fd1) || "follow_sensor".equals(fd2)) && (bodyDataA instanceof Player || bodyDataB instanceof Player)) {
             if (bodyDataA instanceof Enemy) {
