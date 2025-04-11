@@ -183,11 +183,11 @@ public class PlatformScene implements Screen{
 
     protected PooledList<Surface> shadowPlatformQueue = new PooledList<Surface>();
     private DreamDweller queuedHarvestedEnemyD = null;
-    private HashMap<DreamDweller, Sprite> visionCones3;
     private HashMap<Teleporter, Float> teleporterCreationTimes = new HashMap<>();
     private float timeElapsed = 0f;
 
     protected PooledList<ShieldWall> shieldWalls = new PooledList<ShieldWall>();
+    protected PooledList<Spear> spears = new PooledList<Spear>();
 
     // global game units
     float units;
@@ -1041,6 +1041,22 @@ public class PlatformScene implements Screen{
 
                 addQueuedObject(wall);
             }
+            else if (e instanceof DreamDweller && ((DreamDweller) e).isShooting()){
+                Vector2 position = e.getObstacle().getPosition();
+                float direction = 1;
+                if (avatar.getObstacle().getPosition().x < position.x){
+                    direction = -1;
+                }
+                JsonValue bulletjv = constants.get("bullet");
+                Texture texture = directory.getEntry("platform-bullet", Texture.class);
+                Spear spear = new Spear(units, bulletjv, position, direction);
+                spears.add(spear);
+                ((DreamDweller) e).incrementShotsFired();
+                spear.setTexture(texture);
+
+                System.out.println("Creating Spear at " + position + " with direction " + direction);
+                addQueuedObject(spear);
+            }
         }
 
         for(ShieldWall s: shieldWalls){
@@ -1049,6 +1065,15 @@ public class PlatformScene implements Screen{
             if (Math.abs(s.getV()) < 0.05){
                 removeBullet(s);
                 shieldWalls.remove(s);
+            }
+
+        }
+        for(Spear p: spears){
+            p.update();
+
+            if (Math.abs(p.getV()) < 0.05){
+                removeBullet(p);
+                spears.remove(p);
             }
 
         }

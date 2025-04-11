@@ -86,7 +86,7 @@ public class AIControllerManager {
         /**dream dweller is idly looking around, but not moving*/
         IDLE_LOOK,
         /**dream dweller is now alerted to player's presence,will alert nearby enemies*/
-        ALERT,
+        SHOOT,
         /** dream dweller is stunned, cannot move or do damage to player */
         STUNNED     // Temporarily immobilized by player's stun
     }
@@ -607,7 +607,9 @@ public class AIControllerManager {
         data.dweller.setMovement(0);
         data.dweller.getObstacle().setVX(0);
         data.dweller.getObstacle().setVY(0);
-
+        if (data.state == DwellerFSM.START) {
+            transitionDwellerState(data, DwellerFSM.IDLE_LOOK);
+        }
         if (isStunned) {
             if (data.state != DwellerFSM.STUNNED) {
                 transitionDwellerState(data, DwellerFSM.STUNNED);
@@ -621,48 +623,41 @@ public class AIControllerManager {
                 transitionDwellerState(data, DwellerFSM.IDLE_LOOK);
             }
             return;
-        }
+        }else{
+            if (seesPlayer && player != null) {
 
-        if (seesPlayer) {
-            if (data.state == DwellerFSM.IDLE_LOOK) {
-                transitionDwellerState(data, DwellerFSM.ALERT);
-            }
+                if (data.state == DwellerFSM.IDLE_LOOK) {
+                    transitionDwellerState(data, DwellerFSM.SHOOT);
+                    data.dweller.resetShotsFired();
+                }
+                if (data.state == DwellerFSM.SHOOT) {
+                    data.dweller.setShooting(true);
 
-            if (player != null) {
+                    if (data.dweller.getShotsFired() >= 3) {
+                        data.dweller.setShooting(false);
+                        data.dweller.resetShotsFired();
+                        transitionDwellerState(data, DwellerFSM.IDLE_LOOK);
+                    }
+
+                }
+                // Calculate angle to player
                 Vector2 playerPos = getPlayerPosition(player);
                 float dx = playerPos.x - dwellerPos.x;
                 float dy = playerPos.y - dwellerPos.y;
-
                 float angleToPlayer = MathUtils.atan2(dy, dx) * MathUtils.radiansToDegrees;
+                angleToPlayer -= 90;  // Adjust based on sprite orientation
 
-                angleToPlayer -= 90;
-
+                // Update vision cone to track player
                 data.dweller.setVisionAngle(angleToPlayer);
-
                 System.out.println("Dream Dweller tracking player at angle: " + angleToPlayer);
-            }
-        } else {
-            if (data.state == DwellerFSM.IDLE_LOOK) {
-                if (data.stateTimer > data.stateDuration) {
+            } else {
+                if (data.state == DwellerFSM.SHOOT && data.stateDuration>0.2) {
+                    data.dweller.setShooting(false);
+                    data.dweller.resetShotsFired();
                     transitionDwellerState(data, DwellerFSM.IDLE_LOOK);
-                } else {
-                    float time = data.stateTimer;
-                    float swingRange = 60.0f;
-                    float swingSpeed = 1.0f;
-                    float newAngle = swingRange * MathUtils.sin(time * swingSpeed);
-
-                    data.dweller.setVisionAngle(newAngle);
                 }
             }
         }
-
-        if (data.state == DwellerFSM.ALERT) {
-            alertNearbyEnemies(data.dweller);
-            transitionDwellerState(data, DwellerFSM.IDLE_LOOK);
-        }
-
-        data.dweller.applyForce();
-
     }
     private void transitionDwellerState (DwellerAI data, DwellerFSM newState) {
         data.state = newState;
@@ -672,56 +667,22 @@ public class AIControllerManager {
 
         switch (newState) {
             case IDLE_LOOK:
+                data.dweller.setShooting(false);
+                data.dweller.resetShotsFired();
                 break;
 
-            case ALERT:
-                data.stateDuration = 5.0f;
+            case SHOOT:
+                data.stateDuration = 2.0f;
+                data.dweller.setShooting(true);
                 break;
 
             case STUNNED:
-                data.stateDuration = 4.0f; // Harder to stun than other enemies
+                data.stateDuration = 4.0f;
+                data.dweller.setShooting(false);
+                data.dweller.resetShotsFired();
+                data.dweller.setMovement(0);
                 break;
         }
-    }
-    private void alertNearbyEnemies(DreamDweller dweller) {
-        Vector2 dwellerPos = getDwellerPosition(dweller);
-        float alertRadius = dweller.getAlertRadius(); // 从 DreamDweller 获取警报半径
-
-        System.out.println("Dream Dweller alerting nearby enemies within radius: " + alertRadius);
-
-        for (EnemyAI enemyAI : entities) {
-            if (enemyAI.enemy == dweller) {
-                continue;
-            }
-
-            Vector2 enemyPos = new Vector2(
-                enemyAI.enemy.getObstacle().getX(),
-                enemyAI.enemy.getObstacle().getY()
-            );
-
-            float distance = dwellerPos.dst(enemyPos);
-
-            if (distance <= alertRadius) {
-                if (enemyAI instanceof CritterAI) {
-                    CritterAI critterAI = (CritterAI) enemyAI;
-
-
-                    if (critterAI.state != CritterFSM.STUNNED) {
-                        critterAI.critter.setAwareOfPlayer(true);
-                        transitionCritterState(critterAI, CritterFSM.ALERTED);
-                        System.out.println("Alerted a CuriosityCritter at distance: " + distance);
-                    }
-                } else if (enemyAI instanceof MaintenanceAI) {
-                    MaintenanceAI maintenanceAI = (MaintenanceAI) enemyAI;
-
-                    if (maintenanceAI.state != MaintenanceFSM.STUNNED) {
-                        maintenanceAI.maintenance.setAwareOfPlayer(true);
-                        transitionMaintenanceState(maintenanceAI, MaintenanceFSM.CHASING);
-                        System.out.println("Alerted a MindMaintenance at distance: " + distance);
-                    }
-                }
-
-            }
-        }
+        data.dweller.applyForce();
     }
 }

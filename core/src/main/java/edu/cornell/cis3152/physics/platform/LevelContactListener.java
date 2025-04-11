@@ -51,6 +51,12 @@ public class LevelContactListener implements ContactListener {
                 System.out.println(bd2.getClass());
                 System.out.println();
             }
+            if (bd1 instanceof Spear|| bd2 instanceof Spear){
+                System.out.println("Contact detected with spear");
+                System.out.println(bd1.getClass());
+                System.out.println(bd2.getClass());
+                System.out.println();
+            }
 
             // Check for collision with dream shard
             if ((bd1 == dreamWalkerScene.getAvatar() && bd2 instanceof Door)
@@ -225,6 +231,15 @@ public class LevelContactListener implements ContactListener {
                 dreamWalkerScene.getAvatar().setHarvesting(true);
 
             }
+            if (("dweller_vision_sensor".equals(fd1) || "dweller_vision_sensor".equals(fd2))
+                && (bodyDataA instanceof DreamDweller || bodyDataB instanceof DreamDweller)
+                && (bodyDataA instanceof Player || bodyDataB instanceof Player)) {
+
+                DreamDweller dweller = (bodyDataA instanceof DreamDweller) ? (DreamDweller) bodyDataA : (DreamDweller) bodyDataB;
+                dweller.setAwareOfPlayer(true);
+                dreamWalkerScene.getAvatar().setTakingDamage(true);
+                System.out.println("Dweller saw player!");
+            }
 
         } catch (Exception e) {
             e.printStackTrace();
@@ -342,10 +357,31 @@ public class LevelContactListener implements ContactListener {
                 dreamWalkerScene.getAvatar().setIsShadow(false);
             }
         }
+        if (("dweller_vision_sensor".equals(fd1) || "dweller_vision_sensor".equals(fd2))
+            && (bodyDataA instanceof DreamDweller || bodyDataB instanceof DreamDweller)
+            && (bodyDataA instanceof Player || bodyDataB instanceof Player)) {
+
+            DreamDweller dweller = (bodyDataA instanceof DreamDweller) ? (DreamDweller) bodyDataA : (DreamDweller) bodyDataB;
+            dweller.setAwareOfPlayer(false);
+            dreamWalkerScene.getAvatar().setTakingDamage(false);
+            System.out.println("Dweller lost sight of player.");
+        }
     }
 
     /** Unused ContactListener method */
     public void postSolve(Contact contact, ContactImpulse impulse) {}
     /** Unused ContactListener method */
-    public void preSolve(Contact contact, Manifold oldManifold) {}
+    public void preSolve(Contact contact, Manifold oldManifold) {
+        Object a = contact.getFixtureA().getBody().getUserData();
+        Object b = contact.getFixtureB().getBody().getUserData();
+
+        if ((a instanceof Player && b instanceof DreamDweller) ||
+            (b instanceof Player && a instanceof DreamDweller)) {
+            contact.setEnabled(false);
+        }
+        if ((a instanceof Spear && b instanceof Enemy) ||
+            (b instanceof Spear && a instanceof Enemy)) {
+            contact.setEnabled(false);
+        }
+    }
 }
