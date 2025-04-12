@@ -73,6 +73,10 @@
         "platf1" : "shared/platf1.png",
         "platf" : "shared/platf1.png",
 
+        "player-walk" : "platform/walk.png",
+        "player-idle" : "platform/idle.png",
+        "player-jump" : "platform/jump.png",
+
         "background-proto" : "platform/dreamBackground.png",
         "background-technical" : "shared/backgroundTemple.png",
         "curiosity-critter-active": "shared/CuriosityCritterActive.png",

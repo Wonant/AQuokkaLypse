@@ -1,0 +1,22 @@
+import idle:"edu.cornell.cis3152.physics.platform.aibehavior.tasks.IdleTask"
+import moveShard:"edu.cornell.cis3152.physics.platform.aibehavior.tasks.MoveShardTask"
+import run:"edu.cornell.cis3152.physics.platform.aibehavior.tasks.RunTask"
+import stare:"edu.cornell.cis3152.physics.platform.aibehavior.tasks.StareTask"
+import playerVisible:"edu.cornell.cis3152.physics.platform.aibehavior.tasks.PlayerVisibleGuard"
+import alerted:"edu.cornell.cis3152.physics.platform.aibehavior.tasks.AlertedTask"
+import dreamShardNear:"edu.cornell.cis3152.physics.platform.aibehavior.tasks.ShardNearGuard"
+import fearMeterHigh:"edu.cornell.cis3152.physics.platform.aibehavior.tasks.FearMeterGuard"
+import inFollowRange:"edu.cornell.cis3152.physics.platform.aibehavior.tasks.FollowRangeGuard"
+import stareShard:"edu.cornell.cis3152.physics.platform.aibehavior.tasks.StareShardTask"
+import stunnedGuard:"edu.cornell.cis3152.physics.platform.aibehavior.tasks.StunnedGuardTask"
+import stunnedAction:"edu.cornell.cis3152.physics.platform.aibehavior.tasks.StunnedActionTask"
+
+root
+    dynamicGuardSelector
+        (stunnedGuard) stunnedAction stunDuration:0.3
+        (playerVisible) sequence
+            alerted duration:0.05
+            dynamicGuardSelector
+                (inFollowRange) stare followSpeed:2
+        selector
+            idle speed:2 duration:0.3

@@ -12,7 +12,11 @@
  */
 package edu.cornell.cis3152.physics.platform;
 
+import com.badlogic.gdx.ai.GdxAI;
 import com.badlogic.gdx.graphics.g2d.Sprite;
+import com.badlogic.gdx.maps.MapLayer;
+import com.badlogic.gdx.maps.MapObject;
+import com.badlogic.gdx.maps.objects.RectangleMapObject;
 import edu.cornell.cis3152.physics.AIControllerManager;
 import edu.cornell.cis3152.physics.ObstacleGroup;
 
@@ -27,25 +31,20 @@ import com.badlogic.gdx.math.Vector2;
 import com.badlogic.gdx.physics.box2d.*;
 import com.badlogic.gdx.utils.JsonValue;
 import com.badlogic.gdx.utils.ScreenUtils;
+import edu.cornell.cis3152.physics.platform.aibehavior.AIManager;
 import edu.cornell.gdiac.assets.AssetDirectory;
 import edu.cornell.gdiac.util.*;
 import edu.cornell.gdiac.graphics.*;
 import edu.cornell.gdiac.physics2.*;
-import com.badlogic.gdx.Input;
 import com.badlogic.gdx.graphics.g2d.TextureRegion;
 import com.badlogic.gdx.math.*;
 import com.badlogic.gdx.utils.*;
-import com.badlogic.gdx.audio.*;
-import com.badlogic.gdx.graphics.*;
-import com.badlogic.gdx.physics.box2d.*;
 
 import edu.cornell.cis3152.physics.InputController;
 //import edu.cornell.cis3152.physics.rocket.Box;
-import edu.cornell.gdiac.assets.AssetDirectory;
 //import edu.cornell.cis3152.physics.PhysicsScene;
 import edu.cornell.gdiac.audio.SoundEffect;
 import edu.cornell.gdiac.audio.SoundEffectManager;
-import edu.cornell.gdiac.physics2.*;
 
 /**
  * The game scene for the platformer game.
@@ -152,13 +151,16 @@ public class PlatformScene implements Screen{
     private int prev_debug;
     private Sprite visionCone;
 
+    /** manages ai control for all entities */
+    private AIControllerManager aiCManager;
+    private AIManager aiManager;
+
     private PooledList<Enemy> enemies = new PooledList<>();
-    private AIControllerManager aiManager;
     private LevelContactListener levelContactListener;
     /** Reference to the goalDoor (for collision detection) */
-    private Door goalDoor;
-    private int totalGoals;
-    private int collectedGoals;
+    private Shard goalShard;
+    private int totalShards;
+    private int collectedShards;
     private TextLayout dreamShardCountText;
 
     /** Mark set to handle more sophisticated collision callbacks */
@@ -177,7 +179,6 @@ public class PlatformScene implements Screen{
 
     private Vector2 queuedTeleportPosition = null;
 
-
     private Enemy queuedHarvestedEnemy = null;
     private Teleporter currentTeleporter = null;
 
@@ -186,6 +187,12 @@ public class PlatformScene implements Screen{
     private HashMap<DreamDweller, Sprite> visionCones3;
     private HashMap<Teleporter, Float> teleporterCreationTimes = new HashMap<>();
     private float timeElapsed = 0f;
+
+    private ArrayList<Vector2> shardPos;
+
+    /** tiled map + map info */
+    private TiledMapInfo tiledMap;
+
 
     protected PooledList<ShieldWall> shieldWalls = new PooledList<ShieldWall>();
 
@@ -197,9 +204,14 @@ public class PlatformScene implements Screen{
 
     public Player getAvatar() { return avatar;}
 
-    public void incrementGoal() {collectedGoals++;}
+    public void incrementGoal() {
+        collectedShards++;}
 
-    public boolean checkCollectedAllGoals() {return collectedGoals == totalGoals;}
+    public int getTotalShards() {
+        return totalShards;
+    }
+
+    public boolean checkCollectedAllGoals() {return collectedShards == totalShards;}
 
     public void setCurrentTeleporter(Teleporter tele) {currentTeleporter = tele; }
 
@@ -339,7 +351,7 @@ public class PlatformScene implements Screen{
         world = null;
         batch = null;
         fearMeterTexture.dispose();
-        background.dispose();
+        tiledMap.disposeMap();
     }
 
 
@@ -366,6 +378,10 @@ public class PlatformScene implements Screen{
         assert inBounds(sprite) : "Sprite is not in bounds";
         sprites.add(sprite);
         sprite.getObstacle().activatePhysics(world);
+        if (sprite instanceof Bullet) {
+            Bullet bullet = (Bullet) sprite;
+            bullet.setFilter();
+        }
     }
 
     /**
@@ -412,6 +428,7 @@ public class PlatformScene implements Screen{
         // Add any objects created by actions
         while (!addQueue.isEmpty()) {
             addSprite(addQueue.poll());
+
         }
 
         // Turn the physics engine crank.
@@ -462,7 +479,7 @@ public class PlatformScene implements Screen{
 
         batch.draw(background, bgX, bgY, background.getWidth(), background.getHeight() * 2);
 
-        dreamShardCountText.setText("Dream Shards: " + (totalGoals - collectedGoals));
+        dreamShardCountText.setText("Dream Shards: " + (totalShards - collectedShards));
         dreamShardCountText.layout();
 
         if (drawScareEffect)
@@ -505,16 +522,34 @@ public class PlatformScene implements Screen{
         uiCamera.update();
         batch.setProjectionMatrix(uiCamera.combined);
         batch.begin();
-        float scaleFactor = 0.5f;
+        float scaleFactor = 0.2f;
         float originalWidth = crosshairTexture.getRegionWidth();
         float originalHeight = crosshairTexture.getRegionHeight();
         float scaledWidth = originalWidth * scaleFactor;
         float scaledHeight = originalHeight * scaleFactor;
 
-        float crossX = Gdx.input.getX() - scaledWidth / 2;
-        float crossY = Gdx.graphics.getHeight() - Gdx.input.getY() - scaledHeight / 2;
+        float mouseX = Gdx.input.getX();
+        float mouseY = Gdx.graphics.getHeight() - Gdx.input.getY();
 
         batch.drawText(dreamShardCountText, 11, height - 50);
+
+        float units = TiledMapInfo.PIXELS_PER_WORLD_METER;
+        Vector3 playerWorldPos = new Vector3(avatar.getObstacle().getX() * units,
+            avatar.getObstacle().getY() * units,
+            0);
+        camera.project(playerWorldPos);
+
+        float teleportRadiusScreen = avatar.getTeleportRangeRadius() + 50f; // Because drawTeleportRadius uses it directly with u.
+
+        Vector2 delta = new Vector2(mouseX - playerWorldPos.x, mouseY - playerWorldPos.y);
+        if (delta.len() > teleportRadiusScreen) {
+            delta.nor().scl(teleportRadiusScreen);
+            mouseX = playerWorldPos.x + delta.x;
+            mouseY = playerWorldPos.y + delta.y;
+        }
+
+        float crossX = mouseX - scaledWidth/2;
+        float crossY = mouseY - scaledHeight/2;
 
         batch.draw(crosshairTexture, crossX, crossY, scaledWidth, scaledHeight);
 
@@ -545,32 +580,6 @@ public class PlatformScene implements Screen{
         batch.end();
     }
 
-    /** Draws Simple fear meter bar
-     *
-     *
-     */
-    private void drawFearMeter() {
-        int fearLevel = avatar.getFearMeter();
-        int maxFear = avatar.getMaxFearMeter();
-        float meterWidth = 150 * ((float) fearLevel / maxFear);
-        float meterHeight = 20;
-
-        float x = 20; // Offset from the left
-        float y = height - meterHeight - 20;
-
-        float outlineThickness = 2;
-
-
-        batch.setColor(Color.BLACK);
-        batch.draw(fearMeterTexture, x - outlineThickness, y - outlineThickness,
-            meterWidth + 2 * outlineThickness, meterHeight + 2 * outlineThickness);
-
-
-        batch.setColor(Color.RED);
-        batch.draw(fearMeterTexture, x, y, meterWidth, meterHeight);
-        batch.setColor(Color.WHITE);
-    }
-
     private void drawScareEffect(){
         float u = avatar.getObstacle().getPhysicsUnits();
         float size = scareEffectTexture.getRegionWidth() * 0.5f;
@@ -596,8 +605,8 @@ public class PlatformScene implements Screen{
             camera = new OrthographicCamera();
         }
         camera.setToOrtho( false, width, height );
-        scale.x = width/bounds.width;
-        scale.y = height/bounds.height;
+        scale.x = 1;
+        scale.y = 1;
         reset();
     }
 
@@ -611,37 +620,72 @@ public class PlatformScene implements Screen{
      */
     public void render(float delta) {
         if (active) {
-            if (preUpdate(delta)) {
-                update(delta);
-                postUpdate(delta);
-            }
-            draw(delta);
+
+            float units = TiledMapInfo.PIXELS_PER_WORLD_METER;
+
 
             // TA feedback was to make it a little less smooth
             // if the camera is far from being directly over the player, we can try to increase the change
 
             // 2 / (1 + e^(-5(x-0.5)))
 
+            if (debug) {
+                Vector3 worldMouse = new Vector3(Gdx.input.getX(), Gdx.input.getY(), 0);
+                camera.unproject(worldMouse);
+
+                // Compute the difference between the mouse and camera center.
+                float dx = worldMouse.x - camera.position.x;
+                float dy = worldMouse.y - camera.position.y;
+
+                float thresholdX = camera.viewportWidth * 0.25f;
+                float thresholdY = camera.viewportHeight * 0.25f;
+
+                float moveX = 0, moveY = 0;
+                if (Math.abs(dx) > thresholdX) {
+                    moveX = dx - Math.signum(dx) * thresholdX;
+                }
+                if (Math.abs(dy) > thresholdY) {
+                    moveY = dy - Math.signum(dy) * thresholdY;
+                }
+
+                // Apply a speed factor to smooth the movement.
+                float speed = 0.1f;
+                camera.position.x += moveX * speed;
+                camera.position.y += moveY * speed;
+                clampCamera();
+                camera.update();
+            } else {
+
+                Vector3 position = this.camera.position;
+                Vector3 playerPosition = new Vector3(this.avatar.getObstacle().getX() * units, this.avatar.getObstacle().getY() * units, 0);
 
 
-            Vector3 position = this.camera.position;
-            Vector3 playerPosition = new Vector3(this.avatar.getObstacle().getX() * units, this.avatar.getObstacle().getY() * units, 0);
+                Vector3 diff = new Vector3(position).sub(playerPosition);
+                float dis = diff.len();
+                if (dis > 220.0) {
+                    diff.nor().scl(250);
+                    position.lerp(new Vector3((playerPosition).add(diff)), 0.1f);
+                }
 
-
-            Vector3 diff = new Vector3(position).sub(playerPosition);
-            float dis = diff.len();
-            if (dis > 220.0) {
-                diff.nor().scl(250);
-                position.lerp(new Vector3((playerPosition).add(diff)), 0.1f);
+                float lerp = 3.0f;
+                position.x += (this.avatar.getObstacle().getX() * units - position.x) * lerp * delta;
+                position.y += (this.avatar.getObstacle().getY() * units - position.y) * lerp * delta;
+                camera.position.set(position);
+                camera.zoom = 0.7f;
+                clampCamera();
+                camera.update();
             }
 
-            float lerp = 3.0f;
-            position.x += (this.avatar.getObstacle().getX() * units - position.x) * lerp * delta;
-            position.y += (this.avatar.getObstacle().getY() * units - position.y) * lerp * delta;
-            camera.position.set(position);
-            camera.zoom = 0.8f;
-            clampCamera();
-            camera.update();
+
+
+            // box2d
+            if (preUpdate(delta)) {
+                update(delta);
+                postUpdate(delta);
+            }
+            draw(delta);
+
+            tiledMap.renderDefault(camera);
 
 
             drawUI();
@@ -649,17 +693,19 @@ public class PlatformScene implements Screen{
     }
 
     private void clampCamera() {
+        float units = TiledMapInfo.PIXELS_PER_WORLD_METER;
+
         float halfViewportWidth = camera.viewportWidth / 2;
         float halfViewportHeight = camera.viewportHeight / 2;
 
         // Convert world bounds to screen coordinates
         float minX = bounds.x * units + halfViewportWidth;
         float maxX = (bounds.x + bounds.width) * units - halfViewportWidth;
-        float minY = bounds.y * units + halfViewportHeight;
-        float maxY = (bounds.y + bounds.height) * units - halfViewportHeight;
+        float maxY = bounds.y * units + halfViewportHeight;
+        float minY = (bounds.y + bounds.height) * units - halfViewportHeight;
 
-        camera.position.x = MathUtils.clamp(camera.position.x, minX-100, maxX+100);
-        camera.position.y = MathUtils.clamp(camera.position.y, minY-50, maxY+50);
+        camera.position.x = MathUtils.clamp(camera.position.x, minX-200, maxX+200);
+        camera.position.y = MathUtils.clamp(camera.position.y, minY+100, maxY-50);
     }
 
     /**g
@@ -758,13 +804,14 @@ public class PlatformScene implements Screen{
         plopSound = directory.getEntry( "platform-plop", SoundEffect.class );
         volume = constants.getFloat("volume", 1.0f);
 
-        drawScareLimit = 60;
+        drawScareLimit = avatar.getHarvestDuration();
         drawScareCooldown = 0;
 
         uiCamera = new OrthographicCamera(Gdx.graphics.getWidth(), Gdx.graphics.getHeight());
         uiCamera.setToOrtho(false, Gdx.graphics.getWidth(), Gdx.graphics.getHeight());
         uiCamera.update();
         units = height / bounds.height;
+
     }
 
     /**
@@ -788,6 +835,7 @@ public class PlatformScene implements Screen{
 
         world = new World(gravity,false);
         world.setContactListener(levelContactListener);
+
         setComplete(false);
         setFailure(false);
         populateLevel();
@@ -797,19 +845,22 @@ public class PlatformScene implements Screen{
      * Lays out the game geography.
      */
     private void populateLevel() {
+        tiledMap = new TiledMapInfo("maps/dreamwalker_alpha_testmap1.tmx");
+        aiManager = new AIManager("behaviors/critter.tree", "behaviors/dweller.tree","behaviors/maintenance.tree", directory);
+        aiManager.setPlayer(avatar);
+        shardPos = new ArrayList<>();
+
+        float units = TiledMapInfo.PIXELS_PER_WORLD_METER;
+        System.out.println("units: " + units);
 
         // Add level goal
         Texture texture = directory.getEntry( "shared-goal", Texture.class );
 
         JsonValue goal = constants.get("goal");
         JsonValue goalpos = goal.get("pos");
-        totalGoals = goalpos.size;
-        collectedGoals = 0;
-        /*goalDoor = new Door(units, goal);
-        goalDoor.setTexture( texture );
-        goalDoor.getObstacle().setName("goal");
-        addSprite(goalDoor);
-         */
+        totalShards = goalpos.size;
+        collectedShards = 0;
+
         System.out.println(goalpos);
         System.out.println(goalpos.size);
         for (int i = 0; i < goalpos.size; i++) {
@@ -819,54 +870,99 @@ public class PlatformScene implements Screen{
             float y = goalpos.get(i).getFloat(1);
             System.out.println("Y.");
 
-            Door goalDoor = new Door(units, goal, x, y);
-            goalDoor.setTexture(texture);
-            goalDoor.getObstacle().setName("goal_" + i);
-            addSprite(goalDoor);
+            Shard goalShard = new Shard(units, goal, x, y, i);
+            shardPos.add(i, new Vector2(x, y));
+
+            goalShard.setTexture(texture);
+            goalShard.getObstacle().setName("goal_" + i);
+            addSprite(goalShard);
+            goalShard.setFilter();
         }
 
-        // Create ground pieces
+        MapLayer collisionLayer = tiledMap.get().getLayers().get("CollisionLayer");
+        int id = 0;
+        for (MapObject o : collisionLayer.getObjects()) {
+            if (o instanceof RectangleMapObject) {
+                Rectangle rect = ((RectangleMapObject) o).getRectangle();
+                // want to create "surfaces" where rects are in our tiled layer
+
+                float x = o.getProperties().get("x", Float.class);
+                float y = o.getProperties().get("y", Float.class);
+                float height = o.getProperties().get("height", Float.class);
+                float width = o.getProperties().get("width", Float.class);
+
+                float worldX = x / units;
+                float worldWidth = width/units;
+
+                // tiles * pixel per tile
+                float mapPixelHeight = tiledMap.get().getProperties().get("height", Integer.class) * TiledMapInfo.PIXELS_PER_WORLD_METER;
+                float worldY = y / units;
+                float worldHeight = height / units;
+
+                Surface platform = new Surface(worldX, worldY, worldHeight, worldWidth, TiledMapInfo.PIXELS_PER_WORLD_METER, constants.get("platforms"), true);
+
+                platform.setDebugColor(Color.BLUE);
+
+
+                if (o.getProperties().get("isStair", Boolean.class)) {
+                    platform.getObstacle().setName("stair " + id);
+                } else {
+                    platform.getObstacle().setName("platform " + id);
+                }
+                System.out.println(platform.getObstacle().getName());
+                addSprite(platform);
+                platform.setFilter();
+                System.out.println("platform added!");
+                id++;
+            }
+        }
 
 
         texture = directory.getEntry( "shared-test", Texture.class );
         Texture shadowedTexture = directory.getEntry("shared-shadow-test", Texture.class);
 
 
-        aiManager = new AIControllerManager(avatar, directory);
-        Surface wall;
-        String wname = "wall";
-        JsonValue walls = constants.get("walls");
-        JsonValue walljv = walls.get("positions");
-        for (int ii = 0; ii < walljv.size; ii++) {
-            wall = new Surface(walljv.get(ii).asFloatArray(), units, walls, false);
-            wall.getObstacle().setName(wname+ii);
-            wall.setTexture( texture );
-            addSprite(wall);
-        }
 
-        Surface platform;
-        String pname = "platform";
-        JsonValue plats = constants.get("platforms");
-        JsonValue platjv = plats.get("positions");
-        JsonValue platShadow = plats.get("shadowed");
-        for (int ii = 0; ii < platjv.size; ii++) {
-            platform = new Surface(platjv.get(ii).asFloatArray(), units, walls, platShadow.getBoolean(ii) );
-            platform.getObstacle().setName(pname+ii);
-            if (platform.isShadowed()) {
-                platform.setTexture(shadowedTexture);
-                shadowPlatformQueue.add(platform);
-            } else {
-                platform.setTexture(texture);
-            }
-            addSprite(platform);
-        }
+//        Surface wall;
+//        String wname = "wall";
+//        JsonValue walls = constants.get("walls");
+//        JsonValue walljv = walls.get("positions");
+//        for (int ii = 0; ii < walljv.size; ii++) {
+//            wall = new Surface(walljv.get(ii).asFloatArray(), units, walls, false);
+//            wall.getObstacle().setName(wname+ii);
+//            wall.setTexture( texture );
+//            addSprite(wall);
+//        }
+//
+//        Surface platform;
+//        String pname = "platform";
+//        JsonValue plats = constants.get("platforms");
+//        JsonValue platjv = plats.get("positions");
+//        JsonValue platShadow = plats.get("shadowed");
+//        for (int ii = 0; ii < platjv.size; ii++) {
+//            platform = new Surface(platjv.get(ii).asFloatArray(), units, walls, platShadow.getBoolean(ii) );
+//            platform.getObstacle().setName(pname+ii);
+//            if (platform.isShadowed()) {
+//                platform.setTexture(shadowedTexture);
+//                shadowPlatformQueue.add(platform);
+//            } else {
+//                platform.setTexture(texture);
+//            }
+//            addSprite(platform);
+//        }
 
         // Create Player
-        texture = directory.getEntry( "platform-playerSprite", Texture.class );
+        texture = directory.getEntry( "player-walk", Texture.class );
         avatar = new Player(units, constants.get("player"));
-        avatar.setTexture(texture);
+        Texture idle = directory.getEntry("player-idle", Texture.class);
+        Texture jump = directory.getEntry("player-jump", Texture.class);
+
         addSprite(avatar);
+
+        avatar.createAnimators(texture, idle, jump);
         // Have to do after body is created
+        avatar.setFilter();
+
         avatar.createSensor();
 
         avatar.createScareSensor();
@@ -880,10 +976,12 @@ public class PlatformScene implements Screen{
 
         for (int i = 0; i < critterspos.size; i++) {
             texture = directory.getEntry( "curiosity-critter-active", Texture.class );
-            critter = new CuriosityCritter(units, constants.get("curiosity-critter"), critterspos.get(i).asFloatArray());
+            critter = new CuriosityCritter(units, constants.get("curiosity-critter"), critterspos.get(i).asFloatArray(), this);
             critter.setTexture(texture);
             addSprite(critter);
+
             // Have to do after body is created
+            critter.setFilter();
             critter.createSensor();
             critter.createVisionSensor();
             enemies.add(critter);
@@ -943,10 +1041,14 @@ public class PlatformScene implements Screen{
         }
 
         if (dreamShardCountText != null) {
-            dreamShardCountText.setText("Dream Shards: " + (totalGoals - collectedGoals));
+            dreamShardCountText.setText("Dream Shards: " + (totalShards - collectedShards));
             dreamShardCountText.layout();
         }
 
+    }
+
+    public Vector2 getShardPos(int index) {
+        return shardPos.get(index);
     }
 
     /**
@@ -1054,17 +1156,16 @@ public class PlatformScene implements Screen{
         }
 
         avatar.setStunning(input.didStun());
-        avatar.setHarvesting(input.didSecondary());
         avatar.setTeleporting(input.didM1());
 
         // Process actions in object model
         avatar.setMovement(input.getHorizontal() *avatar.getForce());
 
-        if (avatar.isGrounded()) avatar.setJumping(input.didPrimary());
+//        if (avatar.isGrounded()) avatar.setJumping(input.didPrimary());
 
-
+        avatar.setJumping(input.didPrimary());
         avatar.setStunning(input.didStun());
-        avatar.setHarvesting(input.didSecondary());
+        avatar.tryStartHarvesting(input.didSecondary());
         avatar.setTeleporting(input.didM1());
 
         if (avatar.isHarvesting())
@@ -1076,14 +1177,17 @@ public class PlatformScene implements Screen{
                     queuedHarvestedEnemy.getObstacle().markRemoved(true);
                     queuedHarvestedEnemy = null;
                     avatar.setFearMeter(avatar.getFearMeter() + 3);
+                    aiManager.unregister(queuedHarvestedEnemy);
                 }
             } else if (queuedHarvestedEnemyD != null) {
                 if (!queuedHarvestedEnemyD.getObstacle().isRemoved()) {
                     queuedHarvestedEnemyD.getObstacle().markRemoved(true);
                     queuedHarvestedEnemyD = null;
                     avatar.setFearMeter(avatar.getFearMeter() + 5);
+                    aiManager.unregister(queuedHarvestedEnemyD);
                 }
             }
+            System.out.println(queuedHarvestedEnemy + " being harvested");
         }
 
         if (avatar.isStunning() && avatar.getFearMeter() > STUN_COST) {
@@ -1112,8 +1216,9 @@ public class PlatformScene implements Screen{
         }
 
         aiManager.update(dt);
+        GdxAI.getTimepiece().update(dt);
 
-        avatar.applyForce();
+        avatar.applyForce(world);
         if (avatar.isJumping()) {
             /* This jump sound is annoying
             SoundEffectManager sounds = SoundEffectManager.getInstance();
@@ -1122,8 +1227,15 @@ public class PlatformScene implements Screen{
         }
     }
 
+    public AIManager getAiManager() {
+        return aiManager;
+    }
+
     private void teleport() {
         InputController input = InputController.getInstance();
+
+        float units = TiledMapInfo.PIXELS_PER_WORLD_METER;
+
 
         Vector2 playerPosition = avatar.getObstacle().getPosition();
 
@@ -1139,6 +1251,18 @@ public class PlatformScene implements Screen{
         camera.unproject(crosshairTemp);
         Vector2 crosshairWorld = new Vector2(crosshairTemp.x / units, crosshairTemp.y / units);
 
+        // clamp
+        Vector2 delta = new Vector2(crosshairWorld).sub(playerPosition);
+        // Convert teleport range from (screen or arbitrary) units to world units.
+        float teleportRangeWorld = avatar.getTeleportRangeRadius() / units;
+        if (delta.len() > teleportRangeWorld) {
+            delta.nor().scl(teleportRangeWorld);
+            crosshairWorld = new Vector2(playerPosition).add(delta);
+        }
+
+        Vector2 realTeleportPos = crosshairWorld.cpy();
+
+
         final boolean[] isInsideSurface = {false};
         // Check if trying to teleport into a surface
         world.QueryAABB(new QueryCallback() {
@@ -1146,7 +1270,7 @@ public class PlatformScene implements Screen{
                             public boolean reportFixture(Fixture fixture) {
                                 Object userData = fixture.getBody().getUserData();
                                 if (userData instanceof Surface) {
-                                    if (fixture.testPoint(crosshairWorld)) {
+                                    if (fixture.testPoint(realTeleportPos)) {
                                         isInsideSurface[0] = true;
                                         return false; // Stop the query
                                     }
@@ -1234,6 +1358,9 @@ public class PlatformScene implements Screen{
     private void createBullet() {
         InputController input = InputController.getInstance();
 
+
+        float units = TiledMapInfo.PIXELS_PER_WORLD_METER;
+
         Vector2 crosshairScreen = input.getMouse();
 
         // Unproject the crosshair screen position to get world coordinates
@@ -1260,7 +1387,7 @@ public class PlatformScene implements Screen{
         bullet.setTexture(texture);
         addQueuedObject(bullet);
         SoundEffectManager sounds = SoundEffectManager.getInstance();
-        sounds.play("fire", fireSound, volume);
+        //sounds.play("fire", fireSound, volume);
     }
 
     /**

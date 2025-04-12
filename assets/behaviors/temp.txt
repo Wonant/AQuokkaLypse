@@ -1,0 +1,5 @@
+(dreamShardNear random:false) moveShard tolerance:0.1
+
+sequence
+                dreamShardNear random:true
+                stareShard duration:0.1

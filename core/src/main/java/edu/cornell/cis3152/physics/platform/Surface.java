@@ -18,12 +18,17 @@
 
 import com.badlogic.gdx.graphics.Color;
 import com.badlogic.gdx.physics.box2d.BodyDef;
+import com.badlogic.gdx.physics.box2d.Filter;
+import com.badlogic.gdx.physics.box2d.Fixture;
 import com.badlogic.gdx.utils.JsonValue;
 import edu.cornell.gdiac.assets.ParserUtils;
+import edu.cornell.gdiac.graphics.SpriteBatch;
 import edu.cornell.gdiac.math.Poly2;
 import edu.cornell.gdiac.math.PolyTriangulator;
 import edu.cornell.gdiac.physics2.ObstacleSprite;
 import edu.cornell.gdiac.physics2.PolygonObstacle;
+
+import static edu.cornell.cis3152.physics.platform.CollisionFiltering.*;
 
 /**
  * A class representing a tiled surface (wall or platform)
@@ -43,9 +48,9 @@ import edu.cornell.gdiac.physics2.PolygonObstacle;
  */
 public class Surface extends ObstacleSprite {
 
-    private boolean shadowed;
+    protected boolean shadowed;
 
-    private float width;
+    protected float width;
 
     public boolean isShadowed() {
         return shadowed;
@@ -57,6 +62,10 @@ public class Surface extends ObstacleSprite {
 
     public float getWidth(){
         return width;
+    }
+
+    public Surface() {
+        super();
     }
 
     /**
@@ -106,4 +115,62 @@ public class Surface extends ObstacleSprite {
         mesh.set(poly,tile,tile);
     }
 
+    public Surface(float x, float y, float h, float w, float units, JsonValue settings, boolean shadowed) {
+        super();
+
+        float tile = settings.getFloat( "tile" );
+
+        //Counter clockwise in xy pairs
+        float[] points = {x, y, x + w, y, x + w, y + h, x, y + h};
+        for (int i = 0; i < 8; i++) {
+            System.out.println(points[i] + "|");
+        }
+
+        Poly2 poly = new Poly2();
+        PolyTriangulator tri = new PolyTriangulator();
+
+        tri.set(points);
+        tri.calculate();
+        tri.getPolygon(poly);
+
+        obstacle = new PolygonObstacle(points);
+        obstacle.setBodyType( BodyDef.BodyType.StaticBody );
+        obstacle.setDensity( settings.getFloat( "density", 0 ) );
+        obstacle.setFriction( settings.getFloat( "friction", 0.3f) );
+        obstacle.setRestitution( settings.getFloat( "restitution", 0.3f ) );
+        obstacle.setPhysicsUnits( units );
+        obstacle.setUserData( this );
+
+        debug = ParserUtils.parseColor( settings.get("debug"),  Color.WHITE);
+
+        this.shadowed = shadowed;
+        width = points[1] - points[0];
+
+        // Create a polygon mesh matching the physics body, adjusted by the
+        // physics units. We take the save polygon we used to create the
+        // physics obstacle and scale it up. We then use that to set the
+        // mesh. The attribute tile is used to define how we scale/stretch
+        // the texture to fit to the polygon. Try experimenting with this in
+        // the JSON to see what happens.
+        poly.scl( TiledMapInfo.PIXELS_PER_WORLD_METER );
+        mesh.set(poly,tile,tile);
+
+
+    }
+
+    public void setFilter() {
+        for(Fixture fixture : getObstacle().getBody().getFixtureList()) {
+            Filter filter = fixture.getFilterData();
+            filter.categoryBits = CATEGORY_SCENERY;
+            // Scenery collides with players and enemies.
+            filter.maskBits = CATEGORY_PLAYER | CATEGORY_ENEMY | CATEGORY_BULLET;
+            fixture.setFilterData(filter);
+        }
+    }
+
+    @Override
+    public void draw(SpriteBatch batch) {
+        // so textures aren't drawn(surface textures come from tiled implementation)
+        // debug still on
+    }
 }

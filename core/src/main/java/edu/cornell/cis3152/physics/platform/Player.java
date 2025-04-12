@@ -16,6 +16,8 @@
      */
     package edu.cornell.cis3152.physics.platform;
 
+    import com.badlogic.gdx.Gdx;
+    import com.badlogic.gdx.graphics.g2d.TextureRegion;
     import com.badlogic.gdx.math.*;
     import com.badlogic.gdx.graphics.*;
     import com.badlogic.gdx.physics.box2d.*;
@@ -27,6 +29,8 @@
     import edu.cornell.gdiac.math.Path2;
     import edu.cornell.gdiac.math.PathFactory;
     import edu.cornell.gdiac.physics2.*;
+
+    import static edu.cornell.cis3152.physics.platform.CollisionFiltering.*;
 
     /**
      * Player's avatar for the platform game.
@@ -59,6 +63,9 @@
         private float maxspeed;
         /** The impulse for the character jump */
         private float jump_force;
+        /** The impulse for the character dash */
+        private float dash_force;
+
 
         /** Cooldown (in animation frames) for jumping */
         private int jumpLimit;
@@ -66,13 +73,18 @@
         private int jumpCooldown;
         /** Whether we are actively jumping */
         private boolean isJumping;
+        private boolean lastJumping;
 
+        /** How long (in animation frames) the harvesting attack lasts  */
+        private int harvestDuration;
+        /** How long until the harvest attack is finished  */
+        private int harvestDurationCounter;
         /** Cooldown (in animation frames) for harvesting */
         private int harvestLimit;
         /** How long until we can harvest again */
         private int harvestCooldown;
-        /** Whether we are actively harvesting */
-        private boolean isHarvesting;
+        /** Whether player has started to harvest */
+        private boolean startedHarvest;
 
         /** Cooldown (in animation frames) for stunning */
         private int stunLimit;
@@ -133,6 +145,26 @@
 
 
 
+        /** raycasting for stair interpolation */
+        private float stepRayLength;
+        private PlayerVisionRaycast playerVisionRaycast;
+        private Vector2 debugRayStart;
+        private Vector2 debugRayEnd;
+        private boolean seenAStep;
+
+        /** animation */
+        private Animator walkingSprite;
+        private Animator idleSprite;
+        private Animator jumpSprite;
+        private AnimationState animationState;
+
+
+        private enum AnimationState {
+            WALK,
+            IDLE,
+            JUMP,
+            STAIR
+        }
 
 
         /**
@@ -222,16 +254,23 @@
          * @return true if Player is actively harvesting.
          */
         public boolean isHarvesting() {
-            return isHarvesting && harvestCooldown <= 0;
+            return harvestDurationCounter > 0;
+            //return isHarvesting && harvestCooldown <= 0;
         }
 
+        public float getHarvestCooldown() {
+            return harvestCooldown;
+        }
+        public int getHarvestDuration() {
+            return harvestDuration;
+        }
         /**
          * Sets whether Player is actively firing.
          *
          * @param value whether Player is actively firing.
          */
-        public void setHarvesting(boolean value) {
-            isHarvesting = value;
+        public void tryStartHarvesting(boolean value) {
+            startedHarvest = value && harvestCooldown <= 0;
         }
 
         /**
@@ -427,12 +466,13 @@
             float sizeHeight = s*units*1.5f;
 
 
+
             // The capsule is smaller than the image
             // "inner" is the fraction of the original size for the capsule
             width = s*data.get("inner").getFloat(0);
             height = s*data.get("inner").getFloat(1);
-            obstacle = new CapsuleObstacle(x, y, width, height);
-            ((CapsuleObstacle)obstacle).setTolerance( debugInfo.getFloat("tolerance", 0.5f) );
+            obstacle = new BoxObstacle(x, y, width, height*0.9f);
+            //((CapsuleObstacle)obstacle).setTolerance( debugInfo.getFloat("tolerance", 0.5f) );
 
             obstacle.setDensity( data.getFloat( "density", 0 ) );
             obstacle.setFriction( data.getFloat( "friction", 0 ) );
@@ -450,15 +490,17 @@
             damping = data.getFloat("damping", 0);
             force = data.getFloat("force", 0);
             jump_force = data.getFloat( "jump_force", 0 );
+            dash_force = data.getFloat("dash_force", 0);
             jumpLimit = data.getInt( "jump_cool", 0 );
             harvestLimit = 60;
+            harvestDuration = 20;
             stunLimit = data.getInt( "shot_cool", 0 );
             teleportLimit = data.getInt( "shot_cool", 0 );
             takeDamageLimit = 120;
 
             // Gameplay attributes
             isGrounded = false;
-            isHarvesting = false;
+            startedHarvest = false;
             isStunning = false;
             isTeleporting = false;
             isJumping = false;
@@ -482,7 +524,36 @@
             // actually smaller than the image, making a tighter hitbox. You can
             // see this when you enable debug mode.
             mesh.set(-sizeWidth/2.0f,-sizeHeight/2.0f,sizeWidth,sizeHeight);
+
+            stepRayLength = height/2.5f;
+
+            playerVisionRaycast = new PlayerVisionRaycast(PlayerVisionRaycast.VisionMode.STAIR_CHECK, stepRayLength * units);
+
+
+
         }
+
+        public void createAnimators(Texture walkTexture, Texture idleTexture, Texture jumpTexture) {
+            walkingSprite = new Animator(walkTexture, 4, 5, 0.08f, 17);
+            idleSprite = new Animator(idleTexture, 6, 5, 0.08f, 30);
+            jumpSprite = new Animator(jumpTexture, 12, 5, 0.08f, 50, false);
+        }
+
+        public void setFilter() {
+            for (Fixture fixture : obstacle.getBody().getFixtureList()) {
+                Object ud = fixture.getUserData();
+                if (ud != null && ud.equals("player_sensor")) {
+                    continue;
+                }
+                // Otherwise, assume this is the collision capsule fixture.
+                Filter filter = fixture.getFilterData();
+                filter.categoryBits = CATEGORY_PLAYER;
+                // Player should collide with scenery but not with enemies.
+                filter.maskBits = CATEGORY_SCENERY;
+                fixture.setFilterData(filter);
+            }
+        }
+
 
         /**
          * Creates the sensor for Player.
@@ -511,11 +582,18 @@
             sensorShape.setAsBox(w, h, sensorCenter, 0.0f);
             sensorDef.shape = sensorShape;
 
+
+
             // Ground sensor to represent our feet
             Body body = obstacle.getBody();
             Fixture sensorFixture = body.createFixture( sensorDef );
             sensorName = "player_sensor";
             sensorFixture.setUserData(sensorName);
+
+            Filter sensorFilter = sensorFixture.getFilterData();
+            sensorFilter.categoryBits = CollisionFiltering.CATEGORY_PLAYER;    // or a dedicated sensor category
+            sensorFilter.maskBits = CollisionFiltering.CATEGORY_SCENERY;       // so it collides with the ground
+            sensorFixture.setFilterData(sensorFilter);
 
             // Finally, we need a debug outline
             float u = obstacle.getPhysicsUnits();
@@ -556,14 +634,24 @@
          *
          * This method should be called after the force attribute is set.
          */
-        public void applyForce() {
+        public void applyForce(World world) {
             if (!obstacle.isActive()) {
                 return;
             }
 
+            if (isPlatformStep(world, stepRayLength)) {
+                System.out.println("seen a step");
+                seenAStep = true;
+            } else {
+                seenAStep = false;
+            }
+
+
             Vector2 pos = obstacle.getPosition();
             float vx = obstacle.getVX();
             Body body = obstacle.getBody();
+
+
 
             // Don't want to be moving. Damp out player motion
             if (getMovement() == 0f) {
@@ -579,12 +667,55 @@
                 body.applyForce(forceCache,pos,true);
             }
 
+            if (startedHarvest){
+                float direction = -1;
+                if (isFacingRight()){
+                    direction = 1;
+                }
+                forceCache.set(direction * dash_force,0);
+                body.applyLinearImpulse(forceCache,pos,true);
+            }
+
             if (isJumping()) {
+                jumpSprite.reset();
                 forceCache.set(0, jump_force);
                 body.applyLinearImpulse(forceCache,pos,true);
             }
 
             //smoothStairClimb();
+        }
+
+        public boolean isPlatformStep(World world, float raylength) {
+            Vector2 start = (isFacingRight()) ?
+                obstacle.getBody().getPosition().cpy().add(width/2 + 0.1f, 0) :
+                obstacle.getBody().getPosition().cpy().add(-width/2 - 0.1f, 0);
+            Vector2 end = start.cpy().add(0, -raylength);
+
+
+            debugRayStart = start;
+            debugRayEnd = end;
+
+            world.rayCast(playerVisionRaycast, start, end);
+
+            if (playerVisionRaycast.getHitFixture() == null) {
+                return false;
+            } else if (playerVisionRaycast.fixtureIsStair) {
+                Vector2 stairHit = new Vector2(playerVisionRaycast.getHitPoint());
+
+
+                if (isGrounded && Math.abs(movement) > 0) {
+                    float targetCenterY = stairHit.y + height/2;
+                    Body body = obstacle.getBody();
+                    Vector2 pos = body.getPosition();
+                    body.setTransform(stairHit.x, targetCenterY, body.getAngle());
+
+                    debugRayEnd = stairHit;
+                }
+            }
+
+            playerVisionRaycast.reset();
+
+            return true;
         }
 
         /**
@@ -596,6 +727,22 @@
          */
         @Override
         public void update(float dt) {
+            // change character state
+
+            if (isGrounded) {
+                if (movement == 0) {
+                    animationState = AnimationState.IDLE;
+                } else {
+                    if (seenAStep) {
+                        animationState = AnimationState.STAIR;
+                    } else {
+                        animationState = AnimationState.WALK;
+                    }
+                }
+            } else {
+                animationState = AnimationState.JUMP;
+            }
+
             // Apply cooldowns
             if (isJumping()) {
                 jumpCooldown = jumpLimit;
@@ -603,10 +750,13 @@
                 jumpCooldown = Math.max(0, jumpCooldown - 1);
             }
 
-            if (isHarvesting()) {
+            if (startedHarvest) {
                 harvestCooldown = harvestLimit;
+                harvestDurationCounter = harvestDuration;
+
             } else {
                 harvestCooldown = Math.max(0, harvestCooldown - 1);
+                harvestDurationCounter = Math.max(0, harvestDurationCounter - 1);
             }
 
             if (isStunning()) {
@@ -635,55 +785,66 @@
 
         }
 
-        public void smoothStairClimb() {
-            if (!isGrounded() || Math.abs(getMovement()) < 0.1f) {
-                return;
-            }
-
-            Body body = obstacle.getBody();
-            Vector2 pos = obstacle.getPosition();
-            World world = body.getWorld();
-
-            float sensorWidth = width * 0.8f;
-            float sensorHeight = height * 0.2f;  // adjust this to maximum step height
-            float recastOffset = sensorHeight + 0.2f; // offset from bottom of player
-
-            float horizontalOffset = isFacingRight() ? width / 2 : -width / 2;
-
-            Vector2 sensorCenter = new Vector2(pos.x + horizontalOffset, pos.y - height / 2 + recastOffset);
-            final boolean[] stepClear = { true };
-
-            world.QueryAABB(new QueryCallback(){
-                                @Override
-                                public boolean reportFixture(Fixture fixture) {
-                                    Object userData = fixture.getUserData();
-                                    // Adjust the condition as needed to recognize your wall/platform fixtures.
-                                    if (userData != null && userData.toString().startsWith("platform")) {
-                                        stepClear[0] = false;
-                                        return false; // stop the query early
-                                    }
-                                    return true;
-                                }
-                            },
-                sensorCenter.x - sensorWidth / 2,
-                sensorCenter.y - sensorHeight / 2,
-                sensorCenter.x + sensorWidth / 2,
-                sensorCenter.y + sensorHeight / 2);
-
-            if (stepClear[0]) {
-                float climbSpeed = 0.05f;  // change this value for faster or slower climbing
-                body.setTransform(pos.x, pos.y + climbSpeed, body.getAngle());
-            }
-        }
-
         @Override
         public void draw(SpriteBatch batch) {
-            if (faceRight) {
-                flipCache.setToScaling( 1,1 );
-            } else {
-                flipCache.setToScaling( -1,1 );
+
+            TextureRegion frame = new TextureRegion();
+            float scale = 1f;
+            switch (animationState) {
+                case WALK:
+                    frame = walkingSprite.getCurrentFrame(Gdx.graphics.getDeltaTime());
+                    break;
+                case IDLE:
+                    frame = idleSprite.getCurrentFrame(Gdx.graphics.getDeltaTime());
+                    break;
+                case JUMP:
+                    if (!lastJumping && isJumping) {
+                        jumpSprite.reset();
+                    }
+                    scale = 1.3f;
+                    frame = jumpSprite.getCurrentFrame(Gdx.graphics.getDeltaTime());
+                    break;
+                default:
+                    frame = idleSprite.getCurrentFrame(Gdx.graphics.getDeltaTime());
+                    break;
             }
-            super.draw(batch,flipCache);
+
+            float u = obstacle.getPhysicsUnits();
+            // Determine drawing coordinates.
+            // Here we assume obstacle.getX() and getY() return the center position.
+            float posX = obstacle.getX() * u;
+            float posY = obstacle.getY() * u;
+            float drawWidth = width * u * 2f * scale;
+            float drawHeight = height * u * scale;
+
+            float originX = drawWidth / 2f;
+            float originY = drawHeight / 2f;
+
+            if (faceRight) {
+
+            } else {
+                frame.flip(true, false);
+            }
+
+            // Draw the current frame centered on the player's position.
+            batch.draw(frame,
+                posX - originX, // lower-left x position
+                posY - originY, // lower-left y position
+                originX,        // originX used for scaling and rotation
+                originY,        // originY
+                drawWidth,      // width
+                drawHeight,     // height
+                1f,             // scaleX
+                1f,             // scaleY
+                0f              // rotation (in degrees)
+            );
+
+//            if (faceRight) {
+//                flipCache.setToScaling( 1,1 );
+//            } else {
+//                flipCache.setToScaling( -1,1 );
+//            }
+//            super.draw(batch,flipCache);
 
         }
 
@@ -695,6 +856,7 @@
             drawSensorDebug(batch, sensorScareOutline, sensorScareColor);
             drawTeleportRadius(batch);
             //drawRecastSensor(batch);
+            drawRayDebug(batch);
         }
 
         public void drawRecastSensor(SpriteBatch batch) {
@@ -731,6 +893,30 @@
             batch.setColor(Color.WHITE);
         }
 
+        public void drawRayDebug(SpriteBatch batch) {
+            if (debugRayStart != null && debugRayEnd != null) {
+                float u = obstacle.getPhysicsUnits();
+                Vector2 localStart = new Vector2(debugRayStart).sub(obstacle.getPosition());
+                Vector2 localEnd = new Vector2(debugRayEnd).sub(obstacle.getPosition());
+
+                PathFactory factory = new PathFactory();
+                Path2 rayOutline = new Path2();
+                factory.makeLine(localStart.x * u, localStart.y * u,
+                    localEnd.x * u, localEnd.y * u, rayOutline);
+
+                batch.setTexture(Texture2D.getBlank());
+                batch.setColor(Color.PURPLE);
+                transform.idt();
+                float a = obstacle.getAngle();
+                Vector2 p = obstacle.getPosition();
+                transform.preRotate((float)(a * 180.0f / Math.PI));
+                transform.preTranslate(p.x * u, p.y * u);
+                batch.outline(rayOutline, transform);
+
+
+            }
+        }
+
         public void drawSensorDebug (SpriteBatch batch, Path2 outline, Color color)
         {
             if (outline!= null) {
@@ -741,12 +927,10 @@
                 float a = obstacle.getAngle();
                 float u = obstacle.getPhysicsUnits();
 
-                // transform is an inherited cache variable
                 transform.idt();
                 transform.preRotate( (float) (a * 180.0f / Math.PI) );
                 transform.preTranslate( p.x * u, p.y * u );
 
-                //
                 batch.outline( outline, transform );
             }
         }
@@ -760,4 +944,5 @@
             batch.outline(teleportCircle);
             batch.setColor(Color.WHITE);
         }
+
     }

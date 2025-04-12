@@ -31,6 +31,8 @@ public class PlatformRayCast implements RayCastCallback {
         return 1; // Continue searching
     }
 
+
+
     public Fixture getPlatformFixture() {
         return platformFixture;
     }

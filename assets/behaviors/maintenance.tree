@@ -1,0 +1,4 @@
+import idle:"edu.cornell.cis3152.physics.platform.aibehavior.tasks.IdleTask"
+
+root
+    idle speed:2 duration:0.1
