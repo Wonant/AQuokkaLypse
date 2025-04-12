@@ -155,6 +155,7 @@ public class PlatformScene implements Screen{
     private AIControllerManager aiCManager;
     private AIManager aiManager;
 
+    private PooledList<Enemy> enemies = new PooledList<>();
     private LevelContactListener levelContactListener;
     /** Reference to the goalDoor (for collision detection) */
     private Shard goalShard;
@@ -193,6 +194,10 @@ public class PlatformScene implements Screen{
     private TiledMapInfo tiledMap;
 
 
+    protected PooledList<ShieldWall> shieldWalls = new PooledList<ShieldWall>();
+
+    // global game units
+    float units;
 
 
     /*==============================ContactListener Getters/Setters===============================*/
@@ -615,11 +620,9 @@ public class PlatformScene implements Screen{
      */
     public void render(float delta) {
         if (active) {
-            // tiled world
 
-
-            // camera interpolation
             float units = TiledMapInfo.PIXELS_PER_WORLD_METER;
+
 
             // TA feedback was to make it a little less smooth
             // if the camera is far from being directly over the player, we can try to increase the change
@@ -691,6 +694,7 @@ public class PlatformScene implements Screen{
 
     private void clampCamera() {
         float units = TiledMapInfo.PIXELS_PER_WORLD_METER;
+
         float halfViewportWidth = camera.viewportWidth / 2;
         float halfViewportHeight = camera.viewportHeight / 2;
 
@@ -806,7 +810,7 @@ public class PlatformScene implements Screen{
         uiCamera = new OrthographicCamera(Gdx.graphics.getWidth(), Gdx.graphics.getHeight());
         uiCamera.setToOrtho(false, Gdx.graphics.getWidth(), Gdx.graphics.getHeight());
         uiCamera.update();
-
+        units = height / bounds.height;
 
     }
 
@@ -841,7 +845,6 @@ public class PlatformScene implements Screen{
      * Lays out the game geography.
      */
     private void populateLevel() {
-        // can change for testing
         tiledMap = new TiledMapInfo("maps/dreamwalker_alpha_testmap1.tmx");
         aiManager = new AIManager("behaviors/critter.tree", "behaviors/dweller.tree","behaviors/maintenance.tree", directory);
         aiManager.setPlayer(avatar);
@@ -981,7 +984,7 @@ public class PlatformScene implements Screen{
             critter.setFilter();
             critter.createSensor();
             critter.createVisionSensor();
-
+            enemies.add(critter);
             aiManager.register(critter);
             texture = directory.getEntry("vision_cone", Texture.class);
             visionConeRegion = new TextureRegion(texture);
@@ -1005,7 +1008,7 @@ public class PlatformScene implements Screen{
             // Have to do after body is created
             maintenance.createSensor();
             maintenance.createVisionSensor();
-
+            enemies.add(maintenance);
             aiManager.register(maintenance);
             texture = directory.getEntry("vision_cone", Texture.class);
             visionConeRegion = new TextureRegion(texture);
@@ -1025,7 +1028,7 @@ public class PlatformScene implements Screen{
             // Have to do after body is created
             dreamDweller.createSensor();
             dreamDweller.createVisionSensor();
-
+            enemies.add(dreamDweller);
             aiManager.register(dreamDweller);
             texture = directory.getEntry("vision_cone", Texture.class);
             visionConeRegion = new TextureRegion(texture);
@@ -1123,6 +1126,34 @@ public class PlatformScene implements Screen{
     public void update(float dt) {
         InputController input = InputController.getInstance();
 
+        for (Enemy e: enemies){
+            if (e instanceof MindMaintenance && ((MindMaintenance) e).isShooting()){
+                Vector2 position = e.getObstacle().getPosition();
+                float direction = 1;
+                if (avatar.getObstacle().getPosition().x < position.x){
+                    direction = -1;
+                }
+                JsonValue bulletjv = constants.get("bullet");
+                Texture texture = directory.getEntry("platform-bullet", Texture.class);
+
+                ShieldWall wall = new ShieldWall(units, bulletjv, position, direction);
+                shieldWalls.add(wall);
+                wall.setTexture(texture);
+
+
+                addQueuedObject(wall);
+            }
+        }
+
+        for(ShieldWall s: shieldWalls){
+            s.update();
+
+            if (Math.abs(s.getV()) < 0.05){
+                removeBullet(s);
+                shieldWalls.remove(s);
+            }
+
+        }
 
         avatar.setStunning(input.didStun());
         avatar.setTeleporting(input.didM1());
@@ -1178,13 +1209,6 @@ public class PlatformScene implements Screen{
         }
 
 
-        if(avatar.isTakingDamage())
-        {
-            avatar.setFearMeter(avatar.getFearMeter() - 1);
-            avatar.setTakingDamage(false);
-        }
-
-
         if (queuedTeleportPosition != null) {
             avatar.getObstacle().setPosition(queuedTeleportPosition);
             //avatar.setFearMeter(Math.max(0,avatar.getFearMeter() - TELEPORT_COST));
@@ -1209,7 +1233,9 @@ public class PlatformScene implements Screen{
 
     private void teleport() {
         InputController input = InputController.getInstance();
+
         float units = TiledMapInfo.PIXELS_PER_WORLD_METER;
+
 
         Vector2 playerPosition = avatar.getObstacle().getPosition();
 
@@ -1332,7 +1358,9 @@ public class PlatformScene implements Screen{
     private void createBullet() {
         InputController input = InputController.getInstance();
 
+
         float units = TiledMapInfo.PIXELS_PER_WORLD_METER;
+
         Vector2 crosshairScreen = input.getMouse();
 
         // Unproject the crosshair screen position to get world coordinates
@@ -1348,11 +1376,16 @@ public class PlatformScene implements Screen{
         Obstacle player = avatar.getObstacle();
         Vector2 shootAngle = crosshairWorld.sub(player.getPosition());
         shootAngle.nor();
+        float direction = 1;
+        if (crosshairWorld.x * units < player.getPosition().x){
+            direction = -1;
+        }
+        System.out.println("Direction = " + crosshairWorld.x + " " + player.getPosition().x);
         Texture texture = directory.getEntry("platform-bullet", Texture.class);
+
         Bullet bullet = new Bullet(units, bulletjv, player.getPosition(), shootAngle.nor());
         bullet.setTexture(texture);
         addQueuedObject(bullet);
-
         SoundEffectManager sounds = SoundEffectManager.getInstance();
         //sounds.play("fire", fireSound, volume);
     }

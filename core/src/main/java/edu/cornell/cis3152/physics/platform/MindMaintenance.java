@@ -37,6 +37,7 @@ public class MindMaintenance extends Enemy {
     private int jumpCooldown;
     private boolean isJumping;
     private int shootCooldown;
+    private int shootLimit = 40;
     private boolean isGrounded;
     private boolean isShooting;
 
@@ -95,7 +96,7 @@ public class MindMaintenance extends Enemy {
     }
 
     public boolean isShooting() {
-        return isShooting && shootCooldown <= 0;
+        return isShooting && shootCooldown <= 0 && !isStunned();
     }
 
     public void setShooting(boolean value) {
@@ -292,8 +293,8 @@ public class MindMaintenance extends Enemy {
     public void createVisionSensor() {
         createHeadBody();
         attachHead();
-        float coneWidth = 3.0f;
-        float coneLength = 2.4f;
+        float coneWidth = 5.0f;
+        float coneLength = 7.0f;
         Vector2[] vertices = new Vector2[3];
         vertices[0] = new Vector2(-coneWidth/2, coneLength);
         vertices[1] = new Vector2(coneWidth/2, coneLength);
@@ -408,7 +409,11 @@ public class MindMaintenance extends Enemy {
         } else {
             jumpCooldown = Math.max(0, jumpCooldown - 1);
         }
-
+        if (isShooting()) {
+            shootCooldown = shootLimit;
+        } else {
+            shootCooldown = Math.max(0, shootCooldown - 1);
+        }
         super.update(dt);
     }
 
