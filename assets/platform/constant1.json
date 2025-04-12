@@ -90,7 +90,7 @@
     "friction"  : 1.0,
     "maxspeed"  : 5.0,
     "maxfear"   : 10.0,
-    "jump_force": 8.0,
+    "jump_force": 15.0,
     "shot_cool" : 40,
     "sensor": {
       "shrink" : 0.6,
