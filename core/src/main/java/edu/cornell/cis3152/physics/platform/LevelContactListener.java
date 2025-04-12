@@ -237,7 +237,7 @@ public class LevelContactListener implements ContactListener {
 
                     }
                 }
-                dreamWalkerScene.getAvatar().setHarvesting(true);
+                //dreamWalkerScene.getAvatar().setHarvesting(true);
 
             }
 
@@ -309,7 +309,7 @@ public class LevelContactListener implements ContactListener {
             (dreamWalkerScene.getAvatar().getScareSensorName().equals(fd2) && (bd1 instanceof CuriosityCritter)))
         {
             dreamWalkerScene.removeHarvestedEnemy(null);
-            dreamWalkerScene.getAvatar().setHarvesting(false);
+            //dreamWalkerScene.getAvatar().setHarvesting(false);
 
         }
 
@@ -345,7 +345,7 @@ public class LevelContactListener implements ContactListener {
             (dreamWalkerScene.getAvatar().getScareSensorName().equals(fd2) && (bd1 instanceof DreamDweller)))
         {
             dreamWalkerScene.removeHarvestedD(null);
-            dreamWalkerScene.getAvatar().setHarvesting(false);
+            //dreamWalkerScene.getAvatar().setHarvesting(false);
 
         }
 

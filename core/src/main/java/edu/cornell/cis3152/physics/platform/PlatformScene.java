@@ -800,7 +800,7 @@ public class PlatformScene implements Screen{
         plopSound = directory.getEntry( "platform-plop", SoundEffect.class );
         volume = constants.getFloat("volume", 1.0f);
 
-        drawScareLimit = 60;
+        drawScareLimit = avatar.getHarvestDuration();
         drawScareCooldown = 0;
 
         uiCamera = new OrthographicCamera(Gdx.graphics.getWidth(), Gdx.graphics.getHeight());
@@ -1134,7 +1134,7 @@ public class PlatformScene implements Screen{
 
         avatar.setJumping(input.didPrimary());
         avatar.setStunning(input.didStun());
-        avatar.setHarvesting(input.didSecondary());
+        avatar.tryStartHarvesting(input.didSecondary());
         avatar.setTeleporting(input.didM1());
 
         if (avatar.isHarvesting())

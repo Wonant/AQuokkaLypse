@@ -63,6 +63,9 @@
         private float maxspeed;
         /** The impulse for the character jump */
         private float jump_force;
+        /** The impulse for the character dash */
+        private float dash_force;
+
 
         /** Cooldown (in animation frames) for jumping */
         private int jumpLimit;
@@ -72,12 +75,16 @@
         private boolean isJumping;
         private boolean lastJumping;
 
+        /** How long (in animation frames) the harvesting attack lasts  */
+        private int harvestDuration;
+        /** How long until the harvest attack is finished  */
+        private int harvestDurationCounter;
         /** Cooldown (in animation frames) for harvesting */
         private int harvestLimit;
         /** How long until we can harvest again */
         private int harvestCooldown;
-        /** Whether we are actively harvesting */
-        private boolean isHarvesting;
+        /** Whether player has started to harvest */
+        private boolean startedHarvest;
 
         /** Cooldown (in animation frames) for stunning */
         private int stunLimit;
@@ -247,20 +254,23 @@
          * @return true if Player is actively harvesting.
          */
         public boolean isHarvesting() {
-            return isHarvesting && harvestCooldown <= 0;
+            return harvestDurationCounter > 0;
+            //return isHarvesting && harvestCooldown <= 0;
         }
 
         public float getHarvestCooldown() {
             return harvestCooldown;
         }
-
+        public int getHarvestDuration() {
+            return harvestDuration;
+        }
         /**
          * Sets whether Player is actively firing.
          *
          * @param value whether Player is actively firing.
          */
-        public void setHarvesting(boolean value) {
-            isHarvesting = value;
+        public void tryStartHarvesting(boolean value) {
+            startedHarvest = value && harvestCooldown <= 0;
         }
 
         /**
@@ -480,15 +490,17 @@
             damping = data.getFloat("damping", 0);
             force = data.getFloat("force", 0);
             jump_force = data.getFloat( "jump_force", 0 );
+            dash_force = data.getFloat("dash_force", 0);
             jumpLimit = data.getInt( "jump_cool", 0 );
             harvestLimit = 60;
+            harvestDuration = 20;
             stunLimit = data.getInt( "shot_cool", 0 );
             teleportLimit = data.getInt( "shot_cool", 0 );
             takeDamageLimit = 120;
 
             // Gameplay attributes
             isGrounded = false;
-            isHarvesting = false;
+            startedHarvest = false;
             isStunning = false;
             isTeleporting = false;
             isJumping = false;
@@ -655,6 +667,15 @@
                 body.applyForce(forceCache,pos,true);
             }
 
+            if (startedHarvest){
+                float direction = -1;
+                if (isFacingRight()){
+                    direction = 1;
+                }
+                forceCache.set(direction * dash_force,0);
+                body.applyLinearImpulse(forceCache,pos,true);
+            }
+
             if (isJumping()) {
                 jumpSprite.reset();
                 forceCache.set(0, jump_force);
@@ -729,10 +750,13 @@
                 jumpCooldown = Math.max(0, jumpCooldown - 1);
             }
 
-            if (isHarvesting()) {
+            if (startedHarvest) {
                 harvestCooldown = harvestLimit;
+                harvestDurationCounter = harvestDuration;
+
             } else {
                 harvestCooldown = Math.max(0, harvestCooldown - 1);
+                harvestDurationCounter = Math.max(0, harvestDurationCounter - 1);
             }
 
             if (isStunning()) {
