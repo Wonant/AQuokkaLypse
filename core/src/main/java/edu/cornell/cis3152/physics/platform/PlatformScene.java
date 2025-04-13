@@ -195,6 +195,7 @@ public class PlatformScene implements Screen{
 
 
     protected PooledList<ShieldWall> shieldWalls = new PooledList<ShieldWall>();
+    protected PooledList<Spear> spears = new PooledList<Spear>();
 
     // global game units
     float units;
@@ -1143,6 +1144,28 @@ public class PlatformScene implements Screen{
 
                 addQueuedObject(wall);
             }
+            if(e instanceof DreamDweller) {
+                DreamDweller dweller = (DreamDweller) e;
+                if (dweller.isShooting() && dweller.getShotsFired() < dweller.getMaxShots()) {
+                    dweller.incrementShotsFired();
+
+                    Vector2 position = dweller.getObstacle().getPosition();
+                    Vector2 playerPos = avatar.getObstacle().getPosition();
+
+                    // Calculate direction vector toward player
+                    Vector2 shootAngle = new Vector2(playerPos.x - position.x, playerPos.y - position.y).nor();
+
+                    JsonValue spearjv = constants.get("bullet");
+                    Texture texture = directory.getEntry("platform-spear", Texture.class); // Ensure this texture exists in your assets
+
+                    Spear spear = new Spear(units, spearjv, position, shootAngle, directory);
+                    spear.setTexture(texture);
+                    spear.setFilter();
+
+                    spears.add(spear);
+                    addQueuedObject(spear);
+                }
+            }
         }
 
         for(ShieldWall s: shieldWalls){
@@ -1154,14 +1177,19 @@ public class PlatformScene implements Screen{
             }
 
         }
+        for (Spear s : spears) {
+            Vector2 velocity = s.getObstacle().getLinearVelocity();
+            if (velocity.len() < 0.05f || Math.abs(s.getObstacle().getX()) > 100 || Math.abs(s.getObstacle().getY()) > 100) {
+                removeBullet(s);
+                spears.remove(s);
+            }
+        }
 
         avatar.setStunning(input.didStun());
         avatar.setTeleporting(input.didM1());
 
-        // Process actions in object model
         avatar.setMovement(input.getHorizontal() *avatar.getForce());
 
-//        if (avatar.isGrounded()) avatar.setJumping(input.didPrimary());
 
         avatar.setJumping(input.didPrimary());
         avatar.setStunning(input.didStun());
@@ -1211,7 +1239,7 @@ public class PlatformScene implements Screen{
 
         if (queuedTeleportPosition != null) {
             avatar.getObstacle().setPosition(queuedTeleportPosition);
-            //avatar.setFearMeter(Math.max(0,avatar.getFearMeter() - TELEPORT_COST));
+            avatar.setFearMeter(Math.max(0,avatar.getFearMeter() - TELEPORT_COST));
             queuedTeleportPosition = null; // Clear after applying
         }
 
