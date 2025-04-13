@@ -91,6 +91,7 @@
         "platform-playerSprite": "platform/playerSprite.png",
         "platform-barrier"  : "platform/barrier.png",
         "platform-bullet"   : "platform/bullet.png",
+        "platform-bullet"   : "platform/spear.png",
         "platform-teleporter" : "platform/teleport.png",
         "platform-scare-effect" : "platform/scare_effct.png",
         "ragdoll-bubble"    : "ragdoll/bubble.png",

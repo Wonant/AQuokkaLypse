@@ -18,6 +18,7 @@ import edu.cornell.gdiac.physics2.CapsuleObstacle;
 import edu.cornell.gdiac.physics2.Obstacle;
 
 import java.util.HashMap;
+import edu.cornell.cis3152.physics.platform.Player;
 
 public class DreamDweller extends Enemy {
     private final JsonValue data;
@@ -61,8 +62,14 @@ public class DreamDweller extends Enemy {
 
     // Head and vision
     private Fixture visionSensor;
-    private Fixture alertSensor;
+
     private float headOffset = 2.0f;
+
+    private boolean isShooting;
+    private int shootCooldown;
+    private int shootLimit = 2;
+    private int shotsFired;
+    private int maxShots;
 
     /**
      * game logic stuff
@@ -105,6 +112,16 @@ public class DreamDweller extends Enemy {
         headBody.setTransform(headBody.getPosition(), desiredAngle);
     }
 
+    public boolean isShooting() {
+        System.out.println("isShooting: " + isShooting);
+        shotsFired++;
+        return isShooting && !isStunned();
+    }
+
+    public void setShooting(boolean value) {
+        isShooting = value;
+    }
+
     public void setStunned(boolean value) {
         stunned = value;
         if (stunned) {
@@ -114,38 +131,6 @@ public class DreamDweller extends Enemy {
 
     public boolean isStunned() {
         return stunned;
-    }
-
-    public float getStunResistance() {
-        return stunResistance;
-    }
-
-    public boolean isGrounded() {
-        return isGrounded;
-    }
-
-    public void setGrounded(boolean value) {
-        isGrounded = value;
-    }
-
-    public float getForce() {
-        return force;
-    }
-
-    public float getDamping() {
-        return damping;
-    }
-
-    public float getMaxSpeed() {
-        return max_speed;
-    }
-
-    public String getSensorName() {
-        return sensorName;
-    }
-
-    public boolean isFacingRight() {
-        return facingRight;
     }
 
     public void setAwareOfPlayer(boolean awareOfPlayer) {
@@ -165,14 +150,6 @@ public class DreamDweller extends Enemy {
 
     public float getFearEnergyAmount() {
         return fearEnergyAmount;
-    }
-
-    public float getAlertRadius() {
-        return alertRadius;
-    }
-
-    public Body getHeadBody() {
-        return headBody;
     }
 
     /**
@@ -203,7 +180,7 @@ public class DreamDweller extends Enemy {
         width = s * data.get("inner").getFloat(0);
         height = s * data.get("inner").getFloat(1);
 
-        float drawWidth = size / 2;
+        float drawWidth = (float) (size / 1.5);
         float drawHeight = size;
 
         // Create the physics body as a capsule
@@ -227,12 +204,7 @@ public class DreamDweller extends Enemy {
         sensorColor = ParserUtils.parseColor(debugInfo.get("sensor"), Color.WHITE);
 
         // Initialize physics properties
-        max_speed = data.getFloat("maxspeed", 0);
-        damping = data.getFloat("damping", 0);
-        force = data.getFloat("force", 0);
-        damage = data.getFloat("damage", 1.0f);
-        alertRadius = data.getFloat("alertRadius", 100.0f);
-        stunResistance = data.getFloat("stunResistance", 2.0f);
+
         fearEnergyAmount = data.getFloat("fearEnergy", 20.0f);
         stunDuration = data.getFloat("stunDuration", 3.0f);
 
@@ -252,6 +224,8 @@ public class DreamDweller extends Enemy {
         currentAwarenessCooldown = 0;
 
         mesh.set(-drawWidth / 1.5f, -drawHeight / 1.6f, drawWidth * 1.5f, drawHeight * 1.5f);
+        shotsFired = 0;
+        maxShots = data.getInt(3);
     }
     public void setActiveTexture(AssetDirectory directory){
         Texture texture = directory.getEntry( "dream-dweller-active", Texture.class );
@@ -408,11 +382,6 @@ public class DreamDweller extends Enemy {
             coneWidth / 2 * u, coneLength * u,
             0, 0);
 
-
-        // Create outline for alert radius
-        alertSensorOutline = new Path2();
-        factory.makeCircle(0, 0, alertRadius * u);
-
         visionShape.dispose();
     }
 
@@ -421,6 +390,7 @@ public class DreamDweller extends Enemy {
      * This includes horizontal movement (with damping) and jumping impulses.
      */
     public void applyForce() {
+
         setMovement(0);
 
         if (obstacle.isActive()) {
@@ -449,29 +419,24 @@ public class DreamDweller extends Enemy {
                 stunned = false;
             }
         }
-
-        // Update awareness cooldown
-        if (awareOfPlayer && !stunned) {
-            currentAwarenessCooldown -= dt;
-            if (currentAwarenessCooldown <= 0) {
-                awareOfPlayer = false;
-            }
+        if (isShooting()) {
+            shootCooldown = shootLimit;
+            shotsFired++;
+        } else {
+            shootCooldown = Math.max(0, shootCooldown - 1);
         }
 
-        // Update vision swing
         if (!awareOfPlayer && !stunned) {
-            // Update the vision swing time
             currentVisionSwingTime += dt;
 
-            // Calculate the new vision angle based on a sine wave
             float swingProgress = (float) Math.sin(currentVisionSwingTime * visionSwingSpeed);
             float newAngle = swingProgress * visionSwingRange;
 
-            // Set the new vision angle
             setVisionAngle(newAngle);
         } else if (awareOfPlayer && !stunned) {
-            // When aware of player, vision tracks the player's position
-            // This would be implemented in the game mode where it has access to player position
+            if (currentAwarenessCooldown <= 0) {
+                awareOfPlayer = false;
+            }
         }
 
         applyForce();
@@ -549,20 +514,6 @@ public class DreamDweller extends Enemy {
             batch.outline(visionSensorOutline, transform);
             batch.setColor(Color.WHITE);
         }
-
-        if (alertSensorOutline != null && awareOfPlayer) {
-            batch.setTexture(Texture2D.getBlank());
-            batch.setColor(Color.RED); // Alert radius when active
-
-            Vector2 headPos = headBody.getPosition();
-            float u = obstacle.getPhysicsUnits();
-
-            transform.idt();
-            transform.preTranslate(headPos.x * u, headPos.y * u);
-
-            batch.outline(alertSensorOutline, transform);
-            batch.setColor(Color.WHITE);
-        }
         if (harvestOutline != null) {
             batch.setTexture(Texture2D.getBlank());
             batch.setColor(Color.BLUE);
@@ -579,6 +530,32 @@ public class DreamDweller extends Enemy {
 
             batch.setColor(Color.WHITE);
         }
+    }
+    public Body getHeadBody() {
+        return headBody;
+    }
+    public void resetShotsFired() {
+        shotsFired = 0;
+    }
+
+    public int getShotsFired() {
+        return shotsFired;
+    }
+
+    public int getMaxShots() {
+        return maxShots;
+    }
+    public void incrementShotsFired() {
+        shotsFired++;
+    }
+    private Player target;
+
+    public void setTarget(Player target) {
+        this.target = target;
+    }
+
+    public Player getTarget() {
+        return target;
     }
 }
 

@@ -6,6 +6,7 @@ import com.badlogic.gdx.ai.btree.LeafTask;
 import com.badlogic.gdx.ai.btree.Task;
 import com.badlogic.gdx.ai.btree.annotation.TaskAttribute;
 import edu.cornell.cis3152.physics.platform.CuriosityCritter;
+import edu.cornell.cis3152.physics.platform.DreamDweller;
 import edu.cornell.cis3152.physics.platform.Enemy;
 
 public class StunnedActionTask extends LeafTask<Enemy> {
@@ -21,6 +22,9 @@ public class StunnedActionTask extends LeafTask<Enemy> {
         if (getObject() instanceof CuriosityCritter) {
             CuriosityCritter c = (CuriosityCritter) getObject();
 
+        }
+        if (getObject() instanceof DreamDweller) {
+            DreamDweller d = (DreamDweller) getObject();
         }
     }
 
@@ -47,9 +51,31 @@ public class StunnedActionTask extends LeafTask<Enemy> {
                 c.setStunned(false);
                 System.out.println("stun ended");
                 return Status.SUCCEEDED;
-            }
+            } else if (getObject() instanceof DreamDweller) {
+                DreamDweller d = (DreamDweller) getObject();
+                if (!d.isStunned()) {
+                    return Status.SUCCEEDED;
+                }
 
-            // Otherwise keep running
+                // Remain stunned: no movement
+                d.setMovement(0);
+                d.applyForce(); // So velocity gets updated
+
+                // Track elapsed time
+                dt = GdxAI.getTimepiece().getDeltaTime();
+                elapsed += dt;
+                System.out.println(elapsed);
+
+                // If we've served our full stun sentence, clear it and succeed
+                if (elapsed >= stunDuration) {
+                    c.setActiveTexture(c.getScene().getAiManager().directory);
+                    c.setStunned(false);
+                    System.out.println("stun ended");
+                    return Status.SUCCEEDED;
+                }
+
+                // Otherwise keep running
+            }
         }
         return Status.RUNNING;
     }
