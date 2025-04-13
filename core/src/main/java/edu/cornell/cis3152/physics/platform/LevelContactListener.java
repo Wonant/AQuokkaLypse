@@ -323,7 +323,6 @@ public class LevelContactListener implements ContactListener {
 
         }
 
-
         if ((bd1 instanceof Teleporter && bd2 == dreamWalkerScene.getAvatar()) || (bd1 == dreamWalkerScene.getAvatar() && bd2 instanceof Teleporter)) {
             dreamWalkerScene.setCurrentTeleporter(null);
             System.out.println("Player moved away from teleporter");

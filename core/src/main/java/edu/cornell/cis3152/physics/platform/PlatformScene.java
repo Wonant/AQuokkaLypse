@@ -1239,7 +1239,7 @@ public class PlatformScene implements Screen{
 
         if (queuedTeleportPosition != null) {
             avatar.getObstacle().setPosition(queuedTeleportPosition);
-            //avatar.setFearMeter(Math.max(0,avatar.getFearMeter() - TELEPORT_COST));
+            avatar.setFearMeter(Math.max(0,avatar.getFearMeter() - TELEPORT_COST));
             queuedTeleportPosition = null; // Clear after applying
         }
 
