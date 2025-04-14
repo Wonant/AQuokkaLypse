@@ -1410,7 +1410,7 @@ public class PlatformScene implements Screen{
         }
         System.out.println("Direction = " + crosshairWorld.x + " " + player.getPosition().x);
         Texture texture = directory.getEntry("platform-bullet", Texture.class);
-
+        System.out.println(texture);
         Bullet bullet = new Bullet(units, bulletjv, player.getPosition(), shootAngle.nor());
         bullet.setTexture(texture);
         addQueuedObject(bullet);
