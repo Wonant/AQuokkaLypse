@@ -207,20 +207,12 @@ public class CuriosityCritter extends Enemy {
         enemyVisionRaycast = new EnemyVisionRaycast(EnemyVisionRaycast.VisionMode.STAIR_CHECK, stepRayLength);
 
 
-        mesh.set(-drawWidth/1.5f, -drawHeight/1.6f, drawWidth*1.5f, drawHeight*1.5f);
+        mesh.set(-drawWidth/1.5f, -drawHeight/1.3f, drawWidth*1.5f, drawHeight*1.5f);
 
 
     }
 
-    public void setFilter() {
-        for (Fixture fixture : obstacle.getBody().getFixtureList()) {
-            Filter filter = fixture.getFilterData();
-            filter.categoryBits = CATEGORY_ENEMY;
-            // Only collide with scenery. (Assuming scenery fixtures are set to CATEGORY_SCENERY.)
-            filter.maskBits = CATEGORY_SCENERY | CATEGORY_BULLET;
-            fixture.setFilterData(filter);
-        }
-    }
+
 
     public void setActiveTexture(AssetDirectory directory){
         Texture texture = directory.getEntry( "curiosity-critter-active", Texture.class );
