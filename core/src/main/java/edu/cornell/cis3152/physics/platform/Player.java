@@ -151,6 +151,8 @@
         private Vector2 debugRayStart;
         private Vector2 debugRayEnd;
         private boolean seenAStep;
+        private static final int FRAME_STAIR_COOLDOWN = 12;
+        private int stairCooldown = 0;
 
         /** animation */
         private Animator walkingSprite;
@@ -686,6 +688,10 @@
         }
 
         public boolean isPlatformStep(World world, float raylength) {
+            if (stairCooldown > 0) {
+                stairCooldown--;
+                return false;
+            }
             Vector2 start = (isFacingRight()) ?
                 obstacle.getBody().getPosition().cpy().add(width/2 + 0.1f, 0) :
                 obstacle.getBody().getPosition().cpy().add(-width/2 - 0.1f, 0);
@@ -714,6 +720,8 @@
             }
 
             playerVisionRaycast.reset();
+
+            stairCooldown = FRAME_STAIR_COOLDOWN;
 
             return true;
         }

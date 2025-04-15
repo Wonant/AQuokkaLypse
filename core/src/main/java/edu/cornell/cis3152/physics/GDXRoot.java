@@ -34,6 +34,7 @@ public class GDXRoot extends Game implements ScreenListener {
     private int current;
     /** Array of map keys for each level */
     private String[] maps = {"platform-constants", "platform-constants1"};
+    private String[] tiled = {"maps/tutorial1.tmx", "maps/tutorial2.tmx"};
     /** Current map index for switching levels */
     private int currentMapIndex = 0;
 
@@ -112,7 +113,7 @@ public class GDXRoot extends Game implements ScreenListener {
             // Create one Arena for each map key
             controllers = new PlatformScene[maps.length];
             for (int i = 0; i < maps.length; i++) {
-                controllers[i] = new PlatformScene(directory, maps[i]);
+                controllers[i] = new PlatformScene(directory, maps[i], tiled[i]);
                 controllers[i].setScreenListener(this);
                 controllers[i].setSpriteBatch(batch);
                 controllers[i].reset();

@@ -56,6 +56,14 @@ public class LevelContactListener implements ContactListener {
                 System.out.println();
             }
 
+
+            //door
+            if ((bd1 == dreamWalkerScene.getAvatar() && bd2 instanceof Door) ||
+                    (bd2 == dreamWalkerScene.getAvatar() && bd1 instanceof Door)) {
+                if (dreamWalkerScene.checkCollectedAllGoals()) {
+                    dreamWalkerScene.setComplete(true);
+                }
+            }
             // Check for collision with dream shard
             if ((bd1 == dreamWalkerScene.getAvatar() && bd2 instanceof Shard)
                 || (bd2 == dreamWalkerScene.getAvatar() && bd1 instanceof Shard
@@ -67,9 +75,7 @@ public class LevelContactListener implements ContactListener {
                     dreamWalkerScene.incrementGoal();
 
 
-                    if (dreamWalkerScene.checkCollectedAllGoals()) {
-                        dreamWalkerScene.setComplete(true);
-                    }
+
                 }
             }
 

@@ -192,6 +192,7 @@ public class PlatformScene implements Screen{
 
     /** tiled map + map info */
     private TiledMapInfo tiledMap;
+    private String tiledLevelName;
 
 
     protected PooledList<ShieldWall> shieldWalls = new PooledList<ShieldWall>();
@@ -467,7 +468,7 @@ public class PlatformScene implements Screen{
      */
     public void draw(float dt) {
         // Clear the screen (color is homage to the XNA years)
-        ScreenUtils.clear(0.39f, 0.58f, 0.93f, 1.0f);
+
 
         // This shows off how powerful our new SpriteBatch is
         batch.begin(camera);
@@ -478,7 +479,7 @@ public class PlatformScene implements Screen{
         float bgX = camera.position.x * parallaxFactor - background.getWidth() / 2f;
         float bgY = camera.position.y * parallaxFactor - background.getHeight() / 2f;
 
-        batch.draw(background, bgX, bgY, background.getWidth(), background.getHeight() * 2);
+        //batch.draw(background, bgX, bgY, background.getWidth(), background.getHeight() * 2);
 
         dreamShardCountText.setText("Dream Shards: " + (totalShards - collectedShards));
         dreamShardCountText.layout();
@@ -540,7 +541,7 @@ public class PlatformScene implements Screen{
             0);
         camera.project(playerWorldPos);
 
-        float teleportRadiusScreen = avatar.getTeleportRangeRadius() + 50f; // Because drawTeleportRadius uses it directly with u.
+        float teleportRadiusScreen = avatar.getTeleportRangeRadius() + 80f; // Because drawTeleportRadius uses it directly with u.
 
         Vector2 delta = new Vector2(mouseX - playerWorldPos.x, mouseY - playerWorldPos.y);
         if (delta.len() > teleportRadiusScreen) {
@@ -684,9 +685,11 @@ public class PlatformScene implements Screen{
                 update(delta);
                 postUpdate(delta);
             }
+            ScreenUtils.clear(0.9f, 0.9f, 0.93f, 1.0f);
+            tiledMap.renderDefault(camera);
             draw(delta);
 
-            tiledMap.renderDefault(camera);
+
 
 
             drawUI();
@@ -702,11 +705,12 @@ public class PlatformScene implements Screen{
         // Convert world bounds to screen coordinates
         float minX = bounds.x * units + halfViewportWidth;
         float maxX = (bounds.x + bounds.width) * units - halfViewportWidth;
-        float maxY = bounds.y * units + halfViewportHeight;
-        float minY = (bounds.y + bounds.height) * units - halfViewportHeight;
+        float minY = bounds.y * units + halfViewportHeight;
+        float maxY = (bounds.y + bounds.height) * units - halfViewportHeight;
+        System.out.println(minY + " " + maxY);
 
         camera.position.x = MathUtils.clamp(camera.position.x, minX-200, maxX+200);
-        camera.position.y = MathUtils.clamp(camera.position.y, minY+100, maxY-50);
+        camera.position.y = MathUtils.clamp(camera.position.y, minY-100, maxY-50);
     }
 
     /**g
@@ -749,9 +753,10 @@ public class PlatformScene implements Screen{
      *
      * The game has default gravity and other settings
      */
-    public PlatformScene(AssetDirectory directory,String mapkey) {
+    public PlatformScene(AssetDirectory directory,String mapkey,String tiled) {
         this.directory = directory;
         this.mapkey = mapkey;
+        tiledLevelName = tiled;
         constants = directory.getEntry(mapkey,JsonValue.class);
         JsonValue defaults = constants.get("world");
 
@@ -846,7 +851,7 @@ public class PlatformScene implements Screen{
      * Lays out the game geography.
      */
     private void populateLevel() {
-        tiledMap = new TiledMapInfo("maps/dreamwalker_alpha_testmap1.tmx");
+        tiledMap = new TiledMapInfo(tiledLevelName);
         aiManager = new AIManager("behaviors/critter.tree", "behaviors/dweller.tree","behaviors/maintenance.tree", directory);
         aiManager.setPlayer(avatar);
         shardPos = new ArrayList<>();
@@ -854,30 +859,53 @@ public class PlatformScene implements Screen{
         float units = TiledMapInfo.PIXELS_PER_WORLD_METER;
         System.out.println("units: " + units);
 
+        MapLayer spawnLayer = tiledMap.get().getLayers().get("Spawn");
+        for (MapObject o : spawnLayer.getObjects()) {
+            if (o instanceof RectangleMapObject) {
+                float x = o.getProperties().get("x", Float.class);
+                float y = o.getProperties().get("y", Float.class);
+                float height = o.getProperties().get("height", Float.class);
+                float width = o.getProperties().get("width", Float.class);
+
+                float worldX = x / units;
+                float worldWidth = width/units;
+
+                // tiles * pixel per tile
+                float mapPixelHeight = tiledMap.get().getProperties().get("height", Integer.class) * TiledMapInfo.PIXELS_PER_WORLD_METER;
+                float worldY = y / units;
+                float worldHeight = height / units;
+                if (o.getName().startsWith("door")) {
+                    Door door = new Door(units, worldX, worldY, worldWidth, worldHeight);
+                    addSprite(door);
+                    door.setFilter();
+                }
+            }
+        }
+
         // Add level goal
         Texture texture = directory.getEntry( "shared-goal", Texture.class );
 
+        MapLayer shardLayer = tiledMap.get().getLayers().get("Shards");
         JsonValue goal = constants.get("goal");
-        JsonValue goalpos = goal.get("pos");
-        totalShards = goalpos.size;
+        totalShards = shardLayer.getProperties().get("totalShards", Integer.class);
         collectedShards = 0;
 
-        System.out.println(goalpos);
-        System.out.println(goalpos.size);
-        for (int i = 0; i < goalpos.size; i++) {
-            System.out.println("Fetching Goal Positions.");
-            float x = goalpos.get(i).getFloat(0);
-            System.out.println("X.");
-            float y = goalpos.get(i).getFloat(1);
-            System.out.println("Y.");
+        int shardID = 0;
+        for (MapObject o : shardLayer.getObjects()) {
+            if (o instanceof RectangleMapObject) {
+                float x = o.getProperties().get("x", Float.class);
+                float y = o.getProperties().get("y", Float.class);
+                float worldX = x / units;
+                float worldY = y / units;
 
-            Shard goalShard = new Shard(units, goal, x, y, i);
-            shardPos.add(i, new Vector2(x, y));
-
-            goalShard.setTexture(texture);
-            goalShard.getObstacle().setName("goal_" + i);
-            addSprite(goalShard);
-            goalShard.setFilter();
+                Shard goalShard = new Shard(units, goal, worldX, worldY, shardID);
+                shardPos.add(shardID, new Vector2(x, y));
+                goalShard.setTexture(texture);
+                goalShard.getObstacle().setName("goal_" + shardID);
+                addSprite(goalShard);
+                goalShard.setFilter();
+                shardID++;
+            }
         }
 
         MapLayer collisionLayer = tiledMap.get().getLayers().get("CollisionLayer");
@@ -1007,6 +1035,7 @@ public class PlatformScene implements Screen{
             maintenance.setTexture(texture);
             addSprite(maintenance);
             // Have to do after body is created
+            maintenance.setFilter();
             maintenance.createSensor();
             maintenance.createVisionSensor();
             enemies.add(maintenance);

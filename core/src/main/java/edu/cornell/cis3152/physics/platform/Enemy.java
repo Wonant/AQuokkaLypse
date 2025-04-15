@@ -17,6 +17,8 @@ import jdk.jshell.spi.ExecutionControl;
 
 import javax.swing.*;
 
+import static edu.cornell.cis3152.physics.platform.CollisionFiltering.*;
+
 public class Enemy extends ObstacleSprite {
     // for easy reference to some world objects
     protected PlatformScene scene;
@@ -79,6 +81,15 @@ public class Enemy extends ObstacleSprite {
         }
     }
 
+    public void setFilter() {
+        for (Fixture fixture : obstacle.getBody().getFixtureList()) {
+            Filter filter = fixture.getFilterData();
+            filter.categoryBits = CATEGORY_ENEMY;
+            // Only collide with scenery. (Assuming scenery fixtures are set to CATEGORY_SCENERY.)
+            filter.maskBits = CATEGORY_SCENERY | CATEGORY_BULLET;
+            fixture.setFilterData(filter);
+        }
+    }
 
     public boolean isDreamShardNear() {
         System.out.println("Checking for nearby shards to enemy " + this);
