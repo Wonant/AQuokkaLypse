@@ -2,18 +2,27 @@ package edu.cornell.cis3152.physics.platform;
 
 import com.badlogic.gdx.graphics.Color;
 import com.badlogic.gdx.math.Vector2;
+import com.badlogic.gdx.physics.box2d.Filter;
+import com.badlogic.gdx.physics.box2d.Fixture;
 import com.badlogic.gdx.utils.JsonValue;
 import edu.cornell.gdiac.assets.ParserUtils;
 import edu.cornell.gdiac.physics2.ObstacleSprite;
 import edu.cornell.gdiac.physics2.PolygonObstacle;
 import edu.cornell.gdiac.math.Poly2;
 
+import static edu.cornell.cis3152.physics.platform.CollisionFiltering.CATEGORY_PLAYER;
+import static edu.cornell.cis3152.physics.platform.CollisionFiltering.CATEGORY_SCENERY;
+
 public class ShieldWall extends ObstacleSprite {
+
+    private boolean filterActivated;
+    private float timeAlive;
 
     public ShieldWall(float units, JsonValue settings, Vector2 pos, float direction) {
         float offset = settings.getFloat( "offset", 0 );
         float s = settings.getFloat( "size" );
         float radius = s * units / 2.0f;
+        timeAlive = 0;
 
         // Create a rectangular obstacle
         Poly2 p = new Poly2(-units*s/32, -units*s/4, units*s/16, units*s/2);
@@ -39,11 +48,28 @@ public class ShieldWall extends ObstacleSprite {
         // the method call below is (x,y,w,h) where x, y is the bottom left.
         mesh.set( -radius, 20*-radius, 5 * radius, 40 * radius );
     }
-    public void update(){
-        obstacle.setVX(obstacle.getVX()*0.97f);
+    public void update(float dt){
+        if (filterActivated) {
+            timeAlive += dt;
+            float slowFactor = (1.0f - timeAlive);
+            obstacle.setVX(obstacle.getVX()*0.97f * slowFactor);
+        }
+        else if (obstacle.getBody() != null) setFilter();
     }
     public float getV(){
         return obstacle.getVX();
     }
 
+    public void setFilter() {
+        for (Fixture fixture : obstacle.getBody().getFixtureList()) {
+            Object ud = fixture.getUserData();
+            if (ud != null && ud.equals("player_sensor")) {
+                continue;
+            }
+            Filter filter = fixture.getFilterData();
+            filter.categoryBits = CATEGORY_SCENERY;
+            filter.maskBits = CATEGORY_PLAYER;
+            fixture.setFilterData(filter);
+        }
+    }
 }

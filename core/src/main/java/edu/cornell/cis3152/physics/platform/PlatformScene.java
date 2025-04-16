@@ -858,6 +858,8 @@ public class PlatformScene implements Screen{
 
         for (Enemy e: enemies){
             if (e instanceof MindMaintenance && ((MindMaintenance) e).isShooting()){
+
+                units = TiledMapInfo.PIXELS_PER_WORLD_METER;
                 Vector2 position = e.getObstacle().getPosition();
                 float direction = 1;
                 if (avatar.getObstacle().getPosition().x < position.x){
@@ -871,8 +873,6 @@ public class PlatformScene implements Screen{
                 System.out.println("Player at " + avatar.getObstacle().getPosition());
                 shieldWalls.add(wall);
                 wall.setTexture(texture);
-
-
                 addQueuedObject(wall);
             }
             if(e instanceof DreamDweller) {
@@ -900,7 +900,7 @@ public class PlatformScene implements Screen{
         }
 
         for(ShieldWall s: shieldWalls){
-            s.update();
+            s.update(dt);
 
             if (Math.abs(s.getV()) < 0.05){
                 removeBullet(s);

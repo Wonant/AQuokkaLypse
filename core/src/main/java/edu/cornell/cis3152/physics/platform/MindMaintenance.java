@@ -585,6 +585,48 @@ public class MindMaintenance extends Enemy {
 
             batch.setColor(Color.WHITE);
         }
+        drawRayDebug(batch);
+    }
+
+    public void drawRayDebug(SpriteBatch batch) {
+        if (debugRayStart != null && debugRayEnd != null) {
+            float u = obstacle.getPhysicsUnits();
+            Vector2 localStart = new Vector2(debugRayStart).sub(obstacle.getPosition());
+            Vector2 localEnd = new Vector2(debugRayEnd).sub(obstacle.getPosition());
+
+            PathFactory factory = new PathFactory();
+            Path2 rayOutline = new Path2();
+            factory.makeLine(localStart.x * u, localStart.y * u,
+                localEnd.x * u, localEnd.y * u, rayOutline);
+
+            batch.setTexture(Texture2D.getBlank());
+            batch.setColor(Color.PURPLE);
+            transform.idt();
+            float a = obstacle.getAngle();
+            Vector2 p = obstacle.getPosition();
+            transform.preRotate((float)(a * 180.0f / Math.PI));
+            transform.preTranslate(p.x * u, p.y * u);
+            batch.outline(rayOutline, transform);
+        }
+        if (debugLookEnd != null && debugLookStart != null) {
+            float u = obstacle.getPhysicsUnits();
+            Vector2 localStart = new Vector2(debugLookStart).sub(obstacle.getPosition());
+            Vector2 localEnd = new Vector2(debugLookEnd).sub(obstacle.getPosition());
+
+            PathFactory factory = new PathFactory();
+            Path2 rayOutline = new Path2();
+            factory.makeLine(localStart.x * u, localStart.y * u,
+                localEnd.x * u, localEnd.y * u, rayOutline);
+
+            batch.setTexture(Texture2D.getBlank());
+            batch.setColor(Color.PURPLE);
+            transform.idt();
+            float a = obstacle.getAngle();
+            Vector2 p = obstacle.getPosition();
+            transform.preRotate((float)(a * 180.0f / Math.PI));
+            transform.preTranslate(p.x * u, p.y * u);
+            batch.outline(rayOutline, transform);
+        }
     }
 
     public Body getHeadBody() {
