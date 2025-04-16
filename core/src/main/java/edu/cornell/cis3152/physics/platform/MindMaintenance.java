@@ -51,9 +51,12 @@ public class MindMaintenance extends Enemy {
     private final Affine2 flipCache = new Affine2();
 
     private Fixture visionSensor;
+    private float followAngle;
     private Fixture followSensor;
     private float headOffset = 2.0f;
     private Fixture walkSensor;
+    private Vector2 debugLookStart = new Vector2();
+    private Vector2 debugLookEnd = new Vector2();
 
     /** game logic stuff */
 
@@ -140,8 +143,10 @@ public class MindMaintenance extends Enemy {
     }
 
 
-    public MindMaintenance(float units, JsonValue data, float[] points) {
+    public MindMaintenance(float units, JsonValue data, float[] points, PlatformScene scene) {
         this.data = data;
+        this.scene = scene;
+
         // Read initial position and overall size from JSON.
         float x = points[0];
         float y = points[1];
@@ -365,6 +370,15 @@ public class MindMaintenance extends Enemy {
         visionShape.dispose();
     }
 
+    public void updateFollowSensor(Player player) {
+        Vector2 enemyPos = obstacle.getPosition();
+        Vector2 playerPos = player.getObstacle().getPosition();
+        Vector2 visionRef = new Vector2(enemyPos.x, enemyPos.y + 5.0f);
+        visionRef.sub(enemyPos).nor();
+        playerPos.sub(enemyPos).nor();
+        followAngle = MathUtils.atan2(playerPos.y,playerPos.x) - MathUtils.atan2(visionRef.y,visionRef.x);
+        headBody.setTransform(headBody.getPosition(), followAngle);
+    }
 
     /**
      * Applies forces to the physics body based on the current input.
@@ -404,10 +418,14 @@ public class MindMaintenance extends Enemy {
 
     @Override
     public void update(float dt) {
+        lookForPlayer();
         if (isJumping()) {
             jumpCooldown = jumpLimit;
         } else {
             jumpCooldown = Math.max(0, jumpCooldown - 1);
+        }
+        if (isAwareOfPlayer()) {
+            updateFollowSensor(scene.getAvatar());
         }
         if (isShooting()) {
             shootCooldown = shootLimit;
@@ -446,6 +464,43 @@ public class MindMaintenance extends Enemy {
             batch.drawMesh(mesh, transform, false);
             batch.setTexture((Texture) null);
         }
+    }
+
+    public void lookForPlayer() {
+        World world = obstacle.getBody().getWorld();
+        Player player = scene.getAvatar();
+
+
+        Vector2 pos = obstacle.getPosition();
+        float rayLength = 4f;
+        float followSensorAngle = MathUtils.atan2(player.getObstacle().getPosition().y - pos.y,
+            player.getObstacle().getPosition().x - pos.x);
+
+        Vector2 start = (facingRight) ? new Vector2(pos.x + width/2, pos.y + height/4) :
+            new Vector2(pos.x - width/2, pos.y + height/4);
+        //Vector2 end = (facingRight) ? new Vector2(pos.x + width + rayLength, pos.y + height/4) :
+        new Vector2(pos.x - width - rayLength, pos.y + height/4);
+        Vector2 end = new Vector2(
+            pos.x + rayLength * MathUtils.cos(followSensorAngle),
+            pos.y + rayLength * MathUtils.sin(followSensorAngle)
+        );
+
+        EnemyVisionRaycast playerRaycast = new EnemyVisionRaycast(EnemyVisionRaycast.VisionMode.PLAYER_CHECK, 4f);
+        world.rayCast(playerRaycast, start, end);
+
+        debugLookStart.set(start);
+        debugLookEnd.set(end);
+
+        if (playerRaycast.getHitPlayer() != null) {
+            setAwareOfPlayer(true);
+            debugLookEnd.set(playerRaycast.getHitPoint());
+            System.out.println("Seen the player");
+
+        } else if (playerRaycast.getHitFixture() != null) {
+            debugLookEnd.set(playerRaycast.getHitPoint());
+        }
+
+        playerRaycast.reset();
     }
 
     /**

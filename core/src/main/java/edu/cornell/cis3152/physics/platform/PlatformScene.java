@@ -707,7 +707,6 @@ public class PlatformScene implements Screen{
         float maxX = (bounds.x + bounds.width) * units - halfViewportWidth;
         float minY = bounds.y * units + halfViewportHeight;
         float maxY = (bounds.y + bounds.height) * units - halfViewportHeight;
-        System.out.println(minY + " " + maxY);
 
         camera.position.x = MathUtils.clamp(camera.position.x, minX-200, maxX+200);
         camera.position.y = MathUtils.clamp(camera.position.y, minY-100, maxY-50);
@@ -852,6 +851,7 @@ public class PlatformScene implements Screen{
      */
     private void populateLevel() {
         tiledMap = new TiledMapInfo(tiledLevelName);
+        aiCManager = new AIControllerManager(avatar,directory,world);
         aiManager = new AIManager("behaviors/critter.tree", "behaviors/dweller.tree","behaviors/maintenance.tree", directory);
         aiManager.setPlayer(avatar);
         shardPos = new ArrayList<>();
@@ -1031,7 +1031,7 @@ public class PlatformScene implements Screen{
         for (int i = 0; i < maintenancePos.size; i++) {
             texture = directory.getEntry("mind-maintenance-active", Texture.class);
 
-            maintenance = new MindMaintenance(units, constants.get("mind-maintenance"), maintenancePos.get(i).asFloatArray());
+            maintenance = new MindMaintenance(units, constants.get("mind-maintenance"), maintenancePos.get(i).asFloatArray(), this);
             maintenance.setTexture(texture);
             addSprite(maintenance);
             // Have to do after body is created
@@ -1039,7 +1039,8 @@ public class PlatformScene implements Screen{
             maintenance.createSensor();
             maintenance.createVisionSensor();
             enemies.add(maintenance);
-            aiManager.register(maintenance);
+            //aiManager.register(maintenance);
+            aiCManager.register(maintenance);
             texture = directory.getEntry("vision_cone", Texture.class);
             visionConeRegion = new TextureRegion(texture);
             visionCone = new Sprite(visionConeRegion.getTexture());
@@ -1167,6 +1168,8 @@ public class PlatformScene implements Screen{
                 Texture texture = directory.getEntry("platform-bullet", Texture.class);
 
                 ShieldWall wall = new ShieldWall(units, bulletjv, position, direction);
+                System.out.println("Shield wall shot at " + position);
+                System.out.println("Player at " + avatar.getObstacle().getPosition());
                 shieldWalls.add(wall);
                 wall.setTexture(texture);
 
@@ -1273,6 +1276,7 @@ public class PlatformScene implements Screen{
         }
 
         aiManager.update(dt);
+        aiCManager.update(dt);
         GdxAI.getTimepiece().update(dt);
 
         avatar.applyForce(world);

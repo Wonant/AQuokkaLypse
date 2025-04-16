@@ -53,7 +53,9 @@ public class LevelContactListener implements ContactListener {
                 System.out.println("Contact detected with Shield Wall");
                 System.out.println(bd1.getClass());
                 System.out.println(bd2.getClass());
-                System.out.println();
+                System.out.println(bd1.getObstacle().getPosition());
+                System.out.println(bd2.getObstacle().getPosition());
+
             }
 
 
@@ -119,7 +121,7 @@ public class LevelContactListener implements ContactListener {
             if ( ("vision_sensor".equals(fd1) || "vision_sensor".equals(fd2))
                 && (bodyDataA instanceof Player || bodyDataB instanceof Player)
                 && !(dreamWalkerScene.getAvatar().getScareSensorName().equals(fd1) || dreamWalkerScene.getAvatar().getScareSensorName().equals(fd2))) {
-
+                System.out.println("ENEMY SEES PLAYER !!!!!!");
                 // Check if the vision sensor belongs to an "un-stunned" enemy, and if
                 // so update the enemy's awareness and apply damage to player
                 if ( bodyDataA instanceof Enemy && !((Enemy) bodyDataA).isStunned() ) {

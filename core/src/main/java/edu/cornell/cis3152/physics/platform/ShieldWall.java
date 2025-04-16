@@ -17,7 +17,7 @@ public class ShieldWall extends ObstacleSprite {
 
         // Create a rectangular obstacle
         Poly2 p = new Poly2(-units*s/32, -units*s/4, units*s/16, units*s/2);
-        obstacle = new PolygonObstacle(p, pos.x + direction * 1, pos.y + 1);
+        obstacle = new PolygonObstacle(p, pos.x + direction, pos.y + 1);
         obstacle.setDensity(100);
         obstacle.setPhysicsUnits( units );
         obstacle.setBullet( true );
