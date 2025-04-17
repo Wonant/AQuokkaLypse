@@ -29,7 +29,7 @@
     "friction"  : 0.5,
     "maxspeed"  : 7.0,
     "maxfear"   : 10.0,
-    "jump_force": 20.0,
+    "jump_force": 15.0,
     "dash_force": 1000.0,
     "jump_cool" : 30,
     "shot_cool" : 40,
@@ -59,7 +59,7 @@
     }
   },
   "curiosity-critter" : {
-    "pos"       : [[40.5, 17.0]],
+    "pos"       : [],
     "inner"     : [0.7, 1.9],
     "size"      : 0.8,
     "force"     : 20.0,
@@ -79,7 +79,7 @@
     }
   },
   "mind-maintenance" : {
-    "pos"       : [],
+    "pos"       : [[36.0, 17.0]],
     "inner"     : [0.8, 3.5],
     "size"      : 0.8,
     "force"     : 20.0,

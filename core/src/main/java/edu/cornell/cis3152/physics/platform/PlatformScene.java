@@ -902,7 +902,7 @@ public class PlatformScene implements Screen{
         for(ShieldWall s: shieldWalls){
             s.update(dt);
 
-            if (Math.abs(s.getV()) < 0.05){
+            if (s.isDead()){
                 removeBullet(s);
                 shieldWalls.remove(s);
             }

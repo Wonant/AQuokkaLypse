@@ -17,6 +17,8 @@ public class ShieldWall extends ObstacleSprite {
 
     private boolean filterActivated;
     private float timeAlive;
+    private float maxAge = 2;
+    private boolean dead = false;
 
     public ShieldWall(float units, JsonValue settings, Vector2 pos, float direction) {
         float offset = settings.getFloat( "offset", 0 );
@@ -26,7 +28,7 @@ public class ShieldWall extends ObstacleSprite {
 
         // Create a rectangular obstacle
         Poly2 p = new Poly2(-units*s/32, -units*s/4, units*s/16, units*s/2);
-        obstacle = new PolygonObstacle(p, pos.x + direction, pos.y + 1);
+        obstacle = new PolygonObstacle(p, pos.x, pos.y + 1);
         obstacle.setDensity(100);
         obstacle.setPhysicsUnits( units );
         obstacle.setBullet( true );
@@ -49,10 +51,15 @@ public class ShieldWall extends ObstacleSprite {
         mesh.set( -radius, 20*-radius, 5 * radius, 40 * radius );
     }
     public void update(float dt){
+        System.out.println(timeAlive);
+
+        if (timeAlive > maxAge){
+            dead = true;
+        }
+
         if (filterActivated) {
             timeAlive += dt;
-            float slowFactor = (1.0f - timeAlive);
-            obstacle.setVX(obstacle.getVX()*0.97f * slowFactor);
+            obstacle.setVX(obstacle.getVX()*0.98f);
         }
         else if (obstacle.getBody() != null) setFilter();
     }
@@ -62,6 +69,7 @@ public class ShieldWall extends ObstacleSprite {
 
     public void setFilter() {
         for (Fixture fixture : obstacle.getBody().getFixtureList()) {
+            filterActivated = true;
             Object ud = fixture.getUserData();
             if (ud != null && ud.equals("player_sensor")) {
                 continue;
@@ -71,5 +79,9 @@ public class ShieldWall extends ObstacleSprite {
             filter.maskBits = CATEGORY_PLAYER;
             fixture.setFilterData(filter);
         }
+    }
+
+    public boolean isDead(){
+        return dead;
     }
 }

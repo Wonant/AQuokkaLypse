@@ -90,7 +90,7 @@
     "friction"  : 0.5,
     "maxspeed"  : 7.0,
     "maxfear"   : 10.0,
-    "jump_force": 20.0,
+    "jump_force": 15.0,
     "dash_force": 1000.0,
     "jump_cool" : 30,
     "shot_cool" : 40,

@@ -459,7 +459,8 @@ public class AIControllerManager {
                 //d If the critter sees the player, transition to ALERTED
                 if (seesPlayer) {
                     data.maintenance.setShooting(true);
-
+                }
+                else if (seesPlayer || data.maintenance.isSus()){
                     data.stateTimer = 0; //reset for all states
                     if (data.state == MaintenanceFSM.CHASING) {
 

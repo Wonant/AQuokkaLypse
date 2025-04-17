@@ -58,6 +58,9 @@ public class MindMaintenance extends Enemy {
     private Vector2 debugLookStart = new Vector2();
     private Vector2 debugLookEnd = new Vector2();
 
+    // time before enemy resumes normal behavior after detecting player
+    private float susCooldown = 100;
+    private float susCountdown = susCooldown;
     /** game logic stuff */
 
     // each npc ai character will have a unique one
@@ -97,6 +100,8 @@ public class MindMaintenance extends Enemy {
         float desiredAngle = theta * MathUtils.degreesToRadians; // Convert to radians
         headBody.setTransform(headBody.getPosition(), desiredAngle);
     }
+
+    public boolean isSus(){return susCountdown > 0;}
 
     public boolean isShooting() {
         return isShooting && shootCooldown <= 0 && !isStunned();
@@ -426,6 +431,10 @@ public class MindMaintenance extends Enemy {
         }
         if (isAwareOfPlayer()) {
             updateFollowSensor(scene.getAvatar());
+            susCountdown = susCooldown;
+        }
+        else{
+            susCountdown--;
         }
         if (isShooting()) {
             shootCooldown = shootLimit;
@@ -498,6 +507,9 @@ public class MindMaintenance extends Enemy {
 
         } else if (playerRaycast.getHitFixture() != null) {
             debugLookEnd.set(playerRaycast.getHitPoint());
+        }
+        else{
+            setAwareOfPlayer(false);
         }
 
         playerRaycast.reset();
