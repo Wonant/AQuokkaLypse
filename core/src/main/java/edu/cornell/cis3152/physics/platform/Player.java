@@ -644,7 +644,10 @@
             if (isPlatformStep(world, stepRayLength)) {
                 System.out.println("seen a step");
                 seenAStep = true;
-            } else {
+            }
+            else if(isDescendingStair(world, stepRayLength)){
+                seenAStep = true;
+            }else {
                 seenAStep = false;
             }
 
@@ -952,5 +955,48 @@
             batch.outline(teleportCircle);
             batch.setColor(Color.WHITE);
         }
+         public boolean isDescendingStair(World world, float raylength) {
+             if (stairCooldown > 0) {
+                 stairCooldown--;
+                 return false;
+             }
 
+             if (!isGrounded) {
+                 return false;
+             }
+
+             // Cast a ray forward and down to detect stairs
+             Vector2 start = (isFacingRight()) ?
+                 obstacle.getBody().getPosition().cpy().add(width/2 + 0.1f, -height/2) :
+                 obstacle.getBody().getPosition().cpy().add(-width/2 - 0.1f, -height/2);
+
+             // Cast the ray diagonally down
+             Vector2 end = start.cpy().add(
+                 isFacingRight() ? raylength : -raylength,
+                 -raylength
+             );
+
+             debugRayStart = start;
+             debugRayEnd = end;
+
+             world.rayCast(playerVisionRaycast, start, end);
+
+             if (playerVisionRaycast.getHitFixture() != null && playerVisionRaycast.fixtureIsStair) {
+                 Vector2 stairHit = new Vector2(playerVisionRaycast.getHitPoint());
+
+                 // Smoothly position player on the stair
+                 float targetCenterY = stairHit.y + height/2;
+                 Body body = obstacle.getBody();
+                 Vector2 pos = body.getPosition();
+                 body.setTransform(pos.x, targetCenterY, body.getAngle());
+
+                 debugRayEnd = stairHit;
+                 playerVisionRaycast.reset();
+                 stairCooldown = FRAME_STAIR_COOLDOWN;
+                 return true;
+             }
+
+             playerVisionRaycast.reset();
+             return false;
+         }
     }
