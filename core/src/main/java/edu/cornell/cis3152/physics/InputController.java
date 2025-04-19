@@ -36,6 +36,9 @@ public class InputController {
     /** The singleton instance of the input controller */
     private static InputController theController = null;
 
+    /** Whether this input controller is enabled */
+    private boolean enabled = true;
+
     /**
      * Returns the singleton instance of the input controller
      *
@@ -267,6 +270,25 @@ public class InputController {
      * @return true if the take teleport button was pressed
      */
     public boolean didTakeTeleport() { return m1Pressed && !teleportPrevious;}
+
+    /**
+     * Sets whether this controller is enabled or disabled.
+     * When disabled, all input methods will return their neutral values.
+     *
+     * @param enabled whether this controller is enabled
+     */
+    public void setEnabled(boolean enabled) {
+        this.enabled = enabled;
+    }
+
+    /**
+     * Returns whether this controller is currently enabled.
+     *
+     * @return whether this controller is currently enabled
+     */
+    public boolean isEnabled() {
+        return enabled;
+    }
 
 
     /**

@@ -132,6 +132,45 @@
             "mipmaps"   : true,
             "minfilter" : "linear mipmap linear",
             "magfilter" : "linear mipmap linear"
+        },
+        "background": {
+            "file": "menu/background.png"
+        },
+        "title": {
+            "file": "menu/start_button.png"
+        },
+        "button": {
+            "file": "menu/start_button.png"
+        },
+        "buttonhover": {
+            "file": "menu/start_button_pressed.png"
+        },
+        "button0": {
+            "file": "menu/start_button.png"
+        },
+        "buttonhover0": {
+            "file": "menu/start_button_pressed.png"
+        },
+        "button1": {
+            "file": "menu/settings_button.png"
+        },
+        "buttonhover1": {
+            "file": "menu/settings_button_pressed.png"
+        },
+        "button2": {
+            "file": "menu/credits_button.png"
+        },
+        "buttonhover2": {
+            "file": "menu/credits_button_pressed.png"
+        },
+        "button3": {
+            "file": "menu/exit_button.png"
+        },
+        "buttonhover3": {
+            "file": "menu/exit_button_pressed.png"
+        },
+        "white": {
+            "file": "menu/start_button.png"
         }
     },
     "jsons"  : {

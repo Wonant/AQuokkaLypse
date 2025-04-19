@@ -451,7 +451,7 @@ public class PlatformScene implements Screen{
      *
      * The game has default gravity and other settings
      */
-    public PlatformScene(AssetDirectory directory,String mapkey,String tiled) {
+    public PlatformScene(AssetDirectory directory, String mapkey, String tiled) {
         this.directory = directory;
         this.mapkey = mapkey;
         tiledLevelName = tiled;
