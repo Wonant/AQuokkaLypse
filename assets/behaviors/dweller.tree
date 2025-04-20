@@ -1,19 +1,4 @@
-import stunnedGuard:"edu.cornell.cis3152.physics.platform.aibehavior.tasks.StunnedGuardTask"
-import stunnedAction:"edu.cornell.cis3152.physics.platform.aibehavior.tasks.StunnedActionTask"
-
-import playerVisible:"edu.cornell.cis3152.physics.platform.aibehavior.tasks.PlayerVisibleGuard"
-import canShoot:"edu.cornell.cis3152.physics.platform.aibehavior.tasks.CanShootTask"
-import shoot:"edu.cornell.cis3152.physics.platform.aibehavior.tasks.ShootSpearTask"
-import track:"edu.cornell.cis3152.physics.platform.aibehavior.tasks.TrackPlayerTask"
-import swing:"edu.cornell.cis3152.physics.platform.aibehavior.tasks.SwingVisionTask"
+import idle:"edu.cornell.cis3152.physics.platform.aibehavior.tasks.IdleTask"
 
 root
-  dynamicGuardSelector
-    (stunnedGuard) stunnedAction stunDuration:4.0
-
-    (playerVisible) sequence
-      track
-      dynamicGuardSelector
-        (canShoot) shoot maxShots:3 cooldown:0.5
-
-    swing speed:0.5 range:90.0
+    idle speed:2 duration:0.1
