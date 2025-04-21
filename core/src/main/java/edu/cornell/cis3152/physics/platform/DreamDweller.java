@@ -390,33 +390,17 @@ public class DreamDweller extends Enemy {
      * This includes horizontal movement (with damping) and jumping impulses.
      */
     public void applyForce() {
-        if (!obstacle.isActive()) {
-            return;
+        setMovement(0);
+
+        if (obstacle.isActive()) {
+            obstacle.setVX(0);
+            obstacle.setVY(0);
         }
 
-        Vector2 pos = obstacle.getPosition();
-        float vx = obstacle.getVX();
         Body body = obstacle.getBody();
-
-        // Apply damping when no horizontal input is provided
-        if (getMovement() == 0f) {
-            float slowFactor = 2.0f; // Adjust this to fine-tune slowdown speed
-            forceCache.set(-slowFactor * vx, 0);
-            body.applyForce(forceCache, pos, true);
-        }
-
-        // Clamp horizontal velocity to the maximum speed
-        if (Math.abs(vx) >= getMaxSpeed()) {
-            obstacle.setVX(Math.signum(vx) * getMaxSpeed());
-        } else {
-            forceCache.set(getMovement(), 0);
-            body.applyForce(forceCache, pos, true);
-        }
-
-        // Apply a vertical impulse if a jump is initiated
-        if (isJumping()) {
-            forceCache.set(0, jump_force);
-            body.applyLinearImpulse(forceCache, pos, true);
+        if (body != null) {
+            body.setLinearVelocity(0, 0);
+            body.setAngularVelocity(0);
         }
     }
 
