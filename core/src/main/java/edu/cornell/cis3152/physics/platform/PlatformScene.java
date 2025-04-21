@@ -1243,8 +1243,8 @@ public class PlatformScene implements Screen{
             }
         }
         if (avatar.isBlinded()) {
-            batch.setColor(1, 1, 1, 0.98f);
-
+            float alpha = MathUtils.clamp(1.2f - avatar.getBlindProgress(), 0f, 1.0f);
+            batch.setColor(1, 1, 1, alpha);
             batch.draw(Texture2D.getBlank(), 0, 0, width, height);
             batch.setColor(Color.WHITE);
         }

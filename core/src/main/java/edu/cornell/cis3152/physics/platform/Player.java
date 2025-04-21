@@ -979,5 +979,8 @@
             batch.outline(teleportCircle);
             batch.setColor(Color.WHITE);
         }
+        public float getBlindProgress() {
+            return MathUtils.clamp(blindTimer / MAX_BLIND_TIME, 0f, 1f);
+        }
 
     }
