@@ -55,7 +55,7 @@ public class LevelContactListener implements ContactListener {
             handleDreamShardContact(bd1, bd2, fd1, fd2);
             handleFollowSensorContact(bd1, bd2, fd1, fd2);
             handleWalkSensorContact(bd1, bd2, fd1, fd2);
-            handleVisionSensorContact(bd1, bd2, fd1, fd2);
+            //handleVisionSensorContact(bd1, bd2, fd1, fd2);
             handleBulletCollision(bd1, bd2, fd1, fd2);
             handleGroundContact(bd1, bd2, fd1, fd2, fix1, fix2);
             handleHarvestingCollision(bd1, bd2, fd1, fd2);
@@ -98,6 +98,7 @@ public class LevelContactListener implements ContactListener {
         handleTeleporterEndContact(bd1, bd2);
         handleVisionSensorEndContact(fd1, fd2, fix1, fix2);
         handleGroundEndContact(bd1, bd2, fd1, fd2, fix1, fix2);
+        handleDoorEndContact((ObstacleSprite) bd1, (ObstacleSprite) bd2);
     }
 
     /** Unused ContactListener method */
@@ -120,8 +121,23 @@ public class LevelContactListener implements ContactListener {
     private void handleDoorContact(ObstacleSprite bd1, ObstacleSprite bd2) {
         if ((bd1 == dreamWalkerScene.getAvatar() && bd2 instanceof Door) ||
             (bd2 == dreamWalkerScene.getAvatar() && bd1 instanceof Door)) {
-            if (dreamWalkerScene.checkCollectedAllGoals()) {
-                dreamWalkerScene.setComplete(true);
+            if(bd1 instanceof Door){
+                ((Door) bd1).setActive();
+            }
+            else{
+                ((Door) bd2).setActive();
+            }
+        }
+    }
+
+    private void handleDoorEndContact(ObstacleSprite bd1, ObstacleSprite bd2) {
+        if ((bd1 == dreamWalkerScene.getAvatar() && bd2 instanceof Door) ||
+            (bd2 == dreamWalkerScene.getAvatar() && bd1 instanceof Door)) {
+            if(bd1 instanceof Door){
+                ((Door) bd1).setInactive();
+            }
+            else{
+                ((Door) bd2).setInactive();
             }
         }
     }

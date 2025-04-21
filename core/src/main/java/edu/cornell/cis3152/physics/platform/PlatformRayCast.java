@@ -18,7 +18,7 @@ public class PlatformRayCast implements RayCastCallback {
         if (userData instanceof Surface) {
             Surface surface = (Surface)userData;
             String obstacleName = surface.getObstacle().getName();
-            if (obstacleName != null && obstacleName.startsWith("platform")) {
+            if (obstacleName != null && (obstacleName.startsWith("platform") || obstacleName.startsWith("stair"))) {
                 this.hitPointCount+=1;
                 if (surface.isShadowed()) {
                     platformFixture = fixture;

@@ -192,6 +192,7 @@ public class PlatformScene implements Screen{
     private TiledMapInfo tiledMap;
     private String tiledLevelName;
 
+    protected PooledList<Door> doors = new PooledList<Door>();
 
     protected PooledList<ShieldWall> shieldWalls = new PooledList<ShieldWall>();
     protected PooledList<Spear> spears = new PooledList<Spear>();
@@ -575,6 +576,7 @@ public class PlatformScene implements Screen{
                 float worldHeight = height / units;
                 if (o.getName().startsWith("door")) {
                     Door door = new Door(units, worldX, worldY, worldWidth, worldHeight);
+                    doors.add(door);
                     addSprite(door);
                     door.setFilter();
                 }
@@ -858,7 +860,7 @@ public class PlatformScene implements Screen{
 
         for (Enemy e: enemies){
             if (e instanceof MindMaintenance && ((MindMaintenance) e).isShooting()){
-
+                ((MindMaintenance) e).resetShootCooldown();
                 units = TiledMapInfo.PIXELS_PER_WORLD_METER;
                 Vector2 position = e.getObstacle().getPosition();
                 float direction = 1;
@@ -899,6 +901,12 @@ public class PlatformScene implements Screen{
             }
         }
 
+        for (Door d: doors){
+            if(d.isActive() && checkCollectedAllGoals() && avatar.isTakingDoor()){
+                setComplete(true);
+            }
+        }
+
         for(ShieldWall s: shieldWalls){
             s.update(dt);
 
@@ -918,7 +926,7 @@ public class PlatformScene implements Screen{
 
         avatar.setStunning(input.didStun());
         avatar.setTeleporting(input.didM1());
-
+        avatar.setTakingDoor(input.didTakeDoor());
         avatar.setMovement(input.getHorizontal() *avatar.getForce());
 
 
