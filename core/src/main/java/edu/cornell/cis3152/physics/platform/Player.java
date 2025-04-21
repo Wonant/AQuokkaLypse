@@ -160,12 +160,38 @@
         private Animator jumpSprite;
         private AnimationState animationState;
 
+        /** isblinded */
+        private boolean isBlinded = false;
+        private float blindTimer = 0f;
+        private static final float MAX_BLIND_TIME = 2.0f;
+
 
         private enum AnimationState {
             WALK,
             IDLE,
             JUMP,
             STAIR
+        }
+
+        public void setBlinded(boolean blinded) {
+            if (blinded) {
+                this.isBlinded = true;
+                this.blindTimer = 0f;
+            }
+        }
+
+        public boolean isBlinded() {
+            return isBlinded;
+        }
+
+        public void updateBlind(float dt) {
+            if (isBlinded) {
+                blindTimer += dt;
+                if (blindTimer >= MAX_BLIND_TIME) {
+                    isBlinded = false;
+                    blindTimer = 0f;
+                }
+            }
         }
 
 
@@ -789,6 +815,7 @@
             } else {
                 takeDamageCooldown = Math.max(0, takeDamageCooldown - 1);
             }
+            updateBlind(dt);
             super.update(dt);
 
         }

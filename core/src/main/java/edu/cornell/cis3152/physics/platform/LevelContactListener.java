@@ -420,6 +420,7 @@ public class LevelContactListener implements ContactListener {
 
             spear.getObstacle().setVX(0);
             spear.getObstacle().setVY(0);
+            player.setBlinded(true);
 
             System.out.println("Spear hit Player: -1 fear, no push.");
         }

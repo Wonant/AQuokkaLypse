@@ -224,7 +224,8 @@ public class PlatformScene implements Screen{
         queuedHarvestedEnemy.add(enemy);
     }
 
-    public void removeHarvestedEnemy(Enemy enemy) {queuedHarvestedEnemy.remove(enemy);}
+    public void removeHarvestedEnemy(Enemy enemy) {queuedHarvestedEnemy.remove(enemy);
+        enemies.remove(enemy);      }
 
 
 
@@ -1240,6 +1241,12 @@ public class PlatformScene implements Screen{
             for (ObstacleSprite obj : sprites) {
                 obj.drawDebug( batch );
             }
+        }
+        if (avatar.isBlinded()) {
+            batch.setColor(1, 1, 1, 0.98f);
+
+            batch.draw(Texture2D.getBlank(), 0, 0, width, height);
+            batch.setColor(Color.WHITE);
         }
 
         // Draw a final message
