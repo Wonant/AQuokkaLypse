@@ -584,6 +584,13 @@ public class CuriosityCritter extends Enemy {
             debugLookEnd.set(playerRaycast.getHitPoint());
         }
 
+        /*if (playerRaycast.getHitPlayer() != null)
+        {
+            player.setTakingDamage(true);
+        } else {
+            player.setTakingDamage(false);
+        }*/
+
         playerRaycast.reset();
     }
 
@@ -667,6 +674,7 @@ public class CuriosityCritter extends Enemy {
             safeToWalk = true;
         }
         if (isAwareOfPlayer()) {
+            scene.getAvatar().setTakingDamage(true);
             //updateFollowSensor(scene.getAvatar());
             if (checkFollowRaycast()) {
                 updateFollowSensor(scene.getAvatar());
