@@ -59,7 +59,7 @@
     }
   },
   "curiosity-critter" : {
-    "pos"       : [[40.5, 17.0]],
+    "pos"       : [],
     "inner"     : [0.7, 1.9],
     "size"      : 0.8,
     "force"     : 20.0,
@@ -79,7 +79,7 @@
     }
   },
   "mind-maintenance" : {
-    "pos"       : [],
+    "pos"       : [[36.0, 17.0]],
     "inner"     : [0.8, 3.5],
     "size"      : 0.8,
     "force"     : 20.0,
@@ -137,6 +137,15 @@
     "size"   : 0.25,
     "speed"  : 20.0,
     "density": 10.0
+  },
+  "spear": {
+    "offset"     : 0.75,
+    "size": 1.0,
+    "width"      : 1.0,
+    "height"     : 0.2,
+    "speed"      : 15.0,
+    "density"    : 8.0,
+    "debug"      : "#800080"
   },
   "walls" : {
     "tile" : 128.0,

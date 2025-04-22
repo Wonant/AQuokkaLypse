@@ -55,6 +55,7 @@ public class Enemy extends ObstacleSprite {
         this.dispatcher = dispatcher;
     }
     public boolean isAwareOfPlayer(){
+        System.out.println("seesPlayer"+awareOfPlayer);
         return awareOfPlayer;
     }
     public void setAwareOfPlayer(boolean awareness){
@@ -126,7 +127,9 @@ public class Enemy extends ObstacleSprite {
     }
 
     public void dispatchHarvest() {
-        dispatcher.dispatchMessage(null, scene, MessageType.ENEMY_LOST_PLAYER);
+        if (dispatcher != null) {
+            dispatcher.dispatchMessage(null, scene, MessageType.ENEMY_LOST_PLAYER);
+        }
     }
 
 

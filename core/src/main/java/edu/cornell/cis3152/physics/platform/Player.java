@@ -108,7 +108,8 @@
         private int takeDamageCooldown;
         /** Whether we are actively taking damage */
         private boolean isTakingDamage;
-
+        /** Whether we are actively taking door */
+        private boolean isTakingDoor;
         /** The current horizontal movement of the character */
         private float   movement;
         /** Which direction is the character facing */
@@ -196,6 +197,11 @@
         private boolean hoverInteract;
         private boolean absorbing;
 
+        /** isblinded */
+        private boolean isBlinded = false;
+        private float blindTimer = 0f;
+        private static final float MAX_BLIND_TIME = 2.0f;
+
 
         private enum AnimationState {
             WALK,
@@ -207,6 +213,27 @@
             STUN,
             INTERACT,
             ABSORB
+        }
+
+        public void setBlinded(boolean blinded) {
+            if (blinded) {
+                this.isBlinded = true;
+                this.blindTimer = 0f;
+            }
+        }
+
+        public boolean isBlinded() {
+            return isBlinded;
+        }
+
+        public void updateBlind(float dt) {
+            if (isBlinded) {
+                blindTimer += dt;
+                if (blindTimer >= MAX_BLIND_TIME) {
+                    isBlinded = false;
+                    blindTimer = 0f;
+                }
+            }
         }
 
 
@@ -384,23 +411,40 @@
         }
 
         /**
-         * Returns true if CatDemon is actively taking damage.
+         * Returns true if Player is actively taking damage.
          *
-         * @return true if CatDemon is actively taking damage.
+         * @return true if Player is actively taking damage.
          */
         public boolean isTakingDamage() {
             return isTakingDamage && takeDamageCooldown <= 0;
         }
 
         /**
-         * Sets whether CatDemon is actively taking damage.
+         * Sets whether Player is actively taking damage.
          *
-         * @param value whether CatDemon is actively taking damage.
+         * @param value whether Player is actively taking damage.
          */
         public void setTakingDamage(boolean value) {
             isTakingDamage = value;
         }
 
+        /**
+         * Returns true if Player is actively taking door.
+         *
+         * @return true if Player is actively taking door.
+         */
+        public boolean isTakingDoor() {
+            return isTakingDoor;
+        }
+
+        /**
+         * Sets whether Player is actively taking door.
+         *
+         * @param value whether Player is actively taking door.
+         */
+        public void setTakingDoor(boolean value) {
+            isTakingDoor = value;
+        }
 
         /**
          * Returns true if Player is actively jumping.
@@ -1028,6 +1072,7 @@
             } else {
                 takeDamageCooldown = Math.max(0, takeDamageCooldown - 1);
             }
+            updateBlind(dt);
             super.update(dt);
 
         }
@@ -1208,6 +1253,9 @@
             batch.setColor(Color.RED);
             batch.outline(teleportCircle);
             batch.setColor(Color.WHITE);
+        }
+        public float getBlindProgress() {
+            return MathUtils.clamp(blindTimer / MAX_BLIND_TIME, 0f, 1f);
         }
 
     }

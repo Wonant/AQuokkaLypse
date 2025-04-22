@@ -36,6 +36,9 @@ public class InputController {
     /** The singleton instance of the input controller */
     private static InputController theController = null;
 
+    /** Whether this input controller is enabled */
+    private boolean enabled = true;
+
     /**
      * Returns the singleton instance of the input controller
      *
@@ -64,8 +67,9 @@ public class InputController {
     /** Whether the secondary action button was pressed. */
     private boolean secondPressed;
     private boolean secondPrevious;
-
-
+    /** Whether the take door button was pressed */
+    private boolean takeDoorPressed;
+    private boolean takeDoorPrevious;
 
     /** Whether the debug toggle was pressed. */
     private boolean debugPressed;
@@ -269,11 +273,30 @@ public class InputController {
     }
 
     /**
-     * Returns true if the take teleport button was pressed
+     * Returns true if the takeDoor button was pressed
      *
-     * @return true if the take teleport button was pressed
+     * @return true if the takeDoor button was pressed
      */
-    public boolean didTakeTeleport() { return m1Pressed && !teleportPrevious;}
+    public boolean didTakeDoor() { return takeDoorPressed && !takeDoorPrevious;}
+
+    /**
+     * Sets whether this controller is enabled or disabled.
+     * When disabled, all input methods will return their neutral values.
+     *
+     * @param enabled whether this controller is enabled
+     */
+    public void setEnabled(boolean enabled) {
+        this.enabled = enabled;
+    }
+
+    /**
+     * Returns whether this controller is currently enabled.
+     *
+     * @return whether this controller is currently enabled
+     */
+    public boolean isEnabled() {
+        return enabled;
+    }
 
 
     /**
@@ -311,6 +334,7 @@ public class InputController {
         primePrevious  = primePressed;
         secondPrevious = secondPressed;
         resetPrevious  = resetPressed;
+        takeDoorPrevious = takeDoorPressed;
         debugPrevious  = debugPressed;
         exitPrevious = exitPressed;
         nextPrevious = nextPressed;
@@ -386,6 +410,7 @@ public class InputController {
     private void readKeyboard(Rectangle bounds, Vector2 scale, boolean secondary) {
         // Give priority to gamepad results
         resetPressed = (secondary && resetPressed) || (Gdx.input.isKeyPressed(Input.Keys.R));
+        takeDoorPressed = (secondary && takeDoorPressed) || (Gdx.input.isKeyPressed(Input.Keys.S));
         debugPressed = (secondary && debugPressed) || (Gdx.input.isKeyPressed(Input.Keys.B));
         primePressed = (secondary && primePressed) || (Gdx.input.isKeyPressed(Input.Keys.W));
         secondPressed = (secondary && secondPressed) || (Gdx.input.isKeyPressed(Input.Keys.SPACE));
@@ -412,9 +437,7 @@ public class InputController {
         if (Gdx.input.isKeyPressed(Input.Keys.W)) {
             vertical += 1.0f;
         }
-        if (Gdx.input.isKeyPressed(Input.Keys.S)) {
-            vertical -= 1.0f;
-        }
+
 
         shiftPressed = Gdx.input.isKeyPressed(Input.Keys.SHIFT_LEFT);
 

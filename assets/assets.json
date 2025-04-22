@@ -81,6 +81,7 @@
         "absorb-animation" : "platform/absorb.png",
         "fear-meter-sprite-sheet" : "platform/healthbar_spritesheet.png",
         "visibility-indicator" : "platform/v1.png",
+        "teleport-teleport" : "platform/teleport_sheet.png",
 
         "background-proto" : "platform/dreamBackground.png",
         "background-technical" : "shared/backgroundTemple.png",
@@ -95,6 +96,8 @@
         "platform-traci"    : "platform/traci.png",
         "platform-playerSprite": "platform/playerSprite.png",
         "platform-barrier"  : "platform/barrier.png",
+        "platform-spear"  : "platform/spear.png",
+        "platform-spear-right"  : "platform/spear-right.png",
         "platform-bullet"   : "platform/bullet.png",
         "platform-teleporter" : "platform/teleport.png",
         "platform-scare-effect" : "platform/scare_effct.png",
@@ -137,11 +140,51 @@
             "mipmaps"   : true,
             "minfilter" : "linear mipmap linear",
             "magfilter" : "linear mipmap linear"
+        },
+        "background": {
+            "file": "menu/background.png"
+        },
+        "title": {
+            "file": "menu/start_button.png"
+        },
+        "button": {
+            "file": "menu/start_button.png"
+        },
+        "buttonhover": {
+            "file": "menu/start_button_pressed.png"
+        },
+        "button0": {
+            "file": "menu/start_button.png"
+        },
+        "buttonhover0": {
+            "file": "menu/start_button_pressed.png"
+        },
+        "button1": {
+            "file": "menu/settings_button.png"
+        },
+        "buttonhover1": {
+            "file": "menu/settings_button_pressed.png"
+        },
+        "button2": {
+            "file": "menu/credits_button.png"
+        },
+        "buttonhover2": {
+            "file": "menu/credits_button_pressed.png"
+        },
+        "button3": {
+            "file": "menu/exit_button.png"
+        },
+        "buttonhover3": {
+            "file": "menu/exit_button_pressed.png"
+        },
+        "white": {
+            "file": "menu/start_button.png"
         }
     },
     "jsons"  : {
         "platform-constants": "platform/constants.json",
         "platform-constants1": "platform/constant1.json",
+        "platform-constants2": "platform/constant2.json",
         "arena" : "arena/arena.json",
         "arena1" : "arena/arena1.json"
     },
@@ -163,5 +206,8 @@
             "file": "shared/RetroGame.ttf",
             "size": 64
         }
-    }
+    },
+    "samples": {
+        "theme": "music/theme2.ogg"
+  }
 }
