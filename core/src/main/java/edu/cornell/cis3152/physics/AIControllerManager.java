@@ -460,7 +460,10 @@ public class AIControllerManager {
                 if (seesPlayer) {
                     data.maintenance.setShooting(true);
                 }
-                else if (seesPlayer || data.maintenance.isSus()){
+                else{
+                    data.maintenance.setShooting(false);
+                }
+                if (seesPlayer || data.maintenance.isSus()){
                     data.stateTimer = 0; //reset for all states
                     if (data.state == MaintenanceFSM.CHASING) {
 
@@ -495,9 +498,6 @@ public class AIControllerManager {
 
                     }
 
-                }
-                else{
-                    data.maintenance.setShooting(false);
                 }
             }
         }

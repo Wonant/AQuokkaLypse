@@ -37,7 +37,7 @@ public class MindMaintenance extends Enemy {
     private int jumpCooldown;
     private boolean isJumping;
     private int shootCooldown;
-    private int shootLimit = 40;
+    private int shootLimit = 60;
     private boolean isGrounded;
     private boolean isShooting;
 
@@ -420,6 +420,9 @@ public class MindMaintenance extends Enemy {
         }
     }
 
+    public void resetShootCooldown(){
+        shootCooldown = shootLimit;
+    }
 
     @Override
     public void update(float dt) {
@@ -436,9 +439,7 @@ public class MindMaintenance extends Enemy {
         else{
             susCountdown--;
         }
-        if (isShooting()) {
-            shootCooldown = shootLimit;
-        } else {
+        if (!isShooting()) {
             shootCooldown = Math.max(0, shootCooldown - 1);
         }
         super.update(dt);
@@ -481,7 +482,7 @@ public class MindMaintenance extends Enemy {
 
 
         Vector2 pos = obstacle.getPosition();
-        float rayLength = 4f;
+        float rayLength = 5f;
         float followSensorAngle = MathUtils.atan2(player.getObstacle().getPosition().y - pos.y,
             player.getObstacle().getPosition().x - pos.x);
 

@@ -64,8 +64,9 @@ public class InputController {
     /** Whether the secondary action button was pressed. */
     private boolean secondPressed;
     private boolean secondPrevious;
-
-
+    /** Whether the take door button was pressed */
+    private boolean takeDoorPressed;
+    private boolean takeDoorPrevious;
 
     /** Whether the debug toggle was pressed. */
     private boolean debugPressed;
@@ -262,11 +263,11 @@ public class InputController {
     }
 
     /**
-     * Returns true if the take teleport button was pressed
+     * Returns true if the takeDoor button was pressed
      *
-     * @return true if the take teleport button was pressed
+     * @return true if the takeDoor button was pressed
      */
-    public boolean didTakeTeleport() { return m1Pressed && !teleportPrevious;}
+    public boolean didTakeDoor() { return takeDoorPressed && !takeDoorPrevious;}
 
 
     /**
@@ -304,6 +305,7 @@ public class InputController {
         primePrevious  = primePressed;
         secondPrevious = secondPressed;
         resetPrevious  = resetPressed;
+        takeDoorPrevious = takeDoorPressed;
         debugPrevious  = debugPressed;
         exitPrevious = exitPressed;
         nextPrevious = nextPressed;
@@ -379,6 +381,7 @@ public class InputController {
     private void readKeyboard(Rectangle bounds, Vector2 scale, boolean secondary) {
         // Give priority to gamepad results
         resetPressed = (secondary && resetPressed) || (Gdx.input.isKeyPressed(Input.Keys.R));
+        takeDoorPressed = (secondary && takeDoorPressed) || (Gdx.input.isKeyPressed(Input.Keys.S));
         debugPressed = (secondary && debugPressed) || (Gdx.input.isKeyPressed(Input.Keys.B));
         primePressed = (secondary && primePressed) || (Gdx.input.isKeyPressed(Input.Keys.W));
         secondPressed = (secondary && secondPressed) || (Gdx.input.isKeyPressed(Input.Keys.SPACE));
@@ -405,9 +408,7 @@ public class InputController {
         if (Gdx.input.isKeyPressed(Input.Keys.W)) {
             vertical += 1.0f;
         }
-        if (Gdx.input.isKeyPressed(Input.Keys.S)) {
-            vertical -= 1.0f;
-        }
+
 
         stunPressed = Gdx.input.isKeyPressed(Input.Keys.SHIFT_LEFT);
 
