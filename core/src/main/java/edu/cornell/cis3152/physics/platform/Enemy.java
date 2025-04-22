@@ -49,6 +49,7 @@ public class Enemy extends ObstacleSprite {
 
     }
     public boolean isAwareOfPlayer(){
+        System.out.println("seesPlayer"+awareOfPlayer);
         return awareOfPlayer;
     }
     public void setAwareOfPlayer(boolean awareness){

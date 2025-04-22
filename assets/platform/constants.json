@@ -99,7 +99,7 @@
     }
   },
   "dream-dweller": {
-    "pos"       : [],
+    "pos"       : [[14.0, 8.0]],
     "inner"     : [2.0, 1.7],
     "size"      : 1.5,
     "force"     : 20.0,
@@ -137,6 +137,15 @@
     "size"   : 0.25,
     "speed"  : 20.0,
     "density": 10.0
+  },
+  "spear": {
+    "offset"     : 0.75,
+    "size": 1.0,
+    "width"      : 1.0,
+    "height"     : 0.2,
+    "speed"      : 15.0,
+    "density"    : 8.0,
+    "debug"      : "#800080"
   },
   "walls" : {
     "tile" : 128.0,

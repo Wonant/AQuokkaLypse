@@ -46,6 +46,8 @@ import edu.cornell.cis3152.physics.InputController;
 import edu.cornell.gdiac.audio.SoundEffect;
 import edu.cornell.gdiac.audio.SoundEffectManager;
 
+import com.badlogic.gdx.graphics.g2d.TextureRegion;
+
 /**
  * The game scene for the platformer game.
  *
@@ -229,7 +231,8 @@ public class PlatformScene implements Screen{
         queuedHarvestedEnemy.add(enemy);
     }
 
-    public void removeHarvestedEnemy(Enemy enemy) {queuedHarvestedEnemy.remove(enemy);}
+    public void removeHarvestedEnemy(Enemy enemy) {queuedHarvestedEnemy.remove(enemy);
+        enemies.remove(enemy);      }
 
 
 
@@ -760,14 +763,17 @@ public class PlatformScene implements Screen{
         JsonValue dwellersPos = dreamdwellers.get("pos");
         for (int i = 0; i < dwellersPos.size; i++) {
             texture = directory.getEntry("dream-dweller-active", Texture.class);
-            dreamDweller = new DreamDweller(units, constants.get("dream-dweller"), dwellersPos.get(i).asFloatArray());
+
+            dreamDweller = new DreamDweller(units, constants.get("dream-dweller"), dwellersPos.get(i).asFloatArray(), this);
             dreamDweller.setTexture(texture);
             addSprite(dreamDweller);
             // Have to do after body is created
+            dreamDweller.setFilter();
             dreamDweller.createSensor();
             dreamDweller.createVisionSensor();
             enemies.add(dreamDweller);
-            aiManager.register(dreamDweller);
+            //aiManager.register(maintenance);
+            aiCManager.register(dreamDweller);
             texture = directory.getEntry("vision_cone", Texture.class);
             visionConeRegion = new TextureRegion(texture);
             visionCone = new Sprite(visionConeRegion.getTexture());
@@ -885,29 +891,28 @@ public class PlatformScene implements Screen{
                 wall.setTexture(texture);
                 addQueuedObject(wall);
             }
-            if(e instanceof DreamDweller) {
-                DreamDweller dweller = (DreamDweller) e;
-                if (dweller.isShooting() && dweller.getShotsFired() < dweller.getMaxShots()) {
-                    dweller.incrementShotsFired();
+            else  if (e instanceof DreamDweller && ((DreamDweller) e).isShooting()){
 
-                    Vector2 position = dweller.getObstacle().getPosition();
-                    Vector2 playerPos = avatar.getObstacle().getPosition();
-
-                    // Calculate direction vector toward player
-                    Vector2 shootAngle = new Vector2(playerPos.x - position.x, playerPos.y - position.y).nor();
-
-                    JsonValue spearjv = constants.get("bullet");
-                    Texture texture = directory.getEntry("platform-spear", Texture.class); // Ensure this texture exists in your assets
-
-                    Spear spear = new Spear(units, spearjv, position, shootAngle, directory);
-                    spear.setTexture(texture);
-                    spear.setFilter();
-
-                    spears.add(spear);
-                    addQueuedObject(spear);
+                units = TiledMapInfo.PIXELS_PER_WORLD_METER;
+                Vector2 position = e.getObstacle().getPosition();
+                float direction = 1;
+                if (avatar.getObstacle().getPosition().x < position.x){
+                    direction = -1;
                 }
+                JsonValue spearjv = constants.get("spear");
+                Texture texture = directory.getEntry("platform-spear", Texture.class);
+                Texture textureflip = directory.getEntry("platform-spear-right", Texture.class);
+                Spear spear = new Spear(units, spearjv, position, direction);
+                spears.add(spear);
+                if(direction < 0) {
+                    spear.setTexture(texture);
+                } else if (direction > 0) {
+                    spear.setTexture(textureflip);
+                }
+                addQueuedObject(spear);
             }
         }
+
 
         for (Door d: doors){
             if(d.isActive() && checkCollectedAllGoals() && avatar.isTakingDoor()){
@@ -924,11 +929,11 @@ public class PlatformScene implements Screen{
             }
 
         }
-        for (Spear s : spears) {
-            Vector2 velocity = s.getObstacle().getLinearVelocity();
-            if (velocity.len() < 0.05f || Math.abs(s.getObstacle().getX()) > 100 || Math.abs(s.getObstacle().getY()) > 100) {
-                removeBullet(s);
-                spears.remove(s);
+        for (Spear p : spears) {
+
+            if (p.isDead()){
+                removeBullet(p);
+                spears.remove(p);
             }
         }
 
@@ -1286,6 +1291,12 @@ public class PlatformScene implements Screen{
             for (ObstacleSprite obj : sprites) {
                 obj.drawDebug( batch );
             }
+        }
+        if (avatar.isBlinded()) {
+            float alpha = MathUtils.clamp(1.2f - avatar.getBlindProgress(), 0f, 1.0f);
+            batch.setColor(1, 1, 1, alpha);
+            batch.draw(Texture2D.getBlank(), 0, 0, width, height);
+            batch.setColor(Color.WHITE);
         }
 
         // Draw a final message

@@ -91,6 +91,8 @@
         "platform-traci"    : "platform/traci.png",
         "platform-playerSprite": "platform/playerSprite.png",
         "platform-barrier"  : "platform/barrier.png",
+        "platform-spear"  : "platform/spear.png",
+        "platform-spear-right"  : "platform/spear-right.png",
         "platform-bullet"   : "platform/bullet.png",
         "platform-teleporter" : "platform/teleport.png",
         "platform-scare-effect" : "platform/scare_effct.png",

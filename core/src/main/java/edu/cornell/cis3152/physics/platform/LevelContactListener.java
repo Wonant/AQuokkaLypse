@@ -57,6 +57,7 @@ public class LevelContactListener implements ContactListener {
             handleWalkSensorContact(bd1, bd2, fd1, fd2);
             //handleVisionSensorContact(bd1, bd2, fd1, fd2);
             handleBulletCollision(bd1, bd2, fd1, fd2);
+            handleSpearHitPlayer(bd1, bd2);
             handleGroundContact(bd1, bd2, fd1, fd2, fix1, fix2);
             handleHarvestingCollision(bd1, bd2, fd1, fd2);
 
@@ -421,6 +422,23 @@ public class LevelContactListener implements ContactListener {
             if (dreamWalkerScene.shadowSensorFixtures.size == 0) {
                 dreamWalkerScene.getAvatar().setIsShadow(false);
             }
+        }
+    }
+    private void handleSpearHitPlayer(ObstacleSprite bd1, ObstacleSprite bd2) {
+        if ((bd1 instanceof Spear && bd2 instanceof Player) || (bd2 instanceof Spear && bd1 instanceof Player)) {
+            Spear spear = (bd1 instanceof Spear) ? (Spear) bd1 : (Spear) bd2;
+            Player player = (bd1 instanceof Player) ? (Player) bd1 : (Player) bd2;
+
+            spear.getObstacle().markRemoved(true);
+
+            player.setFearMeter(Math.max(0, player.getFearMeter() - 1));
+
+
+            spear.getObstacle().setVX(0);
+            spear.getObstacle().setVY(0);
+            player.setBlinded(true);
+
+            System.out.println("Spear hit Player: -1 fear, no push.");
         }
     }
 }
