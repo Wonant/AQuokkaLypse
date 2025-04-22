@@ -37,7 +37,7 @@ public class MindMaintenance extends Enemy {
     private int jumpCooldown;
     private boolean isJumping;
     private int shootCooldown;
-    private int shootLimit = 40;
+    private int shootLimit = 60;
     private boolean isGrounded;
     private boolean isShooting;
 
@@ -78,6 +78,7 @@ public class MindMaintenance extends Enemy {
     private Path2 walkSensorOutline;
     private Path2 harvestOutline;
 
+    private boolean safeToWalk;
 
     public float getMovement() {
         return movement;
@@ -197,6 +198,8 @@ public class MindMaintenance extends Enemy {
         //deg
         visionAngle = 0;
 
+        stepRayLength = height;
+        enemyVisionRaycast = new EnemyVisionRaycast(EnemyVisionRaycast.VisionMode.STAIR_CHECK, stepRayLength);
 
         mesh.set(-drawWidth/1.5f, -drawHeight/1.6f, drawWidth*1.5f, drawHeight*1.5f);
     }
@@ -385,6 +388,77 @@ public class MindMaintenance extends Enemy {
         headBody.setTransform(headBody.getPosition(), followAngle);
     }
 
+
+    public boolean isPlatformStep(World world, float raylength) {
+        Vector2 start = (isFacingRight()) ?
+            obstacle.getBody().getPosition().cpy().add(width/2 + 0.1f, height/2) :
+            obstacle.getBody().getPosition().cpy().add(-width/2 - 0.1f, height/2);
+        Vector2 end = start.cpy().add(0, -raylength);
+
+
+        debugRayStart = start;
+        debugRayEnd = end;
+
+
+        world.rayCast(enemyVisionRaycast, start, end);
+
+        if (enemyVisionRaycast.getHitFixture() == null) {
+            return false;
+        } else if (!enemyVisionRaycast.fixtureIsStair) {
+            return false;
+        } else {
+            Vector2 stairHit = new Vector2(enemyVisionRaycast.getHitPoint());
+
+            if (isGrounded && Math.abs(movement) > 0) {
+                float targetCenterY = stairHit.y + height/2;
+                Body body = obstacle.getBody();
+                Vector2 pos = body.getPosition();
+                body.setTransform(stairHit.x, targetCenterY, body.getAngle());
+
+                debugRayEnd = stairHit;
+            }
+
+        }
+
+        enemyVisionRaycast.reset();
+
+        return true;
+    }
+
+    public boolean canContinue() {
+        World world = obstacle.getBody().getWorld();
+        Vector2 pos = obstacle.getPosition();
+
+        float groundRayLength = stepRayLength * 4.5f;
+        float wallRayLength = width * 0.5f;
+
+        Vector2 groundStart = (facingRight) ? new Vector2(pos.x + width, pos.y) :
+            new Vector2(pos.x - width, pos.y);
+        Vector2 wallStart = (facingRight) ? new Vector2(pos.x + width/2, pos.y) :
+            new Vector2(pos.x - width/2, pos.y);
+
+        Vector2 groundEnd = groundStart.cpy().add(0, -groundRayLength);
+        EnemyVisionRaycast wallVisionRaycast =
+            new EnemyVisionRaycast(EnemyVisionRaycast.VisionMode.WALL_CHECK, stepRayLength);
+        EnemyVisionRaycast groundVisionRaycast =
+            new EnemyVisionRaycast(EnemyVisionRaycast.VisionMode.FALL_CHECK, stepRayLength);
+        world.rayCast(groundVisionRaycast, groundStart, groundEnd);
+        boolean groundExists = (groundVisionRaycast.getHitFixture() != null);
+        groundVisionRaycast.reset();
+
+        Vector2 wallEnd = new Vector2();
+        if (isFacingRight()) {
+            wallEnd.set(wallStart).add(wallRayLength, 0);
+        } else {
+            wallEnd.set(wallStart).sub(wallRayLength, 0);
+        }
+        world.rayCast(wallVisionRaycast, wallStart, wallEnd);
+        boolean wallExists = (wallVisionRaycast.getHitFixture() != null);
+        wallVisionRaycast.reset();
+
+        return groundExists && !wallExists;
+    }
+
     /**
      * Applies forces to the physics body based on the current input.
      * This includes horizontal movement (with damping) and jumping impulses.
@@ -420,10 +494,27 @@ public class MindMaintenance extends Enemy {
         }
     }
 
+    public void resetShootCooldown(){
+        shootCooldown = shootLimit;
+    }
 
     @Override
     public void update(float dt) {
         lookForPlayer();
+
+        if (isPlatformStep(scene.world, stepRayLength)) {
+            System.out.println("Critter's seen a step");
+        }
+        if (!canContinue()) {
+            safeToWalk = false;
+            setMovement(0);
+            applyForce();
+        } else {
+            safeToWalk = true;
+        }
+        if (!safeToWalk) {
+            setMovement(0);
+        }
         if (isJumping()) {
             jumpCooldown = jumpLimit;
         } else {
@@ -436,9 +527,7 @@ public class MindMaintenance extends Enemy {
         else{
             susCountdown--;
         }
-        if (isShooting()) {
-            shootCooldown = shootLimit;
-        } else {
+        if (!isShooting()) {
             shootCooldown = Math.max(0, shootCooldown - 1);
         }
         super.update(dt);
@@ -481,7 +570,7 @@ public class MindMaintenance extends Enemy {
 
 
         Vector2 pos = obstacle.getPosition();
-        float rayLength = 4f;
+        float rayLength = 5f;
         float followSensorAngle = MathUtils.atan2(player.getObstacle().getPosition().y - pos.y,
             player.getObstacle().getPosition().x - pos.x);
 

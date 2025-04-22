@@ -32,8 +32,6 @@ public class CuriosityCritter extends Enemy {
     private int jumpLimit;
     private int shotLimit;
 
-
-
     private int jumpCooldown;
     private boolean isJumping;
     private int shootCooldown;
@@ -82,6 +80,8 @@ public class CuriosityCritter extends Enemy {
     private Path2 wallSensorOutline;
     private Vector2 debugLookStart = new Vector2();
     private Vector2 debugLookEnd = new Vector2();
+    private Vector2 debugFollowStart = new Vector2();
+    private Vector2 debugFollowEnd = new Vector2();
 
     private boolean hasShard;
     // where to move the shard(ideally) in world positions if this critter is carrying it
@@ -457,6 +457,51 @@ public class CuriosityCritter extends Enemy {
         return followAngle;
     }
 
+    /**
+     * Performs a direct raycast to check if the player is visible from the enemy.
+     * This is used when the player enters the follow sensor area.
+     *
+     *
+     * @return true if player is directly visible, false if blocked by obstacles
+     */
+    public boolean checkFollowRaycast() {
+        World world = obstacle.getBody().getWorld();
+        Player player = scene.getAvatar();
+        Vector2 pos = obstacle.getPosition();
+
+        float rayLength = 7f;
+        float followSensorAngle = MathUtils.atan2(player.getObstacle().getPosition().y - pos.y,
+            player.getObstacle().getPosition().x - pos.x);
+
+        Vector2 start = (facingRight) ? new Vector2(pos.x + width/2, pos.y + height/4) :
+            new Vector2(pos.x - width/2, pos.y + height/4);
+        //Vector2 end = (facingRight) ? new Vector2(pos.x + width + rayLength, pos.y + height/4) :
+        new Vector2(pos.x - width - rayLength, pos.y + height/4);
+        Vector2 end = new Vector2(
+            pos.x + rayLength * MathUtils.cos(followSensorAngle),
+            pos.y + rayLength * MathUtils.sin(followSensorAngle)
+        );
+
+        EnemyVisionRaycast playerFollowRaycast = new EnemyVisionRaycast(EnemyVisionRaycast.VisionMode.PLAYER_CHECK, 4f);
+        world.rayCast(playerFollowRaycast, start, end);
+
+        debugFollowStart.set(start);
+        debugFollowEnd.set(end);
+
+        boolean playerVisible = (playerFollowRaycast.getHitPlayer() != null);
+
+        if (playerVisible)
+        {
+            debugFollowEnd.set(playerFollowRaycast.getHitPoint());
+        }
+        if (playerFollowRaycast.getHitFixture() != null) {
+            debugFollowEnd.set(playerFollowRaycast.getHitPoint());
+        }
+
+        playerFollowRaycast.reset();
+        return playerVisible;
+    }
+
     public void updateFollowSensor(Player player) {
         Vector2 enemyPos = obstacle.getPosition();
         Vector2 playerPos = player.getObstacle().getPosition();
@@ -468,7 +513,7 @@ public class CuriosityCritter extends Enemy {
     }
 
     public void lookForPlayer() {
-        World world = obstacle.getBody().getWorld();
+        /*World world = obstacle.getBody().getWorld();
         Player player = scene.getAvatar();
 
 
@@ -484,7 +529,45 @@ public class CuriosityCritter extends Enemy {
         Vector2 end = new Vector2(
             pos.x + rayLength * MathUtils.cos(followSensorAngle),
             pos.y + rayLength * MathUtils.sin(followSensorAngle)
+        );*/
+
+        World world = obstacle.getBody().getWorld();
+        Player player = scene.getAvatar();
+        Vector2 pos = obstacle.getPosition();
+        float rayLength = 4f;
+        Vector2 start, end;
+
+        start = (facingRight) ? new Vector2(pos.x + width/2, pos.y + height/4) :
+            new Vector2(pos.x - width/2, pos.y + height/4);
+
+        float angleToPlayer = MathUtils.atan2(
+            player.getObstacle().getPosition().y - pos.y,
+            player.getObstacle().getPosition().x - pos.x
         );
+
+        float forwardAngle = facingRight ? 0 : MathUtils.PI;
+
+        if (isAwareOfPlayer()) {
+            end = new Vector2(
+                pos.x + rayLength * MathUtils.cos(angleToPlayer),
+                pos.y + rayLength * MathUtils.sin(angleToPlayer)
+            );
+        } else {
+            float maxAngleOffset = 30 * MathUtils.degreesToRadians; // 30 degrees in radians
+
+            float angleDiff = angleToPlayer - forwardAngle;
+            if (angleDiff > MathUtils.PI) angleDiff -= MathUtils.PI2;
+            if (angleDiff < -MathUtils.PI) angleDiff += MathUtils.PI2;
+
+            float clampedDiff = MathUtils.clamp(angleDiff, -maxAngleOffset, maxAngleOffset);
+
+            float clampedAngle = forwardAngle + clampedDiff;
+
+            end = new Vector2(
+                pos.x + rayLength * MathUtils.cos(clampedAngle),
+                pos.y + rayLength * MathUtils.sin(clampedAngle)
+            );
+        }
 
         EnemyVisionRaycast playerRaycast = new EnemyVisionRaycast(EnemyVisionRaycast.VisionMode.PLAYER_CHECK, 4f);
         world.rayCast(playerRaycast, start, end);
@@ -495,7 +578,7 @@ public class CuriosityCritter extends Enemy {
         if (playerRaycast.getHitPlayer() != null) {
             setAwareOfPlayer(true);
             debugLookEnd.set(playerRaycast.getHitPoint());
-            System.out.println("Seen the player");
+            //System.out.println("Seen the player");
 
         } else if (playerRaycast.getHitFixture() != null) {
             debugLookEnd.set(playerRaycast.getHitPoint());
@@ -584,7 +667,14 @@ public class CuriosityCritter extends Enemy {
             safeToWalk = true;
         }
         if (isAwareOfPlayer()) {
-            updateFollowSensor(scene.getAvatar());
+            //updateFollowSensor(scene.getAvatar());
+            if (checkFollowRaycast()) {
+                updateFollowSensor(scene.getAvatar());
+                playerInFollowRange = true;
+            } else {
+                setAwareOfPlayer(false);
+                playerInFollowRange = false;
+            }
         }
         if (isJumping()) {
             jumpCooldown = jumpLimit;
@@ -626,11 +716,11 @@ public class CuriosityCritter extends Enemy {
     }
 
 
-    public void drawRayDebug(SpriteBatch batch) {
-        if (debugRayStart != null && debugRayEnd != null) {
+    public void drawRayDebug(SpriteBatch batch, Vector2 debugStart, Vector2 debugEnd) {
+        if (debugStart != null && debugEnd != null) {
             float u = obstacle.getPhysicsUnits();
-            Vector2 localStart = new Vector2(debugRayStart).sub(obstacle.getPosition());
-            Vector2 localEnd = new Vector2(debugRayEnd).sub(obstacle.getPosition());
+            Vector2 localStart = new Vector2(debugStart).sub(obstacle.getPosition());
+            Vector2 localEnd = new Vector2(debugEnd).sub(obstacle.getPosition());
 
             PathFactory factory = new PathFactory();
             Path2 rayOutline = new Path2();
@@ -638,26 +728,6 @@ public class CuriosityCritter extends Enemy {
                 localEnd.x * u, localEnd.y * u, rayOutline);
 
             batch.setTexture(Texture2D.getBlank());
-            batch.setColor(Color.PURPLE);
-            transform.idt();
-            float a = obstacle.getAngle();
-            Vector2 p = obstacle.getPosition();
-            transform.preRotate((float)(a * 180.0f / Math.PI));
-            transform.preTranslate(p.x * u, p.y * u);
-            batch.outline(rayOutline, transform);
-        }
-        if (debugLookEnd != null && debugLookStart != null) {
-            float u = obstacle.getPhysicsUnits();
-            Vector2 localStart = new Vector2(debugLookStart).sub(obstacle.getPosition());
-            Vector2 localEnd = new Vector2(debugLookEnd).sub(obstacle.getPosition());
-
-            PathFactory factory = new PathFactory();
-            Path2 rayOutline = new Path2();
-            factory.makeLine(localStart.x * u, localStart.y * u,
-                localEnd.x * u, localEnd.y * u, rayOutline);
-
-            batch.setTexture(Texture2D.getBlank());
-            batch.setColor(Color.PURPLE);
             transform.idt();
             float a = obstacle.getAngle();
             Vector2 p = obstacle.getPosition();
@@ -759,7 +829,15 @@ public class CuriosityCritter extends Enemy {
             batch.outline(wallSensorOutline, transform);
             batch.setColor(Color.WHITE);
         }
-        drawRayDebug(batch);
+        batch.setColor(Color.PURPLE);
+        drawRayDebug(batch, debugRayStart, debugRayEnd);
+        if (isAwareOfPlayer()) {
+            batch.setColor(Color.GREEN);
+            drawRayDebug(batch, debugFollowStart, debugFollowEnd);
+        }
+        batch.setColor(Color.PURPLE);
+        drawRayDebug(batch, debugLookStart, debugLookEnd);
+        batch.setColor(Color.WHITE);
         drawFallCheckDebug(batch);
     }
 

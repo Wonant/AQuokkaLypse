@@ -194,6 +194,7 @@ public class PlatformScene implements Screen{
     private TiledMapInfo tiledMap;
     private String tiledLevelName;
 
+    protected PooledList<Door> doors = new PooledList<Door>();
 
     protected PooledList<ShieldWall> shieldWalls = new PooledList<ShieldWall>();
     protected PooledList<Spear> spears = new PooledList<Spear>();
@@ -201,6 +202,12 @@ public class PlatformScene implements Screen{
     // global game units
     float units;
     private String mapkey  = "platform-constants";
+
+    private Animator teleportAnimator;
+    private TextureRegion teleportSpritesheet;
+    private boolean isTeleporting = false;
+    private float teleportAnimationTime = 0f;
+    private Vector2 teleportPosition;
 
 
     /*==============================ContactListener Getters/Setters===============================*/
@@ -454,7 +461,7 @@ public class PlatformScene implements Screen{
      *
      * The game has default gravity and other settings
      */
-    public PlatformScene(AssetDirectory directory,String mapkey,String tiled) {
+    public PlatformScene(AssetDirectory directory, String mapkey, String tiled) {
         this.directory = directory;
         this.mapkey = mapkey;
         tiledLevelName = tiled;
@@ -578,6 +585,7 @@ public class PlatformScene implements Screen{
                 float worldHeight = height / units;
                 if (o.getName().startsWith("door")) {
                     Door door = new Door(units, worldX, worldY, worldWidth, worldHeight);
+                    doors.add(door);
                     addSprite(door);
                     door.setFilter();
                 }
@@ -781,6 +789,8 @@ public class PlatformScene implements Screen{
             dreamShardCountText.layout();
         }
 
+        initTeleportAnimation();
+
     }
 
     public Vector2 getShardPos(int index) {
@@ -864,7 +874,7 @@ public class PlatformScene implements Screen{
 
         for (Enemy e: enemies){
             if (e instanceof MindMaintenance && ((MindMaintenance) e).isShooting()){
-
+                ((MindMaintenance) e).resetShootCooldown();
                 units = TiledMapInfo.PIXELS_PER_WORLD_METER;
                 Vector2 position = e.getObstacle().getPosition();
                 float direction = 1;
@@ -904,6 +914,11 @@ public class PlatformScene implements Screen{
         }
 
 
+        for (Door d: doors){
+            if(d.isActive() && checkCollectedAllGoals() && avatar.isTakingDoor()){
+                setComplete(true);
+            }
+        }
 
         for(ShieldWall s: shieldWalls){
             s.update(dt);
@@ -924,7 +939,7 @@ public class PlatformScene implements Screen{
 
         avatar.setStunning(input.didStun());
         avatar.setTeleporting(input.didM1());
-
+        avatar.setTakingDoor(input.didTakeDoor());
         avatar.setMovement(input.getHorizontal() *avatar.getForce());
 
 
@@ -961,9 +976,30 @@ public class PlatformScene implements Screen{
             }
         }
 
-        if (avatar.isTeleporting() && avatar.getFearMeter() > TELEPORT_COST)
-        {
+        if (isTeleporting) {
+            teleportAnimationTime += dt;
+            if (teleportAnimationTime >= 0.08f * 12) {
+                isTeleporting = false;
+                teleportAnimationTime = 0f;
+            }
+        }
+
+        if (avatar.isTeleporting() && avatar.getFearMeter() > TELEPORT_COST && !isTeleporting) {
+            // Calculate teleport position
             teleport();
+
+            if (queuedTeleportPosition != null) {
+                // Start teleport animation
+                isTeleporting = true;
+                teleportAnimationTime = 0f;
+                teleportPosition = queuedTeleportPosition.cpy();
+                teleportAnimator.reset();
+
+                // Apply the teleport
+                avatar.getObstacle().setPosition(queuedTeleportPosition);
+                avatar.setFearMeter(Math.max(0, avatar.getFearMeter() - TELEPORT_COST));
+                queuedTeleportPosition = null;
+            }
         }
 
 
@@ -984,6 +1020,11 @@ public class PlatformScene implements Screen{
             sounds.play("jump", jumpSound, volume);
              */
         }
+    }
+
+    public void initTeleportAnimation() {
+        Texture teleportTexture = directory.getEntry("teleport-teleport", Texture.class);
+        teleportAnimator = new Animator(teleportTexture, 1, 12, 0.08f, 12, false);
     }
 
     public AIManager getAiManager() {
@@ -1208,6 +1249,7 @@ public class PlatformScene implements Screen{
     public void draw(float dt) {
         // Clear the screen (color is homage to the XNA years)
         // This shows off how powerful our new SpriteBatch is
+        //float units = TiledMapInfo.PIXELS_PER_WORLD_METER;
         batch.begin(camera);
 
         background = directory.getEntry("background-technical", Texture.class);
@@ -1220,6 +1262,14 @@ public class PlatformScene implements Screen{
 
         dreamShardCountText.setText("Dream Shards: " + (totalShards - collectedShards));
         dreamShardCountText.layout();
+
+        /*if (isTeleporting) {
+            TextureRegion currentFrame = teleportAnimator.getCurrentFrame(Gdx.graphics.getDeltaTime());
+
+            float x = teleportPosition.x * avatar.getObstacle().getPhysicsUnits() ;
+            float y = teleportPosition.y  * avatar.getObstacle().getPhysicsUnits() ;
+            batch.draw(currentFrame, x, y);
+        }*/
 
         if (drawScareEffect)
         {

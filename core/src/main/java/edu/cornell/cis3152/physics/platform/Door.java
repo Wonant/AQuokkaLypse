@@ -9,6 +9,9 @@ import edu.cornell.gdiac.physics2.ObstacleSprite;
 
 public class Door extends ObstacleSprite {
 
+    /** Whether the player is currently in front of the door */
+    private boolean active;
+
     /**
      * Creates a door obstacle.
      *
@@ -22,7 +25,7 @@ public class Door extends ObstacleSprite {
      */
     public Door(float units, float x, float y, float width, float height) {
         super();
-
+        active = false;
         obstacle = new BoxObstacle(x + width/2, y + height/2, width, height);
         obstacle.setPhysicsUnits(units);
         obstacle.setBodyType(BodyDef.BodyType.StaticBody);
@@ -38,6 +41,19 @@ public class Door extends ObstacleSprite {
         // are centered at (0,0), so adjust accordingly.
 //        mesh.set(-width * units / 2.0f, -height * units / 2.0f, width * units, height * units);
         mesh.set(0, 0, 0, 0);
+    }
+
+    /** returns true if the Player is in front of the door */
+    public boolean isActive(){
+        return active;
+    }
+    /** set active to true */
+    public void setActive(){
+        active = true;
+    }
+    /** set active to false*/
+    public void setInactive(){
+        active = false;
     }
 
     /**
