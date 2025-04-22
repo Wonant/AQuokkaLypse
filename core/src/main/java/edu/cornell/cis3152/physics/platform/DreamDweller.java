@@ -169,6 +169,7 @@ public class DreamDweller extends Enemy {
      * @param points The initial position of the enemy
      */
     public DreamDweller(float units, JsonValue data, float[] points) {
+        super(null);
         this.data = data;
         // Read initial position and overall size from JSON.
         float x = points[0];

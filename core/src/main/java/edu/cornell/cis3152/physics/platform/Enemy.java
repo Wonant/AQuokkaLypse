@@ -1,5 +1,6 @@
 package edu.cornell.cis3152.physics.platform;
 
+import com.badlogic.gdx.ai.msg.MessageDispatcher;
 import com.badlogic.gdx.math.*;
 import com.badlogic.gdx.graphics.*;
 import com.badlogic.gdx.physics.box2d.*;
@@ -24,6 +25,7 @@ public class Enemy extends ObstacleSprite {
     protected PlatformScene scene;
 
     private boolean awareOfPlayer;
+    protected boolean wasAware;
     private boolean stunned;
     private boolean seesWall;
     protected Body headBody;
@@ -40,13 +42,17 @@ public class Enemy extends ObstacleSprite {
 
     protected float shardAwareness;
 
+    /** event dispatcher */
+    protected final MessageDispatcher dispatcher;
 
-    public Enemy(){
+
+
+    public Enemy(MessageDispatcher dispatcher){
         shardAwareness = 4.0f;
         this.awareOfPlayer = false;
         this.stunned = false;
         this.seesWall = false;
-
+        this.dispatcher = dispatcher;
     }
     public boolean isAwareOfPlayer(){
         return awareOfPlayer;
@@ -117,6 +123,10 @@ public class Enemy extends ObstacleSprite {
 
     public PlatformScene getScene() {
         return scene;
+    }
+
+    public void dispatchHarvest() {
+        dispatcher.dispatchMessage(null, scene, MessageType.ENEMY_LOST_PLAYER);
     }
 
 

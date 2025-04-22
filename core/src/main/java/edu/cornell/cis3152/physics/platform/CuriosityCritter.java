@@ -1,5 +1,6 @@
 package edu.cornell.cis3152.physics.platform;
 
+import com.badlogic.gdx.ai.msg.MessageDispatcher;
 import com.badlogic.gdx.math.*;
 import com.badlogic.gdx.graphics.*;
 import com.badlogic.gdx.physics.box2d.*;
@@ -93,8 +94,8 @@ public class CuriosityCritter extends Enemy {
     public boolean playerInFollowRange = false;
     private boolean safeToWalk;
 
-
-
+    private int climbCounter = 0;
+    private final int CLIMB_DURATION = 11;
 
 
 
@@ -150,8 +151,8 @@ public class CuriosityCritter extends Enemy {
     }
 
 
-    public CuriosityCritter(float units, JsonValue data, float[] points, PlatformScene scene) {
-        super();
+    public CuriosityCritter(float units, JsonValue data, float[] points, PlatformScene scene, MessageDispatcher dispatcher) {
+        super(dispatcher);
         this.data = data;
         // Read initial position and overall size from JSON.
         float x = points[0];
@@ -418,6 +419,10 @@ public class CuriosityCritter extends Enemy {
     }
 
     public boolean isPlatformStep(World world, float raylength) {
+        if (climbCounter < CLIMB_DURATION) {
+            climbCounter++;
+            return false;
+        }
         Vector2 start = (isFacingRight()) ?
             obstacle.getBody().getPosition().cpy().add(width/2 + 0.1f, height/2) :
             obstacle.getBody().getPosition().cpy().add(-width/2 - 0.1f, height/2);
@@ -449,7 +454,7 @@ public class CuriosityCritter extends Enemy {
         }
 
         enemyVisionRaycast.reset();
-
+        climbCounter = CLIMB_DURATION;
         return true;
     }
 
@@ -492,14 +497,22 @@ public class CuriosityCritter extends Enemy {
         debugLookStart.set(start);
         debugLookEnd.set(end);
 
-        if (playerRaycast.getHitPlayer() != null) {
+        boolean isAware = (playerRaycast.getHitPlayer() != null);
+        if (isAware) {
             setAwareOfPlayer(true);
             debugLookEnd.set(playerRaycast.getHitPoint());
-            System.out.println("Seen the player");
-
         } else if (playerRaycast.getHitFixture() != null) {
             debugLookEnd.set(playerRaycast.getHitPoint());
         }
+
+        // message dispatch
+        if (isAware && !wasAware) {
+            dispatcher.dispatchMessage(null, scene, MessageType.ENEMY_SEES_PLAYER);
+        } else if (!isAware && wasAware) {
+            dispatcher.dispatchMessage(null, scene, MessageType.ENEMY_LOST_PLAYER);
+        }
+
+        wasAware = isAware;
 
         playerRaycast.reset();
     }
@@ -552,6 +565,7 @@ public class CuriosityCritter extends Enemy {
 
         // compute target
 
+
     }
 
     public Shard dropShard() {
@@ -562,7 +576,7 @@ public class CuriosityCritter extends Enemy {
 
 
     public void targetShard() {
-
+        // just take closest vector2?
     }
 
 

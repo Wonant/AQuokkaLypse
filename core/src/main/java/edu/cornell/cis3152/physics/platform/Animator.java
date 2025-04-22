@@ -13,14 +13,17 @@ public class Animator {
     private int frameCount;
     private boolean looping;
 
+    private int startFrame;
+    private int endFrame;
+
     private int rows;
     private int cols;
 
-    public Animator(Texture spriteSheet, int rows, int cols, float frameDuration, int frameCount) {
-        this(spriteSheet,rows,cols,frameDuration,frameCount,true);
+    public Animator(Texture spriteSheet, int rows, int cols, float frameDuration, int frameCount, int startFrame, int endFrame) {
+        this(spriteSheet,rows,cols,frameDuration,frameCount,startFrame, endFrame, true);
     }
 
-    public Animator(Texture spriteSheet, int rows, int cols, float frameDuration, int frameCount, boolean looping) {
+    public Animator(Texture spriteSheet, int rows, int cols, float frameDuration, int frameCount, int startFrame, int endFrame, boolean looping) {
         this.spriteSheet = new SpriteSheet(spriteSheet, rows, cols);
         this.rows = rows;
         this.cols = cols;
@@ -28,6 +31,8 @@ public class Animator {
         this.frameDuration = frameDuration;
         this.frameCount = frameCount;
         this.looping = looping;
+        this.startFrame = startFrame;
+        this.endFrame = endFrame;
     }
 
     public TextureRegion getCurrentFrame(float delta) {
@@ -35,12 +40,14 @@ public class Animator {
         // Calculate frame index based on elapsed time and frame duration
         int frameIndex;
         if (looping) {
-            frameIndex = (int)(stateTime / frameDuration) % frameCount;
+            frameIndex = startFrame + (int)(stateTime / frameDuration) % (endFrame - startFrame + 1);
+
         } else {
-            frameIndex = (int)(stateTime / frameDuration);
-            if (frameIndex >= frameCount) {
-                frameIndex = frameCount - 1;
+            frameIndex = startFrame + (int)(stateTime / frameDuration);
+            if (frameIndex > endFrame) {
+                frameIndex = endFrame - 1;
             }
+
         }
         // Set the active frame in the sprite sheet
         spriteSheet.setFrame(frameIndex);
@@ -48,11 +55,24 @@ public class Animator {
     }
 
     public void reset() {
-        stateTime = 1.3f; // IT SHOULD BE 0f just rn cause the only use is for jump sprite i change it
+        stateTime = 0f;
+    }
+
+    public boolean isAnimationFinished() {
+        if (looping) {
+            return false;
+        }
+        // total frames in this segment
+        int totalFrames = endFrame - startFrame + 1;
+        // total animation length
+        float animationLength = totalFrames * frameDuration;
+        return stateTime >= animationLength;
     }
 
     public TextureRegion getKeyFrame(int i) {
-        spriteSheet.setFrame(i);
+        int actualIndex = startFrame + i;
+        if (actualIndex > endFrame) actualIndex = endFrame;
+        spriteSheet.setFrame(actualIndex);
         return spriteSheet;
     }
 }
