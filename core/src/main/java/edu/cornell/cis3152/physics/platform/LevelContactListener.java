@@ -53,7 +53,7 @@ public class LevelContactListener implements ContactListener {
             handleShieldWallContact(bd1, bd2);
             handleDoorContact(bd1, bd2);
             handleDreamShardContact(bd1, bd2, fd1, fd2);
-            handleFollowSensorContact(bd1, bd2, fd1, fd2);
+            //handleFollowSensorContact(bd1, bd2, fd1, fd2);
             handleWalkSensorContact(bd1, bd2, fd1, fd2);
             //handleVisionSensorContact(bd1, bd2, fd1, fd2);
             handleBulletCollision(bd1, bd2, fd1, fd2);
@@ -166,6 +166,7 @@ public class LevelContactListener implements ContactListener {
             } else if (bd2 instanceof CuriosityCritter){
                 ((CuriosityCritter) bd2).playerInFollowRange = true;
             }
+            // This should be handled in update???
             if (!playerSlowed) {
                 Player player = dreamWalkerScene.getAvatar();
                 originalPlayerMovement = player.getMovement(); // store whatever it is now
