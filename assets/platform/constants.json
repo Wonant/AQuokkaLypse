@@ -21,7 +21,7 @@
   },
   "player" : {
     "pos"       : [2.5, 7.0],
-    "inner"     : [0.7, 1.45],
+    "inner"     : [0.5, 1.45],
     "size"      : 1.5,
     "force"     : 25.0,
     "damping"   : 10.0,
@@ -34,7 +34,7 @@
     "jump_cool" : 30,
     "shot_cool" : 40,
     "sensor": {
-      "shrink" : 0.6,
+      "shrink" : 1,
       "height" : 0.05
     },
     "debug" : {
@@ -99,7 +99,7 @@
     }
   },
   "dream-dweller": {
-    "pos"       : [[14.0, 8.0]],
+    "pos"       : [],
     "inner"     : [2.0, 1.7],
     "size"      : 1.5,
     "force"     : 20.0,

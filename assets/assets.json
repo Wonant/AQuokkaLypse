@@ -76,6 +76,11 @@
         "player-walk" : "platform/walk.png",
         "player-idle" : "platform/idle.png",
         "player-jump" : "platform/jump.png",
+        "player-stair" : "platform/stair.png",
+        "player-sprite-sheet" : "platform/dreamwalker.png",
+        "absorb-animation" : "platform/absorb.png",
+        "fear-meter-sprite-sheet" : "platform/healthbar_spritesheet.png",
+        "visibility-indicator" : "platform/v1.png",
         "teleport-teleport" : "platform/teleport_sheet.png",
 
         "background-proto" : "platform/dreamBackground.png",
@@ -87,7 +92,7 @@
         "dream-dweller-active": "shared/DreamDwellerActive.png",
         "dream-dweller-inactive": "shared/DreamDwellerInactive.png",
         "vision_cone" : "shared/vision1.png",
-        "fear-meter" : "shared/earthtile.png",
+        "fear-meter" : "platform/fearmeter_0.png",
         "platform-traci"    : "platform/traci.png",
         "platform-playerSprite": "platform/playerSprite.png",
         "platform-barrier"  : "platform/barrier.png",
@@ -179,6 +184,7 @@
     "jsons"  : {
         "platform-constants": "platform/constants.json",
         "platform-constants1": "platform/constant1.json",
+        "platform-constants2": "platform/constant2.json",
         "arena" : "arena/arena.json",
         "arena1" : "arena/arena1.json"
     },

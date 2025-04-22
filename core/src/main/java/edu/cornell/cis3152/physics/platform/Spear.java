@@ -23,14 +23,14 @@ public class Spear extends ObstacleSprite {
         timeAlive = 0;
         this.direction = direction;
 
-        float width = settings.getFloat("width", 1.0f);
-        float height = settings.getFloat("height", 0.2f);
+        float width = 1.0f;
+        float height = 0.2f;
         float halfW = units * width / 15;
         float halfH = units * height / 25;
 
         Poly2 p = new Poly2(-halfW, -halfH, halfW, halfH);
         obstacle = new PolygonObstacle(p, pos.x, pos.y);
-        obstacle.setDensity(settings.getFloat("density", 8.0f));
+        obstacle.setDensity(8.0f);
         obstacle.setPhysicsUnits(units);
         obstacle.setBullet(true);
         obstacle.setGravityScale(0);
@@ -38,7 +38,7 @@ public class Spear extends ObstacleSprite {
         obstacle.setName("spear");
         obstacle.setFixedRotation(true);
 
-        float speed = settings.getFloat("speed", 0) * 1.5f;
+        float speed = 22.5f;
         obstacle.setVX(speed * direction);
         obstacle.setVY(0);
 

@@ -12,7 +12,7 @@
     "restitution": 0.0
   },
   "curiosity-critter" : {
-    "pos"       : [[10.0, 22.0],[8.0, 22.0]],
+    "pos"       : [[15.0, 17.0],[55.0, 17.0]],
     "inner"     : [0.7, 1.9],
     "size"      : 0.8,
     "force"     : 20.0,
@@ -33,7 +33,7 @@
     }
   },
   "mind-maintenance" : {
-    "pos"       : [[30, 20.0]],
+    "pos"       : [],
     "inner"     : [0.8, 3.5],
     "size"      : 0.8,
     "force"     : 20.0,
@@ -53,7 +53,7 @@
     }
   },
   "dream-dweller": {
-    "pos"       : [],
+    "pos"       : [[40, 17]],
     "inner"     : [0.7, 1.9],
     "size"      : 1.5,
     "force"     : 20.0,
@@ -81,13 +81,13 @@
     "restitution": 0.0
   },
   "player" : {
-    "pos"       : [3.0, 22.0],
-    "inner"     : [0.7, 1.45],
+    "pos"       : [2.5, 7.0],
+    "inner"     : [0.5, 1.45],
     "size"      : 1.5,
     "force"     : 25.0,
-    "damping"   : 10.0,
+    "damping"   : 20.0,
     "density"   : 1.0,
-    "friction"  : 0.5,
+    "friction"  : 1.0,
     "maxspeed"  : 7.0,
     "maxfear"   : 10.0,
     "jump_force": 15.0,
@@ -95,14 +95,14 @@
     "jump_cool" : 30,
     "shot_cool" : 40,
     "sensor": {
-      "shrink" : 0.6,
+      "shrink" : 1,
       "height" : 0.05
     },
     "debug" : {
-      "avatar" : "#ffff00ff",
-      "sensor" : "#ff0000ff",
-      "scare_sensor" : "#fff00fff",
-      "tolerance" : 0.05
+      "avatar": "#ffff00ff",
+      "sensor": "#ff0000ff",
+      "scare_sensor": "#fff00fff",
+      "tolerance": 0.05
     }
   },
   "bridge" : {

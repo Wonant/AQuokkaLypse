@@ -138,16 +138,9 @@ public class DreamDweller extends Enemy {
         return max_speed;
     }
 
-    public String getSensorName() {
-        return sensorName;
-    }
-
-    public boolean isFacingRight() {
-        return facingRight;
-    }
-
 
     public DreamDweller(float units, JsonValue data, float[] points, PlatformScene scene) {
+        super(null);
         this.data = data;
         this.scene = scene;
 
@@ -465,7 +458,7 @@ public class DreamDweller extends Enemy {
 
 
         Vector2 pos = obstacle.getPosition();
-        float rayLength = 4f;
+        float rayLength = 10f;
         float followSensorAngle = MathUtils.atan2(player.getObstacle().getPosition().y - pos.y,
             player.getObstacle().getPosition().x - pos.x);
 

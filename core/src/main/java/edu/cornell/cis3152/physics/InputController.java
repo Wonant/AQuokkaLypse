@@ -81,11 +81,14 @@ public class InputController {
 
 
     /** Whether the stun action button was pressed. */
-    private boolean stunPressed;
+    private boolean shiftPressed;
     /** Whether the teleport button was pressed */
 
     private boolean m1Pressed;
     private boolean teleportPrevious;
+
+    /** Whether interact stun button was pressed */
+    private boolean interactPressed;
 
 
     /** How much did we move horizontally? */
@@ -113,7 +116,6 @@ public class InputController {
     private boolean invulPressed = false;
     private boolean invulPrev = false;
 
-
     public boolean isArenaMode() {
         return arenaMode;
     }
@@ -137,6 +139,11 @@ public class InputController {
     public boolean isSpawningGuard() {
         return arenaMode && spawnGuardPressed && !spawnGuardPrevious;
     }
+
+    public boolean isInteractDown() {
+        return interactPressed;
+    }
+
     /**
      * Returns the amount of sideways movement.
      *
@@ -248,12 +255,12 @@ public class InputController {
         return exitPressed && !exitPrevious;
     }
     /**
-     * Returns true if the stun button was pressed
+     * Returns true if the stun modifier button was pressed
      *
-     * @return true if the stun button was pressed
+     * @return true if the stun modifier button was pressed
      */
-    public boolean didStun() {
-        return stunPressed;
+    public boolean inStunMode() {
+        return shiftPressed;
     }
     /**
      * Returns true if the create teleport button was pressed
@@ -376,7 +383,7 @@ public class InputController {
         secondPressed = xbox.getRightTrigger() > 0.6f;
 
         // Move the crosshairs with the right stick.
-        stunPressed = xbox.getA();
+        shiftPressed = xbox.getA();
         crosscache.set(xbox.getLeftX(), xbox.getLeftY());
         if (crosscache.len2() > GP_THRESHOLD) {
             momentum += GP_ACCELERATE;
@@ -432,11 +439,11 @@ public class InputController {
         }
 
 
-        stunPressed = Gdx.input.isKeyPressed(Input.Keys.SHIFT_LEFT);
+        shiftPressed = Gdx.input.isKeyPressed(Input.Keys.SHIFT_LEFT);
+
+        interactPressed = Gdx.input.isKeyPressed(Input.Keys.E);
 
         // Mouse results
-
-
         m1Pressed = Gdx.input.isButtonPressed(Input.Buttons.LEFT);
 
 

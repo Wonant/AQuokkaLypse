@@ -150,6 +150,7 @@ public class MindMaintenance extends Enemy {
 
 
     public MindMaintenance(float units, JsonValue data, float[] points, PlatformScene scene) {
+        super(null);
         this.data = data;
         this.scene = scene;
 

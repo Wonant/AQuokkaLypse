@@ -60,6 +60,7 @@ public class LevelContactListener implements ContactListener {
             handleSpearHitPlayer(bd1, bd2);
             handleGroundContact(bd1, bd2, fd1, fd2, fix1, fix2);
             handleHarvestingCollision(bd1, bd2, fd1, fd2);
+            handleFallSensorContact(bd1, bd2, fd1, fd2);
 
         } catch (Exception e) {
             e.printStackTrace();
@@ -99,6 +100,14 @@ public class LevelContactListener implements ContactListener {
         handleTeleporterEndContact(bd1, bd2);
         handleVisionSensorEndContact(fd1, fd2, fix1, fix2);
         handleGroundEndContact(bd1, bd2, fd1, fd2, fix1, fix2);
+        handleFallSensorEndContact((ObstacleSprite) bd1, (ObstacleSprite) bd2, fd1, fd2);
+        if ((bd1 == dreamWalkerScene.getAvatar() && bd2 instanceof Shard) ||
+            (bd2 == dreamWalkerScene.getAvatar() && bd1 instanceof Shard)) {
+            Shard shard = (Shard)( bd1 instanceof Shard ? bd1 : bd2 );
+            dreamWalkerScene.cancelShardPickup(shard);
+            dreamWalkerScene.getAvatar().setHoverInteract(false);
+            dreamWalkerScene.currentInteractingShard = null;
+        }
         handleDoorEndContact((ObstacleSprite) bd1, (ObstacleSprite) bd2);
     }
 
@@ -153,8 +162,9 @@ public class LevelContactListener implements ContactListener {
             Shard collectedShard = (bd1 instanceof Shard) ? (Shard) bd1 : (Shard) bd2;
 
             if (!collectedShard.getObstacle().isRemoved()) {
-                collectedShard.getObstacle().markRemoved(true);
-                dreamWalkerScene.incrementGoal();
+                dreamWalkerScene.currentInteractingShard = collectedShard;
+                dreamWalkerScene.getAvatar().setHoverInteract(true);
+                dreamWalkerScene.registerShardForPickup(collectedShard);
             }
         }
     }
@@ -424,6 +434,35 @@ public class LevelContactListener implements ContactListener {
             }
         }
     }
+
+
+    private void handleFallSensorContact(ObstacleSprite bd1,
+                                         ObstacleSprite bd2,
+                                         Object fd1,
+                                         Object fd2) {
+        // Look for the fall_sensor on the player hitting any Surface
+        if (("fall_sensor".equals(fd1) && bd2 instanceof Surface) ||
+            ("fall_sensor".equals(fd2) && bd1 instanceof Surface)) {
+            Player player = dreamWalkerScene.getAvatar();
+            player.setFallSensorContact(true);
+        }
+    }
+
+    /**
+     * Called when the player's fall_sensor stops touching the ground.
+     */
+    private void handleFallSensorEndContact(ObstacleSprite bd1,
+                                            ObstacleSprite bd2,
+                                            Object fd1,
+                                            Object fd2) {
+        if (("fall_sensor".equals(fd1) && bd2 instanceof Surface) ||
+            ("fall_sensor".equals(fd2) && bd1 instanceof Surface)) {
+            Player player = dreamWalkerScene.getAvatar();
+            player.setFallSensorContact(false);
+
+        }
+    }
+
     private void handleSpearHitPlayer(ObstacleSprite bd1, ObstacleSprite bd2) {
         if ((bd1 instanceof Spear && bd2 instanceof Player) || (bd2 instanceof Spear && bd1 instanceof Player)) {
             Spear spear = (bd1 instanceof Spear) ? (Spear) bd1 : (Spear) bd2;
@@ -439,6 +478,7 @@ public class LevelContactListener implements ContactListener {
             player.setBlinded(true);
 
             System.out.println("Spear hit Player: -1 fear, no push.");
+
         }
     }
 }
