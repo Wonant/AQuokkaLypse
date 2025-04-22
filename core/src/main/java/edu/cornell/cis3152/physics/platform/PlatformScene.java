@@ -557,6 +557,7 @@ public class PlatformScene implements Screen{
         shardPos = new ArrayList<>();
 
         float units = TiledMapInfo.PIXELS_PER_WORLD_METER;
+        int level = 0;
         System.out.println("units: " + units);
 
         MapLayer spawnLayer = tiledMap.get().getLayers().get("Spawn");
@@ -575,7 +576,7 @@ public class PlatformScene implements Screen{
                 float worldY = y / units;
                 float worldHeight = height / units;
                 if (o.getName().startsWith("door")) {
-                    Door door = new Door(units, worldX, worldY, worldWidth, worldHeight);
+                    Door door = new Door(units, worldX, worldY, worldWidth, worldHeight, level + 1);
                     doors.add(door);
                     addSprite(door);
                     door.setFilter();
@@ -682,8 +683,8 @@ public class PlatformScene implements Screen{
 //        }
 
         // Create Player
-        texture = directory.getEntry( "player-walk", Texture.class );
         avatar = new Player(units, constants.get("player"));
+        texture = directory.getEntry( "player-walk", Texture.class );
         Texture idle = directory.getEntry("player-idle", Texture.class);
         Texture jump = directory.getEntry("player-jump", Texture.class);
 
@@ -730,11 +731,16 @@ public class PlatformScene implements Screen{
         JsonValue maintenancePos = maintainers.get("pos");
 
         for (int i = 0; i < maintenancePos.size; i++) {
-            texture = directory.getEntry("mind-maintenance-active", Texture.class);
+
+            texture = directory.getEntry( "maintenance-walk", Texture.class );
+            Texture turning = directory.getEntry("maintenance-turn", Texture.class);
+
+            //texture = directory.getEntry("mind-maintenance-active", Texture.class);
 
             maintenance = new MindMaintenance(units, constants.get("mind-maintenance"), maintenancePos.get(i).asFloatArray(), this);
-            maintenance.setTexture(texture);
+            //maintenance.setTexture(texture);
             addSprite(maintenance);
+            maintenance.createAnimators(texture, turning);
             // Have to do after body is created
             maintenance.setFilter();
             maintenance.createSensor();

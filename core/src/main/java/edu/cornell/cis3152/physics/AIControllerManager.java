@@ -428,7 +428,7 @@ public class AIControllerManager {
 
     private void updateMaintenance(MaintenanceAI data, float dt) {
         data.stateTimer += dt;
-
+        System.out.println(data.state);
         // quick comment on how the angle works:
         // 0 is straight above the critter. so that means 180 means its look straight down
         Vector2 maintenancePos = getMaintenancePosition(data.maintenance);
@@ -502,28 +502,10 @@ public class AIControllerManager {
             }
         }
 
-        Vector2 playerPos = getPlayerPosition(player);
         if (data.state == MaintenanceFSM.CHASING) {
             if (data.stateTimer > data.stateDuration) {
                 transitionMaintenanceState(data, MaintenanceFSM.IDLE_LOOK);
             }
-            /*
-            else{
-                float chaseSpeed = 10f;
-                if (playerPos.x < maintenancePos.x) {
-                    data.horizontal = -chaseSpeed;
-                    data.movingRight = !data.movingRight;
-                    data.maintenance.setMovement(data.horizontal);
-                    data.maintenance.applyForce();
-                } else {
-                    data.horizontal = chaseSpeed;
-                    data.movingRight = !data.movingRight;
-                    data.maintenance.setMovement(data.horizontal);
-                    data.maintenance.applyForce();
-                }
-            }
-
-             */
         }
 
         if (data.state == MaintenanceFSM.START) {
@@ -544,14 +526,16 @@ public class AIControllerManager {
         if (data.state == MaintenanceFSM.IDLE_WALK) {
             if (data.stateTimer > data.stateDuration) {
                 transitionMaintenanceState(data, MaintenanceFSM.IDLE_LOOK);
-            } else if (data.maintenance.isSeesWall()) {
-                data.maintenance.setMovement(0);
+            } else if (data.maintenance.isSeesWall() || !data.maintenance.isSafeToWalk()) {
+                data.maintenance.setMovement(1);
+                System.out.println("Reached!!!");
+                System.out.println(data.maintenance.isFacingRight());
                 data.maintenance.applyForce();
                 transitionMaintenanceState(data, MaintenanceFSM.IDLE_LOOK);
             } else {
                 // Walk in a direction, will have already known if wall is in front
                 data.maintenance.setVisionAngle(data.movingRight ? 270 : 90);
-                data.maintenance.setMovement(data.horizontal);
+                data.maintenance.setMovement(data.movingRight? 1 : -1);
                 data.maintenance.applyForce();
             }
         }
@@ -572,9 +556,13 @@ public class AIControllerManager {
                 if (data.maintenance.isSeesWall()) {
                     data.movingRight = !data.movingRight;
                     data.maintenance.setSeesWall(false);
-                } else {
+                }
+                /*
+                else {
                     data.movingRight = random.nextBoolean();
                 }
+
+                 */
                 data.horizontal = data.movingRight ? 1.0f : -1.0f;
                 break;
 

@@ -76,7 +76,8 @@
         "player-walk" : "platform/walk.png",
         "player-idle" : "platform/idle.png",
         "player-jump" : "platform/jump.png",
-
+        "maintenance-walk" : "platform/maintenance_walk.png",
+        "maintenance-turn" : "platform/maintenance_turn.png",
         "background-proto" : "platform/dreamBackground.png",
         "background-technical" : "shared/backgroundTemple.png",
         "curiosity-critter-active": "shared/CuriosityCritterActive.png",
