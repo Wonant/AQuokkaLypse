@@ -471,10 +471,7 @@ public class MindMaintenance extends Enemy {
         Vector2 pos = obstacle.getPosition();
         float vx = obstacle.getVX();
         Body body = obstacle.getBody();
-        if (!safeToWalk) {
-            vx = -vx;
-            setMovement(vx);
-        }
+
         // Apply damping when no horizontal input is provided
         if (getMovement() == 0f) {
             float slowFactor = 2.0f; // Adjust this to fine-tune slowdown speed
@@ -515,7 +512,9 @@ public class MindMaintenance extends Enemy {
         } else {
             safeToWalk = true;
         }
-
+        if (!safeToWalk) {
+            setMovement(0);
+        }
         if (isJumping()) {
             jumpCooldown = jumpLimit;
         } else {
