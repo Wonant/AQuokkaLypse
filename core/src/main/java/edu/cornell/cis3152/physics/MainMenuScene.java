@@ -8,6 +8,9 @@ import com.badlogic.gdx.math.Rectangle;
 import com.badlogic.gdx.utils.JsonValue;
 import com.badlogic.gdx.utils.ScreenUtils;
 import edu.cornell.gdiac.assets.*;
+import edu.cornell.gdiac.audio.AudioEngine;
+import edu.cornell.gdiac.audio.AudioSource;
+import edu.cornell.gdiac.audio.MusicQueue;
 import edu.cornell.gdiac.graphics.SpriteBatch;
 import edu.cornell.gdiac.util.*;
 import com.badlogic.gdx.graphics.Texture;
@@ -83,6 +86,14 @@ public class MainMenuScene implements Screen, InputProcessor {
     /** The button currently being pressed down */
     private int pressedButton = -1;
 
+    /** List of music to play */
+    AudioSource samples[];
+    /** The current music sample to play */
+    int currentSample = 0;
+
+    /** A queue to play music */
+    MusicQueue music;
+
 
     /**
      * Returns the asset directory produced by this loading screen
@@ -141,6 +152,19 @@ public class MainMenuScene implements Screen, InputProcessor {
             }
         }
 
+        samples = new AudioSource[1];
+        samples[0] = assets.getEntry( "theme", AudioSource.class );
+        currentSample = 0;
+
+        AudioEngine engine = (AudioEngine)Gdx.audio;
+        music = engine.newMusicQueue( false, 44100 );
+        music.addSource( samples[0] );
+
+        //VOLUME CONTROL SHOULD PROBABLY BE IN A SETTINGS SCREEN
+        if (music != null) {
+            music.setVolume(1.0f);
+        }
+
         Gdx.input.setInputProcessor(this);
     }
 
@@ -148,7 +172,15 @@ public class MainMenuScene implements Screen, InputProcessor {
      * Called when this screen should release all resources.
      */
     public void dispose() {
-        //Managed by GDXRoot
+        if (music != null) {
+            music.stop();
+        }
+
+        for (AudioSource sample : samples) {
+             if (sample != null) {
+                 sample.dispose();
+             }
+        }
     }
 
     /**
@@ -296,6 +328,10 @@ public class MainMenuScene implements Screen, InputProcessor {
         active = true;
         resize(Gdx.graphics.getWidth(), Gdx.graphics.getHeight());
         Gdx.input.setInputProcessor(this);
+
+        if (music != null && !music.isPlaying()) {
+            music.play();
+        }
     }
 
     /**
@@ -304,6 +340,10 @@ public class MainMenuScene implements Screen, InputProcessor {
     public void hide() {
         active = false;
         Gdx.input.setInputProcessor(null);
+
+        if (music != null && music.isPlaying()) {
+            music.pause();
+        }
     }
 
     /**

@@ -200,6 +200,12 @@ public class PlatformScene implements Screen{
     float units;
     private String mapkey  = "platform-constants";
 
+    private Animator teleportAnimator;
+    private TextureRegion teleportSpritesheet;
+    private boolean isTeleporting = false;
+    private float teleportAnimationTime = 0f;
+    private Vector2 teleportPosition;
+
 
     /*==============================ContactListener Getters/Setters===============================*/
 
@@ -775,6 +781,8 @@ public class PlatformScene implements Screen{
             dreamShardCountText.layout();
         }
 
+        initTeleportAnimation();
+
     }
 
     public Vector2 getShardPos(int index) {
@@ -955,9 +963,30 @@ public class PlatformScene implements Screen{
             }
         }
 
-        if (avatar.isTeleporting() && avatar.getFearMeter() > TELEPORT_COST)
-        {
+        if (isTeleporting) {
+            teleportAnimationTime += dt;
+            if (teleportAnimationTime >= 0.08f * 12) {
+                isTeleporting = false;
+                teleportAnimationTime = 0f;
+            }
+        }
+
+        if (avatar.isTeleporting() && avatar.getFearMeter() > TELEPORT_COST && !isTeleporting) {
+            // Calculate teleport position
             teleport();
+
+            if (queuedTeleportPosition != null) {
+                // Start teleport animation
+                isTeleporting = true;
+                teleportAnimationTime = 0f;
+                teleportPosition = queuedTeleportPosition.cpy();
+                teleportAnimator.reset();
+
+                // Apply the teleport
+                avatar.getObstacle().setPosition(queuedTeleportPosition);
+                avatar.setFearMeter(Math.max(0, avatar.getFearMeter() - TELEPORT_COST));
+                queuedTeleportPosition = null;
+            }
         }
 
 
@@ -978,6 +1007,11 @@ public class PlatformScene implements Screen{
             sounds.play("jump", jumpSound, volume);
              */
         }
+    }
+
+    public void initTeleportAnimation() {
+        Texture teleportTexture = directory.getEntry("teleport-teleport", Texture.class);
+        teleportAnimator = new Animator(teleportTexture, 1, 12, 0.08f, 12, false);
     }
 
     public AIManager getAiManager() {
@@ -1202,6 +1236,7 @@ public class PlatformScene implements Screen{
     public void draw(float dt) {
         // Clear the screen (color is homage to the XNA years)
         // This shows off how powerful our new SpriteBatch is
+        //float units = TiledMapInfo.PIXELS_PER_WORLD_METER;
         batch.begin(camera);
 
         background = directory.getEntry("background-technical", Texture.class);
@@ -1214,6 +1249,14 @@ public class PlatformScene implements Screen{
 
         dreamShardCountText.setText("Dream Shards: " + (totalShards - collectedShards));
         dreamShardCountText.layout();
+
+        /*if (isTeleporting) {
+            TextureRegion currentFrame = teleportAnimator.getCurrentFrame(Gdx.graphics.getDeltaTime());
+
+            float x = teleportPosition.x * avatar.getObstacle().getPhysicsUnits() ;
+            float y = teleportPosition.y  * avatar.getObstacle().getPhysicsUnits() ;
+            batch.draw(currentFrame, x, y);
+        }*/
 
         if (drawScareEffect)
         {

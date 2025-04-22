@@ -76,6 +76,7 @@
         "player-walk" : "platform/walk.png",
         "player-idle" : "platform/idle.png",
         "player-jump" : "platform/jump.png",
+        "teleport-teleport" : "platform/teleport_sheet.png",
 
         "background-proto" : "platform/dreamBackground.png",
         "background-technical" : "shared/backgroundTemple.png",
@@ -197,5 +198,8 @@
             "file": "shared/RetroGame.ttf",
             "size": 64
         }
-    }
+    },
+    "samples": {
+        "theme": "music/theme2.ogg"
+  }
 }
