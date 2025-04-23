@@ -250,6 +250,7 @@ public class PlatformScene implements Screen, Telegraph {
     private boolean isTeleporting = false;
     private float teleportAnimationTime = 0f;
     private Vector2 teleportPosition;
+    private boolean teleportDirectionRight;
 
 
     /*==============================ContactListener Getters/Setters===============================*/
@@ -1139,7 +1140,9 @@ public class PlatformScene implements Screen, Telegraph {
 
         if (isTeleporting) {
             teleportAnimationTime += dt;
-            if (teleportAnimationTime >= 0.08f * 12) {
+            // I dont like the last frames so I'm cutting it. Also this is bad hardcoding but the
+            //Animator function currently doens't work
+            if (teleportAnimationTime >= 0.06f * 10) {
                 isTeleporting = false;
                 teleportAnimationTime = 0f;
             }
@@ -1148,6 +1151,7 @@ public class PlatformScene implements Screen, Telegraph {
         if (avatar.isTeleporting() && avatar.getFearMeter() > TELEPORT_COST && !isTeleporting) {
             // Calculate teleport position
             teleport();
+            teleportDirectionRight = avatar.isFacingRight();
 
             if (queuedTeleportPosition != null) {
                 // Start teleport animation
@@ -1164,12 +1168,6 @@ public class PlatformScene implements Screen, Telegraph {
         }
 
 
-        if (queuedTeleportPosition != null) {
-            avatar.getObstacle().setPosition(queuedTeleportPosition);
-            avatar.setFearMeter(Math.max(0,avatar.getFearMeter() - TELEPORT_COST));
-            queuedTeleportPosition = null; // Clear after applying
-        }
-
         aiManager.update(dt);
         aiCManager.update(dt);
         GdxAI.getTimepiece().update(dt);
@@ -1185,7 +1183,7 @@ public class PlatformScene implements Screen, Telegraph {
 
     public void initTeleportAnimation() {
         Texture teleportTexture = directory.getEntry("teleport-teleport", Texture.class);
-        teleportAnimator = new Animator(teleportTexture, 1, 12, 0.08f, 12, 0, 11, false);
+        teleportAnimator = new Animator(teleportTexture, 2, 10, 0.08f, 10, 0, 9, false);
     }
 
     public AIManager getAiManager() {
@@ -1424,13 +1422,6 @@ public class PlatformScene implements Screen, Telegraph {
         dreamShardCountText.setText("Dream Shards: " + (totalShards - collectedShards));
         dreamShardCountText.layout();
 
-        /*if (isTeleporting) {
-            TextureRegion currentFrame = teleportAnimator.getCurrentFrame(Gdx.graphics.getDeltaTime());
-
-            float x = teleportPosition.x * avatar.getObstacle().getPhysicsUnits() ;
-            float y = teleportPosition.y  * avatar.getObstacle().getPhysicsUnits() ;
-            batch.draw(currentFrame, x, y);
-        }*/
 
         if (drawScareEffect)
         {
@@ -1447,6 +1438,7 @@ public class PlatformScene implements Screen, Telegraph {
         for(ObstacleSprite obj : sprites) {
             obj.draw(batch);
         }
+
         if (debug) {
             // Draw the outlines
             for (ObstacleSprite obj : sprites) {
@@ -1454,7 +1446,7 @@ public class PlatformScene implements Screen, Telegraph {
             }
         }
 
-
+        drawTeleport();
         // Draw a final message
         //batch.setColor(foregroundColor);
         //batch.draw(foregroundTexture, 0, 0, width, height);
@@ -1464,6 +1456,49 @@ public class PlatformScene implements Screen, Telegraph {
             vortexRenderer.begin(ShapeRenderer.ShapeType.Line);
             drawVortex(vortexRenderer, currentInteractingShard, vortexTimer);
             vortexRenderer.end();
+        }
+    }
+    private void drawTeleport()
+    {
+        float units = TiledMapInfo.PIXELS_PER_WORLD_METER;
+
+        if (isTeleporting) {
+            TextureRegion currentFrame = teleportAnimator.getCurrentFrame(Gdx.graphics.getDeltaTime());
+
+            float width = currentFrame.getRegionWidth();
+            float height = currentFrame.getRegionHeight();
+
+
+            // You might also want to scale it down if it's too large
+            float scale = 0.15f; // Adjust as needed
+            float scaledWidth = width * scale;
+            float scaledHeight = height * scale;
+
+            float xOffset;
+            boolean shouldFlip = !teleportDirectionRight; // Flip if facing left
+
+            if (teleportDirectionRight) {
+                // Position behind player when facing right
+                xOffset = -avatar.getWidth() * units * 1.75f;
+            } else {
+                // Position behind player when facing left
+                //xOffset = avatar.getWidth() * units * 0.1f;
+                xOffset = -avatar.getWidth() * units * 0.50f;;
+            }
+
+            // Center the animation horizontally and vertically at the teleport position
+            float x = teleportPosition.x * units  + xOffset;
+            float y = teleportPosition.y * units - scaledHeight * 3/5;
+
+            TextureRegion frameToDraw = new TextureRegion(currentFrame);
+
+            // Flip the texture horizontally if needed
+            if (shouldFlip) {
+                frameToDraw.flip(true, false);
+            }
+
+            batch.setColor(Color.WHITE);
+            batch.draw(frameToDraw, x, y, scaledWidth, scaledHeight);
         }
     }
     private void drawVortex(ShapeRenderer sr, Shard shard, float time) {
