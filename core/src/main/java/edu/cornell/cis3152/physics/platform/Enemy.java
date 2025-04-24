@@ -26,6 +26,7 @@ public class Enemy extends ObstacleSprite {
 
     private boolean awareOfPlayer;
     protected boolean wasAware;
+    protected boolean wasSeen;
     private boolean stunned;
     private boolean seesWall;
     protected Body headBody;
