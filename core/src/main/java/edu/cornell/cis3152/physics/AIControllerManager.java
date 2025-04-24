@@ -1,20 +1,17 @@
 
 package edu.cornell.cis3152.physics;
 
-import com.badlogic.gdx.graphics.Texture;
 import com.badlogic.gdx.math.MathUtils;
 import com.badlogic.gdx.math.Vector2;
 import com.badlogic.gdx.physics.box2d.World;
-import com.sun.tools.javac.Main;
 import edu.cornell.cis3152.physics.platform.CuriosityCritter;
 import edu.cornell.cis3152.physics.platform.Enemy;
 import edu.cornell.cis3152.physics.platform.MindMaintenance;
 import edu.cornell.cis3152.physics.platform.Player;
 import edu.cornell.cis3152.physics.platform.DreamDweller;
 
-import edu.cornell.cis3152.physics.platform.ShieldWall;
 import edu.cornell.gdiac.assets.AssetDirectory;
-import edu.cornell.gdiac.graphics.SpriteBatch;
+
 import java.util.*;
 
 public class AIControllerManager {
@@ -87,10 +84,8 @@ public class AIControllerManager {
         START,
         /**dream dweller is idly looking around, but not moving*/
         IDLE_LOOK,
-        /**dream dweller is now alerted to player's presence,will alert nearby enemies*/
-        SHOOT,
-        /** dream dweller is stunned, cannot move or do damage to player */
-        STUNNED     // Temporarily immobilized by player's stun
+        /** dream dweller is stunned, cannot move or see (do damage to player) */
+        STUNNED,
     }
 
 
@@ -591,16 +586,14 @@ public class AIControllerManager {
     private void updateDweller(DwellerAI data, float dt) {
         data.stateTimer += dt;
 
+
+
         Vector2 dwellerPos = getDwellerPosition(data.dweller);
+        Vector2 visionRef = new Vector2(dwellerPos.x, dwellerPos.y + 10.0f);
         boolean seesPlayer = data.dweller.isAwareOfPlayer();
         boolean isStunned = data.dweller.isStunned();
 
-        data.dweller.setMovement(0);
-        data.dweller.getObstacle().setVX(0);
-        data.dweller.getObstacle().setVY(0);
-        if (data.state == DwellerFSM.START) {
-            transitionDwellerState(data, DwellerFSM.IDLE_LOOK);
-        }
+        // if the enemy is stunned, transition to the stunned state
         if (isStunned) {
             if (data.state != DwellerFSM.STUNNED) {
                 transitionDwellerState(data, DwellerFSM.STUNNED);
@@ -608,72 +601,53 @@ public class AIControllerManager {
             data.dweller.getObstacle().setVX(0);
 
             if (data.stateTimer > data.stateDuration) {
-                System.out.println("Dream Dweller recovers from stun.");
+                System.out.println("Maintenance stun wears off");
                 data.dweller.setActiveTexture(asset_directory);
                 data.dweller.setStunned(false);
                 transitionDwellerState(data, DwellerFSM.IDLE_LOOK);
             }
-            return;
-        }else{
-            if (seesPlayer && player != null) {
-
-                if (data.state == DwellerFSM.IDLE_LOOK) {
-                    transitionDwellerState(data, DwellerFSM.SHOOT);
-                    data.dweller.resetShotsFired();
-                }
-                if (data.state == DwellerFSM.SHOOT) {
-                    data.dweller.setShooting(true);
-
-                    if (data.dweller.getShotsFired() >= 3) {
-                        data.dweller.setShooting(false);
-                        data.dweller.resetShotsFired();
-                        transitionDwellerState(data, DwellerFSM.IDLE_LOOK);
-                    }
-
-                }
-                // Calculate angle to player
+        }
+        else{
+            if (player != null) {
                 Vector2 playerPos = getPlayerPosition(player);
-                float dx = playerPos.x - dwellerPos.x;
-                float dy = playerPos.y - dwellerPos.y;
-                float angleToPlayer = MathUtils.atan2(dy, dx) * MathUtils.radiansToDegrees;
-                angleToPlayer -= 90;  // Adjust based on sprite orientation
-
-                // Update vision cone to track player
-                data.dweller.setVisionAngle(angleToPlayer);
-                System.out.println("Dream Dweller tracking player at angle: " + angleToPlayer);
-            } else {
-                if (data.state == DwellerFSM.SHOOT && data.stateDuration>0.2) {
+                float distanceToPlayer = dwellerPos.dst(playerPos);
+                if (seesPlayer) {
+                    data.dweller.setShooting(true);
+                }
+                else if (seesPlayer || data.dweller.isSus()){
+                    data.stateTimer = 0;
+                }
+                else{
                     data.dweller.setShooting(false);
-                    data.dweller.resetShotsFired();
-                    transitionDwellerState(data, DwellerFSM.IDLE_LOOK);
                 }
             }
         }
+
+
+        if (data.state ==DwellerFSM.START) {
+           transitionDwellerState(data, DwellerFSM.IDLE_LOOK);
+        }
+
+        if (data.state == DwellerFSM.IDLE_LOOK) {
+                data.dweller.setVisionAngle(data.movingRight ? 270 : 90);
+                data.dweller.setMovement(0);
+                data.dweller.applyForce();
+            }
     }
     private void transitionDwellerState (DwellerAI data, DwellerFSM newState) {
-        data.state = newState;
-        data.stateTimer = 0;
         data.state = newState;
         data.stateTimer = 0;
 
         switch (newState) {
             case IDLE_LOOK:
-                data.dweller.setShooting(false);
-                data.dweller.resetShotsFired();
-                break;
-
-            case SHOOT:
-                data.stateDuration = 2.0f;
-                data.dweller.setShooting(true);
+                data.stateDuration = random.nextFloat() * 2.0f + 1.0f; // 1-3 seconds
+                data.horizontal = 0;
                 break;
 
             case STUNNED:
-                data.stateDuration = 4.0f;
-                data.dweller.setShooting(false);
-                data.dweller.resetShotsFired();
-                data.dweller.setMovement(0);
+                data.stateDuration = 3.0f;
+                data.horizontal = 0;
                 break;
         }
-        data.dweller.applyForce();
     }
 }

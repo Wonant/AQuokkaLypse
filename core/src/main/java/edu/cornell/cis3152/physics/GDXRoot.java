@@ -28,13 +28,15 @@ public class GDXRoot extends Game implements ScreenListener {
     private SpriteBatch batch;
     /** The loading scene that loads assets asynchronously */
     private LoadingScene loading;
+    /** The main menu scene */
+    private MainMenuScene mainMenu;
     /** Array of Arena controllers (one per map) */
     private PlatformScene[] controllers;
     /** Index of the current Arena */
     private int current;
     /** Array of map keys for each level */
-    private String[] maps = {"platform-constants", "platform-constants1"};
-    private String[] tiled = {"maps/tutorial1.tmx", "maps/tutorial2.tmx"};
+    private String[] maps = {"platform-constants", "platform-constants1", "platform-constants2"};
+    private String[] tiled = {"maps/tutorial1.tmx", "maps/tutorial2.tmx", "maps/easy_level.tmx"};
     /** Current map index for switching levels */
     private int currentMapIndex = 0;
 
@@ -61,6 +63,10 @@ public class GDXRoot extends Game implements ScreenListener {
         if (loading != null) {
             loading.dispose();
             loading = null;
+        }
+        if (mainMenu != null) {
+            mainMenu.dispose();
+            mainMenu = null;
         }
         if (controllers != null) {
             for (int i = 0; i < controllers.length; i++) {
@@ -90,6 +96,9 @@ public class GDXRoot extends Game implements ScreenListener {
         if (loading != null) {
             loading.resize(width, height);
         }
+        if (mainMenu != null) {
+            mainMenu.resize(width, height);
+        }
         if (controllers != null) {
             for (int i = 0; i < controllers.length; i++) {
                 controllers[i].resize(width, height);
@@ -110,6 +119,9 @@ public class GDXRoot extends Game implements ScreenListener {
             loading.dispose();
             loading = null;
 
+            mainMenu = new MainMenuScene(directory, batch);
+            mainMenu.setScreenListener(this);
+
             // Create one Arena for each map key
             controllers = new PlatformScene[maps.length];
             for (int i = 0; i < maps.length; i++) {
@@ -118,8 +130,30 @@ public class GDXRoot extends Game implements ScreenListener {
                 controllers[i].setSpriteBatch(batch);
                 controllers[i].reset();
             }
-            current = 0;
-            setScreen(controllers[current]);
+
+            setScreen(mainMenu);
+        }
+        else if (screen == mainMenu) {
+            switch (exitCode) {
+                case MainMenuScene.EXIT_PLAY:
+                    current = 0;
+                    setScreen(controllers[current]);
+                    break;
+                case MainMenuScene.EXIT_SETTINGS:
+                    // TODO: Implement level select screen
+                    // For now, just start the game
+                    current = 0;
+                    setScreen(controllers[current]);
+                    break;
+                case MainMenuScene.EXIT_CREDITS:
+                    // TODO: Implement credits screen
+                    // For now, just return to main menu
+                    setScreen(mainMenu);
+                    break;
+                case MainMenuScene.EXIT_EXIT:
+                    Gdx.app.exit();
+                    break;
+            }
         }
         else if (exitCode == PlatformScene.EXIT_NEXT) {
             current = (current + 1) % controllers.length;

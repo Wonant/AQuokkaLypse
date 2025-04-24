@@ -158,6 +158,69 @@ public class Surface extends ObstacleSprite {
 
     }
 
+    public Surface(float x, float y, float h, float w,
+                   float units, JsonValue settings,
+                   boolean shadowed, float angle) {
+        super();
+        float tile = settings.getFloat("tile");
+
+        // Center of rectangle
+        float cx = x + w*0.5f;
+        float cy = y + h*0.5f;
+
+        // Local corners relative to center
+        float[] local = new float[]{
+            -w*0.5f, -h*0.5f,
+            w*0.5f, -h*0.5f,
+            w*0.5f,  h*0.5f,
+            -w*0.5f,  h*0.5f
+        };
+
+        // Rotate and translate back
+        float cos = (float)Math.cos(angle);
+        float sin = (float)Math.sin(angle);
+        float[] points = new float[8];
+        for (int i = 0; i < 4; i++) {
+            float dx = local[2*i];
+            float dy = local[2*i+1];
+            float rx = dx * cos - dy * sin;
+            float ry = dx * sin + dy * cos;
+            points[2*i]   = cx + rx;
+            points[2*i+1] = cy + ry;
+        }
+
+        // Triangulate mesh
+        Poly2 poly = new Poly2();
+        PolyTriangulator tri = new PolyTriangulator();
+        tri.set(points);
+        tri.calculate();
+        tri.getPolygon(poly);
+
+        // Create physics obstacle
+        obstacle = new PolygonObstacle(points);
+        obstacle.setBodyType( BodyDef.BodyType.StaticBody );
+        obstacle.setDensity( settings.getFloat("density", 0) );
+        obstacle.setFriction( settings.getFloat("friction", 0.3f) );
+        obstacle.setRestitution( settings.getFloat("restitution", 0.3f) );
+        obstacle.setPhysicsUnits( units );
+        obstacle.setUserData( this );
+
+        debug = ParserUtils.parseColor( settings.get("debug"), Color.WHITE );
+
+        this.shadowed = shadowed;
+        width = w;
+
+        // Scale mesh for rendering
+        poly.scl( units );
+        mesh.set(poly, tile, tile);
+    }
+
+    /**
+     * Legacy constructor delegates to new one with zero rotation
+     */
+
+
+
     public void setFilter() {
         for(Fixture fixture : getObstacle().getBody().getFixtureList()) {
             Filter filter = fixture.getFilterData();

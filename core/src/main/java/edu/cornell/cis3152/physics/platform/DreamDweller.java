@@ -1,10 +1,9 @@
 package edu.cornell.cis3152.physics.platform;
 
-import com.badlogic.gdx.graphics.Color;
-import com.badlogic.gdx.graphics.Texture;
-import com.badlogic.gdx.graphics.g2d.Sprite;
 import com.badlogic.gdx.math.*;
+import com.badlogic.gdx.graphics.*;
 import com.badlogic.gdx.physics.box2d.*;
+
 import com.badlogic.gdx.physics.box2d.joints.RevoluteJoint;
 import com.badlogic.gdx.physics.box2d.joints.RevoluteJointDef;
 import com.badlogic.gdx.utils.JsonValue;
@@ -14,42 +13,32 @@ import edu.cornell.gdiac.graphics.SpriteBatch;
 import edu.cornell.gdiac.graphics.Texture2D;
 import edu.cornell.gdiac.math.Path2;
 import edu.cornell.gdiac.math.PathFactory;
-import edu.cornell.gdiac.physics2.CapsuleObstacle;
-import edu.cornell.gdiac.physics2.Obstacle;
+import edu.cornell.gdiac.physics2.*;
 
-import java.util.HashMap;
-import edu.cornell.cis3152.physics.platform.Player;
+import javax.swing.*;
 
 public class DreamDweller extends Enemy {
     private final JsonValue data;
 
-    /**
-     * physics stuff
-     */
+    /** physics stuff */
     private float width;
     private float height;
 
     private float force;
     private float damping;
     private float max_speed;
-    private float damage;
-    private float alertRadius;
-    private float stunResistance;
-    private float fearEnergyAmount;
+    private float jump_force;
+    private int jumpLimit;
+    private int shotLimit;
 
     private float movement;
     private boolean facingRight;
+    private int jumpCooldown;
+    private boolean isJumping;
+    private int shootCooldown;
+    private int shootLimit = 40;
     private boolean isGrounded;
-    private boolean stunned;
-    private float stunDuration;
-    private float currentStunTime;
-
-    // Vision related properties
-    private float visionAngle;
-    private float visionSwingSpeed;
-    private float visionSwingRange;
-    private float currentVisionSwingTime;
-    private boolean visionDirectionClockwise;
+    private boolean isShooting;
 
     // Sensor for ground detection
     private Path2 sensorOutline;
@@ -60,38 +49,38 @@ public class DreamDweller extends Enemy {
     private final Vector2 forceCache = new Vector2();
     private final Affine2 flipCache = new Affine2();
 
-    // Head and vision
     private Fixture visionSensor;
-
+    private float followAngle;
+    private Fixture followSensor;
     private float headOffset = 2.0f;
+    private Fixture walkSensor;
+    private Vector2 debugLookStart = new Vector2();
+    private Vector2 debugLookEnd = new Vector2();
 
-    private boolean isShooting;
-    private int shootCooldown;
-    private int shootLimit = 2;
-    private int shotsFired;
-    private int maxShots;
+    // time before enemy resumes normal behavior after detecting player
+    private float susCooldown = 100;
+    private float susCountdown = susCooldown;
+    /** game logic stuff */
 
-    /**
-     * game logic stuff
-     */
+    // each npc ai character will have a unique one
     private int entityID;
+    // indicates if this critter is interactable with or not. once harvested critteres are inactive
     private boolean active;
-    private boolean awareOfPlayer;
+    // where the critter is looking, 0 is relative down of the critter's central location, iterates clockwise
+    private float visionAngle;
+
+    // should be seconds in how long it takes for the critter to reset from aware of player to idle
     private float awarenessCooldown;
-    private float currentAwarenessCooldown;
 
     private Path2 visionSensorOutline;
-    private Path2 alertSensorOutline;
-
-    // Texture for the DreamDweller
-    private Texture2D dwellerTexture;
-    private HashMap<DreamDweller, Sprite> visionCones3;
+    private Path2 visionFollowOutline;
+    private Path2 walkSensorOutline;
     private Path2 harvestOutline;
+
 
     public float getMovement() {
         return movement;
     }
-
     public void setMovement(float value) {
         movement = value;
         // Change facing direction based on input
@@ -107,69 +96,54 @@ public class DreamDweller extends Enemy {
     }
 
     public void setVisionAngle(float theta) {
-        visionAngle = theta;
         float desiredAngle = theta * MathUtils.degreesToRadians; // Convert to radians
         headBody.setTransform(headBody.getPosition(), desiredAngle);
     }
 
+    public boolean isSus(){return susCountdown > 0;}
+
     public boolean isShooting() {
-        System.out.println("isShooting: " + isShooting);
-        shotsFired++;
-        return isShooting && !isStunned();
+        return isShooting && shootCooldown <= 0 && !isStunned();
     }
 
     public void setShooting(boolean value) {
         isShooting = value;
     }
 
-    public void setStunned(boolean value) {
-        stunned = value;
-        if (stunned) {
-            currentStunTime = stunDuration;
-        }
+    public boolean isJumping() {
+        return isJumping && isGrounded && jumpCooldown <= 0;
     }
 
-    public boolean isStunned() {
-        return stunned;
+    public void setJumping(boolean value) {
+        isJumping = value;
     }
 
-    public void setAwareOfPlayer(boolean awareOfPlayer) {
-        this.awareOfPlayer = awareOfPlayer;
-        if (awareOfPlayer) {
-            currentAwarenessCooldown = awarenessCooldown;
-        }
+    public boolean isGrounded() {
+        return isGrounded;
     }
 
-    public boolean isAwareOfPlayer() {
-        return awareOfPlayer;
+    public void setGrounded(boolean value) {
+        isGrounded = value;
     }
 
-    public float getDamage() {
-        return damage;
+    public float getForce() {
+        return force;
     }
 
-    public float getFearEnergyAmount() {
-        return fearEnergyAmount;
+    public float getDamping() {
+        return damping;
     }
 
-    /**
-     * Alerts other enemies in the vicinity
-     * Should be called by the GameMode or other manager when this enemy detects the player
-     */
-    public void alertOtherEnemies() {
-        // This will be implemented in the game mode to find and alert other enemies
-        // This method serves as a hook for that functionality
+    public float getMaxSpeed() {
+        return max_speed;
     }
 
-    /**
-     * Constructor for DreamDweller
-     *
-     * @param units  The ratio of pixels to Box2D units
-     * @param data   The JSON value containing enemy properties
-     * @param points The initial position of the enemy
-     */
-    public DreamDweller(float units, JsonValue data, float[] points) {
+
+    public DreamDweller(float units, JsonValue data, float[] points, PlatformScene scene) {
+        super(null);
         this.data = data;
+        this.scene = scene;
+
         // Read initial position and overall size from JSON.
         float x = points[0];
         float y = points[1];
@@ -177,18 +151,17 @@ public class DreamDweller extends Enemy {
 
         float size = s * units;
 
-        width = s * data.get("inner").getFloat(0);
+        width  = s * data.get("inner").getFloat(0);
         height = s * data.get("inner").getFloat(1);
 
         float drawWidth = (float) (size / 1.5);
         float drawHeight = size;
 
-        // Create the physics body as a capsule
-
+        // may want to change what kind of physical obstacle this is
         obstacle = new CapsuleObstacle(x, y, width, height);
         // Optionally set a tolerance for collision detection (from JSON debug info)
         JsonValue debugInfo = data.get("debug");
-        ((CapsuleObstacle) obstacle).setTolerance(debugInfo.getFloat("tolerance", 0.5f));
+        ((CapsuleObstacle)obstacle).setTolerance( debugInfo.getFloat("tolerance", 0.5f) );
 
         obstacle.setDensity(data.getFloat("density", 0));
         obstacle.setFriction(data.getFloat("friction", 0));
@@ -196,36 +169,28 @@ public class DreamDweller extends Enemy {
         obstacle.setFixedRotation(true);
         obstacle.setPhysicsUnits(units);
         obstacle.setUserData(this);
-        obstacle.setName("dweller");
-
+        obstacle.setName("maintenance");
 
         // Set debugging colors
         debug = ParserUtils.parseColor(debugInfo.get("avatar"), Color.WHITE);
         sensorColor = ParserUtils.parseColor(debugInfo.get("sensor"), Color.WHITE);
 
-        // Initialize physics properties
+        max_speed   = data.getFloat("maxspeed", 0);
+        damping    = data.getFloat("damping", 0);
+        force      = data.getFloat("force", 0);
+        jump_force = data.getFloat("jump_force", 0);
 
-        fearEnergyAmount = data.getFloat("fearEnergy", 20.0f);
-        stunDuration = data.getFloat("stunDuration", 3.0f);
-
-        // Initialize vision properties
-        visionSwingSpeed = data.getFloat("visionSwingSpeed", 0.5f);
-        visionSwingRange = data.getFloat("visionSwingRange", 90.0f);
-        currentVisionSwingTime = 0;
-        visionDirectionClockwise = true;
-
-        // Initialize state
-        isGrounded = false;
-        facingRight = true;
-        stunned = false;
-        currentStunTime = 0;
+        isGrounded  = false;
+        isShooting  = false;
+        isJumping   = false;
+        facingRight   = true;
+        jumpCooldown = 0;
+        shootCooldown = 0;
+        //deg
         visionAngle = 0;
-        awarenessCooldown = data.getFloat("awarenessCooldown", 5.0f);
-        currentAwarenessCooldown = 0;
 
-        mesh.set(-drawWidth / 1.5f, -drawHeight / 1.6f, drawWidth * 1.5f, drawHeight * 1.5f);
-        shotsFired = 0;
-        maxShots = data.getInt(3);
+
+        mesh.set(-drawWidth/1.5f, -drawHeight/1.6f, drawWidth*1.5f, drawHeight*1.5f);
     }
     public void setActiveTexture(AssetDirectory directory){
         Texture texture = directory.getEntry( "dream-dweller-active", Texture.class );
@@ -237,14 +202,8 @@ public class DreamDweller extends Enemy {
         this.setTexture(texture);
     }
     /**
-     * Loads the texture for the DreamDweller
-     */
-    public void setTexture(Texture texture) {
-        super.setTexture(texture);
-    }
-
-    /**
      * Creates a sensor fixture to detect ground contact.
+     * This sensor prevents double-jumping by detecting when the player is on the ground.
      */
     public void createSensor() {
         // Position the sensor just below the physics body.
@@ -264,10 +223,10 @@ public class DreamDweller extends Enemy {
         // Create the sensor fixture on the physics body
         Body body = obstacle.getBody();
         Fixture sensorFixture = body.createFixture(sensorDef);
-        sensorName = "dweller_sensor";
+        sensorName = "maintenance_sensor";
         sensorFixture.setUserData(sensorName);
 
-        // Create a debug outline for the sensor
+        // Create a debug outline for the sensor so you can see it in debug mode
         float u = obstacle.getPhysicsUnits();
         PathFactory factory = new PathFactory();
         sensorOutline = new Path2();
@@ -277,27 +236,19 @@ public class DreamDweller extends Enemy {
         createHarvestSensor(width, height);
     }
 
-    // hitbox
     public void createHarvestSensor(float harvestWidth, float harvestHeight) {
         float u = obstacle.getPhysicsUnits();
+        float maxSafeRadius = Math.min(harvestWidth, harvestHeight) / 2 * u;
 
         // Create the harvest outline (for visualization)
         PathFactory factory = new PathFactory();
         harvestOutline = new Path2();
 
-        float minDim = Math.min(harvestWidth, harvestHeight);
-        float cornerRadius = (minDim / 2.0f) * u;
+        factory.makeRoundedRect(-harvestWidth/2 * u, -harvestHeight/2 * u,
+            harvestWidth * u, harvestHeight * u,
+            maxSafeRadius, harvestOutline);
 
-        factory.makeRoundedRect(
-            -harvestWidth / 2 * u,
-            -harvestHeight / 2 * u,
-            harvestWidth * u,
-            harvestHeight * u,
-            cornerRadius,
-            harvestOutline
-        );
-
-        // hitbox!!!
+        // Create a sensor fixture for the harvest area
         PolygonShape harvestShape = new PolygonShape();
         harvestShape.setAsBox(harvestWidth/2, harvestHeight/2);
 
@@ -313,9 +264,6 @@ public class DreamDweller extends Enemy {
         harvestShape.dispose();
     }
 
-    /**
-     * Creates a separate body for the head
-     */
     public void createHeadBody() {
         BodyDef bdef = new BodyDef();
         bdef.type = BodyDef.BodyType.DynamicBody;
@@ -336,9 +284,6 @@ public class DreamDweller extends Enemy {
         headShape.dispose();
     }
 
-    /**
-     * Attaches the head to the main body with a revolute joint
-     */
     public void attachHead() {
         RevoluteJointDef jointDef = new RevoluteJointDef();
         jointDef.initialize(obstacle.getBody(), headBody, obstacle.getBody().getWorldCenter().add(0, height / 2));
@@ -348,21 +293,14 @@ public class DreamDweller extends Enemy {
         headJoint = (RevoluteJoint) obstacle.getBody().getWorld().createJoint(jointDef);
     }
 
-    /**
-     * Creates vision sensors for the DreamDweller
-     * - A wider vision cone than other enemies
-     * - An alert radius to notify other enemies
-     */
     public void createVisionSensor() {
         createHeadBody();
         attachHead();
-
-        // Vision cone - wider than CuriosityCritter
-        float coneWidth = 3.9f;  // Wider than CuriosityCritter
-        float coneLength = 4.8f; // Longer than CuriosityCritter
+        float coneWidth = 5.0f;
+        float coneLength = 7.0f;
         Vector2[] vertices = new Vector2[3];
-        vertices[0] = new Vector2(-coneWidth / 2, coneLength);
-        vertices[1] = new Vector2(coneWidth / 2, coneLength);
+        vertices[0] = new Vector2(-coneWidth/2, coneLength);
+        vertices[1] = new Vector2(coneWidth/2, coneLength);
         vertices[2] = new Vector2(0, 0);
         PolygonShape visionShape = new PolygonShape();
         visionShape.set(vertices);
@@ -374,15 +312,70 @@ public class DreamDweller extends Enemy {
         visionSensor = headBody.createFixture(visionDef);
         visionSensor.setUserData("vision_sensor");
 
+
         PathFactory factory = new PathFactory();
         visionSensorOutline = new Path2();
         float u = obstacle.getPhysicsUnits();
         visionSensorOutline = factory.makeTriangle(
-            -coneWidth / 2 * u, coneLength * u,
-            coneWidth / 2 * u, coneLength * u,
+            -coneWidth/2 * u, coneLength * u,
+            coneWidth/2 * u, coneLength * u,
+            0, 0);
+
+        // follow sensor
+        coneWidth *= 1.8f;
+
+
+        //okay idk why this works but it works for having the vision cone follow the player once aggro'd
+        vertices[0] = new Vector2((-coneWidth)/2, coneLength);
+        vertices[1] = new Vector2((coneWidth)/2, coneLength);
+        vertices[2] = new Vector2(0, -3f);
+
+        visionShape.set(vertices);
+        visionDef = new FixtureDef();
+        visionDef.shape = visionShape;
+        visionDef.isSensor = true;
+
+        followSensor = headBody.createFixture(visionDef);
+        followSensor.setUserData("follow_sensor");
+        visionFollowOutline = new Path2();
+        visionFollowOutline = factory.makeTriangle(
+            -coneWidth/2 * u, coneLength * u,
+            coneWidth/2 * u, coneLength * u,
+            0, -3f);
+
+        //walk sensor
+        coneWidth = 0.4f;
+        coneLength = 2.5f;
+        vertices[0] = new Vector2(-coneWidth/2, coneLength);
+        vertices[1] = new Vector2(coneWidth/2, coneLength);
+        vertices[2] = new Vector2(0, 0);
+
+        visionShape.set(vertices);
+
+        FixtureDef walkDef = new FixtureDef();
+        walkDef.shape = visionShape;
+        walkDef.isSensor = true;
+
+        walkSensor = headBody.createFixture(walkDef);
+        walkSensor.setUserData("walk_sensor");
+
+        walkSensorOutline = new Path2();
+        walkSensorOutline = factory.makeTriangle(
+            -coneWidth/2 * u, coneLength * u,
+            coneWidth/2 * u, coneLength * u,
             0, 0);
 
         visionShape.dispose();
+    }
+
+    public void updateFollowSensor(Player player) {
+        Vector2 enemyPos = obstacle.getPosition();
+        Vector2 playerPos = player.getObstacle().getPosition();
+        Vector2 visionRef = new Vector2(enemyPos.x, enemyPos.y + 5.0f);
+        visionRef.sub(enemyPos).nor();
+        playerPos.sub(enemyPos).nor();
+        followAngle = MathUtils.atan2(playerPos.y,playerPos.x) - MathUtils.atan2(visionRef.y,visionRef.x);
+        headBody.setTransform(headBody.getPosition(), followAngle);
     }
 
     /**
@@ -390,7 +383,6 @@ public class DreamDweller extends Enemy {
      * This includes horizontal movement (with damping) and jumping impulses.
      */
     public void applyForce() {
-
         setMovement(0);
 
         if (obstacle.isActive()) {
@@ -405,48 +397,35 @@ public class DreamDweller extends Enemy {
         }
     }
 
-    /**
-     * Updates the DreamDweller's state
-     *
-     * @param dt The time elapsed since the last update
-     */
+
     @Override
     public void update(float dt) {
-        // Update stun state
-        if (stunned) {
-            currentStunTime -= dt;
-            if (currentStunTime <= 0) {
-                stunned = false;
-            }
+        lookForPlayer();
+        if (isJumping()) {
+            jumpCooldown = jumpLimit;
+        } else {
+            jumpCooldown = Math.max(0, jumpCooldown - 1);
+        }
+        if (isAwareOfPlayer()) {
+            updateFollowSensor(scene.getAvatar());
+            susCountdown = susCooldown;
+        }
+        else{
+            susCountdown--;
         }
         if (isShooting()) {
             shootCooldown = shootLimit;
-            shotsFired++;
         } else {
             shootCooldown = Math.max(0, shootCooldown - 1);
         }
-
-        if (!awareOfPlayer && !stunned) {
-            currentVisionSwingTime += dt;
-
-            float swingProgress = (float) Math.sin(currentVisionSwingTime * visionSwingSpeed);
-            float newAngle = swingProgress * visionSwingRange;
-
-            setVisionAngle(newAngle);
-        } else if (awareOfPlayer && !stunned) {
-            if (currentAwarenessCooldown <= 0) {
-                awareOfPlayer = false;
-            }
-        }
-
-        applyForce();
         super.update(dt);
     }
 
     /**
-     * Draws the DreamDweller sprite
+     * Draws the player sprite.
+     * The sprite is flipped horizontally if the player is facing left.
      *
-     * @param batch The sprite batch used for drawing
+     * @param batch  The sprite batch used for drawing.
      */
     @Override
     public void draw(SpriteBatch batch) {
@@ -455,16 +434,15 @@ public class DreamDweller extends Enemy {
         } else {
             flipCache.setToScaling(-1, 1);
         }
-
-        if (obstacle != null && mesh != null && sprite != null) {
-            float scaleFactor = 1.5f; // Increase sprite size
+        if (obstacle != null && mesh != null) {
+            float scaleFactor = 1.4f; // Increase sprite size by 20%
             float x = obstacle.getX();
             float y = obstacle.getY();
             float a = obstacle.getAngle();
             float u = obstacle.getPhysicsUnits();
 
             transform.idt();
-            transform.preScale(scaleFactor, scaleFactor);
+            transform.preScale(scaleFactor, scaleFactor); // Scale up sprite only
             transform.preRotate((float) ((double) (a * 180.0F) / Math.PI));
             transform.preTranslate(x * u, y * u);
 
@@ -474,15 +452,54 @@ public class DreamDweller extends Enemy {
         }
     }
 
+    public void lookForPlayer() {
+        World world = obstacle.getBody().getWorld();
+        Player player = scene.getAvatar();
+
+
+        Vector2 pos = obstacle.getPosition();
+        float rayLength = 10f;
+        float followSensorAngle = MathUtils.atan2(player.getObstacle().getPosition().y - pos.y,
+            player.getObstacle().getPosition().x - pos.x);
+
+        Vector2 start = (facingRight) ? new Vector2(pos.x + width/2, pos.y + height/4) :
+            new Vector2(pos.x - width/2, pos.y + height/4);
+        //Vector2 end = (facingRight) ? new Vector2(pos.x + width + rayLength, pos.y + height/4) :
+        new Vector2(pos.x - width - rayLength, pos.y + height/4);
+        Vector2 end = new Vector2(
+            pos.x + rayLength * MathUtils.cos(followSensorAngle),
+            pos.y + rayLength * MathUtils.sin(followSensorAngle)
+        );
+
+        EnemyVisionRaycast playerRaycast = new EnemyVisionRaycast(EnemyVisionRaycast.VisionMode.PLAYER_CHECK, 4f);
+        world.rayCast(playerRaycast, start, end);
+
+        debugLookStart.set(start);
+        debugLookEnd.set(end);
+
+        if (playerRaycast.getHitPlayer() != null) {
+            setAwareOfPlayer(true);
+            debugLookEnd.set(playerRaycast.getHitPoint());
+            System.out.println("Seen the player");
+
+        } else if (playerRaycast.getHitFixture() != null) {
+            debugLookEnd.set(playerRaycast.getHitPoint());
+        }
+        else{
+            setAwareOfPlayer(false);
+        }
+
+        playerRaycast.reset();
+    }
+
     /**
-     * Draws the debug outlines for the physics body and sensors
+     * Draws the debug outlines for the physics body and sensor.
      *
-     * @param batch The sprite batch used for drawing
+     * @param batch  The sprite batch used for drawing.
      */
     @Override
     public void drawDebug(SpriteBatch batch) {
         super.drawDebug(batch);
-
         if (sensorOutline != null) {
             batch.setTexture(Texture2D.getBlank());
             batch.setColor(sensorColor);
@@ -493,15 +510,14 @@ public class DreamDweller extends Enemy {
 
             // Prepare a transformation matrix for proper sensor positioning
             transform.idt();
-            transform.preRotate((float) (a * 180.0f / Math.PI));
+            transform.preRotate((float)(a * 180.0f / Math.PI));
             transform.preTranslate(p.x * u, p.y * u);
 
             batch.outline(sensorOutline, transform);
         }
-
         if (visionSensorOutline != null) {
             batch.setTexture(Texture2D.getBlank());
-            batch.setColor(Color.PURPLE); // Different color for DreamDweller vision
+            batch.setColor(Color.GREEN);
 
             Vector2 headPos = headBody.getPosition();
             float headAngleDeg = headBody.getAngle() * MathUtils.radiansToDegrees;
@@ -512,6 +528,34 @@ public class DreamDweller extends Enemy {
             transform.preTranslate(headPos.x * u, headPos.y * u);
 
             batch.outline(visionSensorOutline, transform);
+        }
+        if (visionFollowOutline != null) {
+            batch.setTexture(Texture2D.getBlank());
+            batch.setColor(Color.LIME);
+
+            Vector2 headPos = headBody.getPosition();
+            float headAngleDeg = headBody.getAngle() * MathUtils.radiansToDegrees;
+            float u = obstacle.getPhysicsUnits();
+
+            transform.idt();
+            transform.preRotate(headAngleDeg);
+            transform.preTranslate(headPos.x * u, headPos.y * u);
+
+            batch.outline(visionFollowOutline, transform);
+        }
+        if (walkSensorOutline != null) {
+            batch.setTexture(Texture2D.getBlank());
+            batch.setColor(Color.RED);
+
+            Vector2 headPos = headBody.getPosition();
+            float headAngleDeg = headBody.getAngle() * MathUtils.radiansToDegrees;
+            float u = obstacle.getPhysicsUnits();
+
+            transform.idt();
+            transform.preRotate(headAngleDeg);
+            transform.preTranslate(headPos.x * u, headPos.y * u);
+
+            batch.outline(walkSensorOutline, transform);
             batch.setColor(Color.WHITE);
         }
         if (harvestOutline != null) {
@@ -530,33 +574,55 @@ public class DreamDweller extends Enemy {
 
             batch.setColor(Color.WHITE);
         }
+        drawRayDebug(batch);
     }
+
+    public void drawRayDebug(SpriteBatch batch) {
+        if (debugRayStart != null && debugRayEnd != null) {
+            float u = obstacle.getPhysicsUnits();
+            Vector2 localStart = new Vector2(debugRayStart).sub(obstacle.getPosition());
+            Vector2 localEnd = new Vector2(debugRayEnd).sub(obstacle.getPosition());
+
+            PathFactory factory = new PathFactory();
+            Path2 rayOutline = new Path2();
+            factory.makeLine(localStart.x * u, localStart.y * u,
+                localEnd.x * u, localEnd.y * u, rayOutline);
+
+            batch.setTexture(Texture2D.getBlank());
+            batch.setColor(Color.PURPLE);
+            transform.idt();
+            float a = obstacle.getAngle();
+            Vector2 p = obstacle.getPosition();
+            transform.preRotate((float)(a * 180.0f / Math.PI));
+            transform.preTranslate(p.x * u, p.y * u);
+            batch.outline(rayOutline, transform);
+        }
+        if (debugLookEnd != null && debugLookStart != null) {
+            float u = obstacle.getPhysicsUnits();
+            Vector2 localStart = new Vector2(debugLookStart).sub(obstacle.getPosition());
+            Vector2 localEnd = new Vector2(debugLookEnd).sub(obstacle.getPosition());
+
+            PathFactory factory = new PathFactory();
+            Path2 rayOutline = new Path2();
+            factory.makeLine(localStart.x * u, localStart.y * u,
+                localEnd.x * u, localEnd.y * u, rayOutline);
+
+            batch.setTexture(Texture2D.getBlank());
+            batch.setColor(Color.PURPLE);
+            transform.idt();
+            float a = obstacle.getAngle();
+            Vector2 p = obstacle.getPosition();
+            transform.preRotate((float)(a * 180.0f / Math.PI));
+            transform.preTranslate(p.x * u, p.y * u);
+            batch.outline(rayOutline, transform);
+        }
+    }
+
     public Body getHeadBody() {
         return headBody;
     }
-    public void resetShotsFired() {
-        shotsFired = 0;
-    }
-
-    public int getShotsFired() {
-        return shotsFired;
-    }
-
-    public int getMaxShots() {
-        return maxShots;
-    }
-    public void incrementShotsFired() {
-        shotsFired++;
-    }
-    private Player target;
-
-    public void setTarget(Player target) {
-        this.target = target;
-    }
-
-    public Player getTarget() {
-        return target;
-    }
 }
+
+
 
 

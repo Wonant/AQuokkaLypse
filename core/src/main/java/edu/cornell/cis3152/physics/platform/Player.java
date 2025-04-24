@@ -23,6 +23,7 @@
     import com.badlogic.gdx.physics.box2d.*;
 
     import com.badlogic.gdx.utils.JsonValue;
+    import edu.cornell.cis3152.physics.InputController;
     import edu.cornell.gdiac.assets.ParserUtils;
     import edu.cornell.gdiac.graphics.SpriteBatch;
     import edu.cornell.gdiac.graphics.Texture2D;
@@ -61,6 +62,7 @@
         private float damping;
         /** The maximum character speed */
         private float maxspeed;
+        private float defaultMaxSpeed;
         /** The impulse for the character jump */
         private float jump_force;
         /** The impulse for the character dash */
@@ -144,6 +146,11 @@
         /** The name of the sensor fixture */
         private String sensorScareName;
 
+        // falling
+        private Path2   fallSensorOutline;
+        private String  fallSensorName;
+        private boolean fallSensorContact = false;
+
 
 
         /** raycasting for stair interpolation */
@@ -152,21 +159,81 @@
         private Vector2 debugRayStart;
         private Vector2 debugRayEnd;
         private boolean seenAStep;
-        private static final int FRAME_STAIR_COOLDOWN = 12;
+        private static final int FRAME_STAIR_COOLDOWN = 0;
         private int stairCooldown = 0;
 
         /** animation */
         private Animator walkingSprite;
         private Animator idleSprite;
         private Animator jumpSprite;
+        private Animator stairSprite;
+        private Animator fallSprite;
+        private Animator landingSprite;
+        private Animator stunningSprite;
+        private Animator interactingSprite;
+        private Animator absorbSprite;
         private AnimationState animationState;
+
+        /** animation constants/variables */
+        private boolean isClimbing = false;
+        private int climbCounter = 0;
+        private final int CLIMB_DURATION = 11;
+        private Vector2 climbStart = new Vector2();
+        private Vector2 climbTarget = new Vector2();
+
+        private boolean isLanding = false;
+        private int landCounter = 0;
+        private final int LAND_DURATION = 18;
+
+        private boolean inStunAnimation = false;
+        private int attackFrameCounter = 0;
+        private final int ATTACK_FRAME_DURATION = 24;
+
+        private boolean isInteracting;
+        private boolean lastInteracting = false;
+        private boolean inInteractAnimation = false;
+        private int interactFrameCounter = 0;
+        private static final int INTERACT_FRAME_DURATION = 46;
+        private boolean hoverInteract;
+        private boolean absorbing;
+
+        /** isblinded */
+        private boolean isBlinded = false;
+        private float blindTimer = 0f;
+        private static final float MAX_BLIND_TIME = 2.0f;
 
 
         private enum AnimationState {
             WALK,
             IDLE,
             JUMP,
-            STAIR
+            STAIR,
+            FALL,
+            LAND,
+            STUN,
+            INTERACT,
+            ABSORB
+        }
+
+        public void setBlinded(boolean blinded) {
+            if (blinded) {
+                this.isBlinded = true;
+                this.blindTimer = 0f;
+            }
+        }
+
+        public boolean isBlinded() {
+            return isBlinded;
+        }
+
+        public void updateBlind(float dt) {
+            if (isBlinded) {
+                blindTimer += dt;
+                if (blindTimer >= MAX_BLIND_TIME) {
+                    isBlinded = false;
+                    blindTimer = 0f;
+                }
+            }
         }
 
 
@@ -189,6 +256,15 @@
          * @param value the left/right movement of this character.
          */
         public void setMovement(float value) {
+            if (isClimbing || isInteracting) {
+                movement = 0;
+                return;
+            }
+            if (isLanding) {
+                movement = value * 0.1f;
+                return;
+            }
+
             movement = value;
             // Change facing if appropriate
             if (movement < 0) {
@@ -196,6 +272,10 @@
             } else if (movement > 0) {
                 faceRight = true;
             }
+        }
+
+        public void setFaceRight(boolean value) {
+            faceRight = value;
         }
 
         /** Returns teleport range radius
@@ -292,6 +372,22 @@
          */
         public void setStunning(boolean value) {
             isStunning = value;
+        }
+
+        public void setInteracting(boolean value) {
+            isInteracting = value;
+        }
+
+        public boolean isInteracting() {
+            return isInteracting;
+        }
+
+        public void setHoverInteract(boolean value) {
+            hoverInteract = value;
+        }
+
+        public boolean getHoverInteract() {
+            return hoverInteract;
         }
 
 
@@ -464,6 +560,23 @@
         }
 
         /**
+         * Set if the fall sensor is contact with a platform(for landing animations)
+         *
+         */
+        public void setFallSensorContact(boolean value) {
+            this.fallSensorContact = value;
+        }
+
+        public void setMaxSpeed(float s) {
+            this.maxspeed = s;
+        }
+        /** Restores the original max speed from JSON. */
+        public void resetMaxSpeed() {
+            this.maxspeed = defaultMaxSpeed;
+        }
+
+
+        /**
          * Creates a new Player avatar with the given physics data
          *
          * The physics units are used to size the mesh relative to the physics
@@ -474,13 +587,13 @@
          * @param units     The physics units
          * @param data      The physics constants for Player
          */
-        public Player(float units, JsonValue data) {
+        public Player(float units, JsonValue data, Vector2 spawn) {
             this.data = data;
             JsonValue debugInfo = data.get("debug");
 
 
-            float x = data.get("pos").getFloat(0);
-            float y = data.get("pos").getFloat(1);
+            float x = spawn.x;
+            float y = spawn.y;
             float s = data.getFloat( "size" );
             float sizeWidth = s*units;
             float sizeHeight = s*units*1.5f;
@@ -507,6 +620,7 @@
             sensorScareColor = ParserUtils.parseColor( debugInfo.get("scare_sensor"),  Color.GREEN);
 
             maxspeed = data.getFloat("maxspeed", 0);
+            defaultMaxSpeed = maxspeed;
             damping = data.getFloat("damping", 0);
             force = data.getFloat("force", 0);
             jump_force = data.getFloat( "jump_force", 0 );
@@ -543,7 +657,7 @@
             // since Player is a rectangular image. But note that the capsule is
             // actually smaller than the image, making a tighter hitbox. You can
             // see this when you enable debug mode.
-            mesh.set(-sizeWidth/2.0f,-sizeHeight/2.0f,sizeWidth,sizeHeight);
+            mesh.set(-sizeWidth/2.0f,-sizeHeight/2.0f,sizeWidth * 2 ,sizeHeight * 2);
 
             stepRayLength = height/2.5f;
 
@@ -553,10 +667,16 @@
 
         }
 
-        public void createAnimators(Texture walkTexture, Texture idleTexture, Texture jumpTexture) {
-            walkingSprite = new Animator(walkTexture, 4, 5, 0.08f, 17);
-            idleSprite = new Animator(idleTexture, 6, 5, 0.08f, 30);
-            jumpSprite = new Animator(jumpTexture, 12, 5, 0.08f, 50, false);
+        public void createAnimators(Texture dreamwalker, Texture absorb) {
+            walkingSprite = new Animator(dreamwalker, 11, 16, 0.033f, 176, 0, 15);
+            idleSprite = new Animator(dreamwalker, 11, 16, 0.033f, 176, 37, 56);
+            jumpSprite = new Animator(dreamwalker, 11, 16, 0.066f, 176, 20, 26, false);
+            stairSprite = new Animator(dreamwalker, 11, 16, 0.033f, 176, 126, 137, false);
+            fallSprite = new Animator(dreamwalker, 11, 16, 0.033f, 176, 134, 134);
+            landingSprite = new Animator(dreamwalker, 11, 16, 0.033f, 176, 138, 156, false);
+            stunningSprite = new Animator(dreamwalker, 11, 16, 0.033f, 176, 157, 174, false);
+            interactingSprite = new Animator(absorb, 5, 5, 0.033f, 23, 0, 22, false);
+            absorbSprite = new Animator(absorb, 5, 5, 0.033f, 23, 10, 11);
         }
 
         public void setFilter() {
@@ -590,13 +710,13 @@
          * once the physics obstacle has been activated.
          */
         public void createSensor() {
-            Vector2 sensorCenter = new Vector2(0, -height / 2);
+            Vector2 sensorCenter = new Vector2(0, -height / 2.2f);
             FixtureDef sensorDef = new FixtureDef();
             sensorDef.density = data.getFloat("density",0);
             sensorDef.isSensor = true;
 
             JsonValue sensorjv = data.get("sensor");
-            float w = sensorjv.getFloat("shrink",0)*width/2.0f;
+            float w = sensorjv.getFloat("shrink",0)*width;
             float h = sensorjv.getFloat("height",0);
             PolygonShape sensorShape = new PolygonShape();
             sensorShape.setAsBox(w, h, sensorCenter, 0.0f);
@@ -620,6 +740,45 @@
             PathFactory factory = new PathFactory();
             sensorOutline = new Path2();
             factory.makeRect( (sensorCenter.x-w/2)*u,(sensorCenter.y-h/2)*u, w*u, h*u,  sensorOutline);
+
+
+        }
+
+        public void createFallSensor() {
+            float units = obstacle.getPhysicsUnits();
+            float fallDepth = data.getFloat("fall_sensor_depth", 0.5f);
+            // how far below feet to sense (in physics units)
+            Vector2 center = new Vector2(0, -height/2 - fallDepth/2);
+
+            FixtureDef def = new FixtureDef();
+            def.isSensor = true;
+            def.density  = 0;
+            PolygonShape shape = new PolygonShape();
+            shape.setAsBox(width/2, fallDepth/2, center, 0);
+            def.shape = shape;
+
+            Body body = obstacle.getBody();
+            Fixture f = body.createFixture(def);
+            fallSensorName = "fall_sensor";
+            f.setUserData(fallSensorName);
+
+            // collide only with scenery
+            Filter filter = f.getFilterData();
+            filter.categoryBits = CATEGORY_PLAYER;
+            filter.maskBits     = CATEGORY_SCENERY;
+            f.setFilterData(filter);
+
+            // debug outline
+            float u = units;
+            PathFactory factory = new PathFactory();
+            fallSensorOutline = new Path2();
+            factory.makeRect(
+                (center.x - width/2)*u,
+                (center.y - fallDepth/2)*u,
+                width*u,
+                fallDepth*u,
+                fallSensorOutline
+            );
         }
 
         public void createScareSensor(){
@@ -655,6 +814,11 @@
          * This method should be called after the force attribute is set.
          */
         public void applyForce(World world) {
+            // ANY animation lock we don't handle movement(maybe messes stuff up so disable input instead?)
+
+
+
+
             if (!obstacle.isActive()) {
                 return;
             }
@@ -696,7 +860,7 @@
                 body.applyLinearImpulse(forceCache,pos,true);
             }
 
-            if (isJumping()) {
+            if (isJumping() && isGrounded()) {
                 jumpSprite.reset();
                 forceCache.set(0, jump_force);
                 body.applyLinearImpulse(forceCache,pos,true);
@@ -706,7 +870,8 @@
         }
 
         public boolean isPlatformStep(World world, float raylength) {
-            if (stairCooldown > 0) {
+            playerVisionRaycast.reset();
+            if (stairCooldown > 0 || isClimbing) {
                 stairCooldown--;
                 return false;
             }
@@ -728,12 +893,18 @@
 
 
                 if (isGrounded && Math.abs(movement) > 0) {
+                    climbStart.set(obstacle.getBody().getPosition());
                     float targetCenterY = stairHit.y + height/2;
+                    climbTarget.set(stairHit.x, targetCenterY);
                     Body body = obstacle.getBody();
-                    Vector2 pos = body.getPosition();
-                    body.setTransform(stairHit.x, targetCenterY, body.getAngle());
-
+                    isClimbing = true;
+                    climbCounter = 0;
+                    stairSprite.reset();
                     debugRayEnd = stairHit;
+                    return true;
+
+                    //body.setTransform(stairHit.x, targetCenterY, body.getAngle());
+
                 }
             }
 
@@ -741,7 +912,7 @@
 
             stairCooldown = FRAME_STAIR_COOLDOWN;
 
-            return true;
+            return false;
         }
 
         /**
@@ -753,20 +924,114 @@
          */
         @Override
         public void update(float dt) {
-            // change character state
 
-            if (isGrounded) {
+            System.out.println(animationState);
+
+
+            // animation locks
+            if (absorbing) {
+                if (isInteracting) {
+                    super.update(dt);
+                    return;
+                }
+            }
+            absorbing = false;
+            if (inInteractAnimation) {
+                interactFrameCounter++;
+
+                if ( hoverInteract
+                    && isInteracting
+                    && interactFrameCounter >= INTERACT_FRAME_DURATION/2
+                ) {
+                    animationState = AnimationState.ABSORB;
+                    inInteractAnimation = false;
+                    absorbing = true;
+                } else {
+                    animationState = AnimationState.INTERACT;
+                }
+                super.update(dt);
+                if (interactFrameCounter >= INTERACT_FRAME_DURATION) {
+                    interactFrameCounter = 0;
+                    inInteractAnimation = false;
+                }
+                return;
+            }
+
+
+            if (isLanding) {
+                landCounter++;
+                super.update(dt);
+                if (landCounter >= LAND_DURATION) {
+                    landCounter = 0;
+                    isLanding = false;
+                }
+                return;
+            }
+
+
+
+            if (isClimbing) {
+                float t = (float)climbCounter / CLIMB_DURATION;
+                Vector2 interp = climbStart.cpy().lerp(climbTarget, t);
+                obstacle.getBody().setTransform(interp, obstacle.getBody().getAngle());
+
+                climbCounter++;
+                animationState = AnimationState.STAIR;
+                if (climbCounter >= CLIMB_DURATION) {
+                    isClimbing = false;
+                }
+                super.update(dt);
+                return;
+            }
+
+            if (inStunAnimation) {
+                attackFrameCounter++;
+                super.update(dt);
+                if (attackFrameCounter > ATTACK_FRAME_DURATION) {
+                    attackFrameCounter = 0;
+                    inStunAnimation = false;
+                }
+                return;
+            }
+
+            if (isInteracting && isGrounded) {
+                if (!inInteractAnimation) {
+                    inInteractAnimation = true;
+                    interactFrameCounter = 0;
+                    interactingSprite.reset();
+                }
+                animationState = AnimationState.INTERACT;
+            } else if (isStunning()) {
+                if (!inStunAnimation) {
+                    inStunAnimation = true;
+                    attackFrameCounter = 0;
+                    stunningSprite.reset();
+                }
+                animationState = AnimationState.STUN;
+            } else if (isGrounded) {
                 if (movement == 0) {
                     animationState = AnimationState.IDLE;
                 } else {
-                    if (seenAStep) {
-                        animationState = AnimationState.STAIR;
-                    } else {
-                        animationState = AnimationState.WALK;
-                    }
+                    animationState = AnimationState.WALK;
                 }
             } else {
-                animationState = AnimationState.JUMP;
+                if (fallSensorContact && obstacle.getVY() < 0) {
+                    if (!isLanding) {
+                        isLanding = true;
+                        landCounter = 0;
+                        landingSprite.reset();
+                    }
+                    animationState = AnimationState.LAND;
+                    // next frame it animation locks
+                }
+                else if (obstacle.getVY() > 0) {
+                    // not grounded, in the state of moving up = jumping
+                    animationState = AnimationState.JUMP;
+                } else {
+                    // we are falling
+                    animationState= AnimationState.FALL;
+                }
+
             }
 
             // Apply cooldowns
@@ -807,6 +1072,7 @@
             } else {
                 takeDamageCooldown = Math.max(0, takeDamageCooldown - 1);
             }
+            updateBlind(dt);
             super.update(dt);
 
         }
@@ -824,11 +1090,28 @@
                     frame = idleSprite.getCurrentFrame(Gdx.graphics.getDeltaTime());
                     break;
                 case JUMP:
-                    if (!lastJumping && isJumping) {
+                    if (!lastJumping && isJumping && isGrounded) {
                         jumpSprite.reset();
                     }
-                    scale = 1.3f;
                     frame = jumpSprite.getCurrentFrame(Gdx.graphics.getDeltaTime());
+                    break;
+                case STAIR:
+                    frame = stairSprite.getCurrentFrame(Gdx.graphics.getDeltaTime());
+                    break;
+                case FALL:
+                    frame = fallSprite.getCurrentFrame(Gdx.graphics.getDeltaTime());
+                    break;
+                case LAND:
+                    frame = landingSprite.getCurrentFrame(Gdx.graphics.getDeltaTime());
+                    break;
+                case STUN:
+                    frame = stunningSprite.getCurrentFrame(Gdx.graphics.getDeltaTime());
+                    break;
+                case INTERACT:
+                    frame = interactingSprite.getCurrentFrame(Gdx.graphics.getDeltaTime());
+                    break;
+                case ABSORB:
+                    frame = absorbSprite.getCurrentFrame(Gdx.graphics.getDeltaTime());
                     break;
                 default:
                     frame = idleSprite.getCurrentFrame(Gdx.graphics.getDeltaTime());
@@ -840,11 +1123,11 @@
             // Here we assume obstacle.getX() and getY() return the center position.
             float posX = obstacle.getX() * u;
             float posY = obstacle.getY() * u;
-            float drawWidth = width * u * 2f * scale;
+            float drawWidth = width * u * 3f * scale;
             float drawHeight = height * u * scale;
 
-            float originX = drawWidth / 2f;
-            float originY = drawHeight / 2f;
+            float originX = (faceRight) ? drawWidth / 2.0f : drawWidth / 1.75f;
+            float originY = drawHeight / 1.6f;
 
             if (faceRight) {
 
@@ -858,8 +1141,8 @@
                 posY - originY, // lower-left y position
                 originX,        // originX used for scaling and rotation
                 originY,        // originY
-                drawWidth,      // width
-                drawHeight,     // height
+                drawWidth * 1.1f,      // width
+                drawHeight * 1.1f,     // height
                 1f,             // scaleX
                 1f,             // scaleY
                 0f              // rotation (in degrees)
@@ -880,6 +1163,7 @@
 
             drawSensorDebug(batch, sensorOutline, sensorColor);
             drawSensorDebug(batch, sensorScareOutline, sensorScareColor);
+            drawSensorDebug(batch, fallSensorOutline, Color.GREEN);
             drawTeleportRadius(batch);
             //drawRecastSensor(batch);
             drawRayDebug(batch);
@@ -969,6 +1253,9 @@
             batch.setColor(Color.RED);
             batch.outline(teleportCircle);
             batch.setColor(Color.WHITE);
+        }
+        public float getBlindProgress() {
+            return MathUtils.clamp(blindTimer / MAX_BLIND_TIME, 0f, 1f);
         }
 
     }

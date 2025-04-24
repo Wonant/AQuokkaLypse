@@ -223,14 +223,25 @@ public class LoadingScene implements Screen, InputProcessor {
     private void draw() {
         // Side loading screen colors
 
-        ScreenUtils.clear( 0.1411764706f, 0.1803921569f, 0.2117647059f,1.0f );
+        ScreenUtils.clear( 0, 0, 0,1.0f );
 
         batch.begin(camera);
         batch.setColor( Color.WHITE );
 
-        // Height lock the logo
         Texture texture = internal.getEntry( "splash", Texture.class );
-        batch.draw(texture,0, 0, width, height);
+
+        float originalWidth = texture.getWidth();
+        float originalHeight = texture.getHeight();
+
+        float maxHeight = height * 0.7f;
+        float scaleFactor = Math.min(maxHeight / originalHeight, 1.0f);
+        float scaledWidth = originalWidth * scaleFactor;
+        float scaledHeight = originalHeight * scaleFactor;
+
+        float x = (width - scaledWidth) / 2;
+        float y = (height - scaledHeight) *  2/3;
+
+        batch.draw(texture, x, y, scaledWidth, scaledHeight);
 
         if (progress < 1.0f) {
             drawProgress();

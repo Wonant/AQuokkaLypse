@@ -96,8 +96,8 @@ public class MindMaintenance extends Enemy {
 
     public void createAnimators(Texture walkTexture, Texture turnTexture) {
         //idleSprite = new Animator();
-        walkingSprite = new Animator(walkTexture, 1, 16, 0.08f, 16);
-        turnSprite = new Animator(turnTexture, 2, 16, 0.08f, 23);
+        walkingSprite = new Animator(walkTexture, 1, 16, 0.08f, 16, 0,15);
+        turnSprite = new Animator(turnTexture, 2, 16, 0.08f, 23,0,22);
     }
 
     public float getMovement() {
@@ -172,6 +172,7 @@ public class MindMaintenance extends Enemy {
 
 
     public MindMaintenance(float units, JsonValue data, float[] points, PlatformScene scene) {
+        super(null);
         this.data = data;
         this.scene = scene;
 
@@ -502,9 +503,6 @@ public class MindMaintenance extends Enemy {
             animationState = MindMaintenance.AnimationState.WALK;
         }
 
-        if (isPlatformStep(scene.world, stepRayLength)) {
-            System.out.println("Critter's seen a step");
-        }
         if (!canContinue()) {
             safeToWalk = false;
         } else {

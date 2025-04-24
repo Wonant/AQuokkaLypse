@@ -36,7 +36,7 @@ public class StareTask extends LeafTask<Enemy> {
         float critterX = critter.getObstacle().getX();
         float playerX = critter.getScene().getAvatar().getObstacle().getX();
 
-        float movement = (playerX - critterX) > 0.3 ? followSpeed : -followSpeed;
+        float movement = Math.abs(playerX - critterX) > 1.5 ? playerX > critterX ? followSpeed : -followSpeed : 0;
         critter.setMovement(movement);
         critter.applyForce();
 

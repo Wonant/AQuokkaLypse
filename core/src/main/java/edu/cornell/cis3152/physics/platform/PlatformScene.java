@@ -13,7 +13,14 @@
 package edu.cornell.cis3152.physics.platform;
 
 import com.badlogic.gdx.ai.GdxAI;
+import com.badlogic.gdx.ai.msg.MessageDispatcher;
+import com.badlogic.gdx.ai.msg.Telegram;
+import com.badlogic.gdx.ai.msg.Telegraph;
+import com.badlogic.gdx.graphics.g2d.ParticleEffect;
 import com.badlogic.gdx.graphics.g2d.Sprite;
+import com.badlogic.gdx.graphics.glutils.FrameBuffer;
+import com.badlogic.gdx.graphics.glutils.ShaderProgram;
+import com.badlogic.gdx.graphics.glutils.ShapeRenderer;
 import com.badlogic.gdx.maps.MapLayer;
 import com.badlogic.gdx.maps.MapObject;
 import com.badlogic.gdx.maps.objects.RectangleMapObject;
@@ -23,6 +30,8 @@ import edu.cornell.cis3152.physics.ObstacleGroup;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.Iterator;
+import java.util.Map;
+
 import com.badlogic.gdx.*;
 import com.badlogic.gdx.graphics.*;
 import com.badlogic.gdx.graphics.g2d.BitmapFont;
@@ -46,6 +55,8 @@ import edu.cornell.cis3152.physics.InputController;
 import edu.cornell.gdiac.audio.SoundEffect;
 import edu.cornell.gdiac.audio.SoundEffectManager;
 
+import com.badlogic.gdx.graphics.g2d.TextureRegion;
+
 /**
  * The game scene for the platformer game.
  *
@@ -54,7 +65,7 @@ import edu.cornell.gdiac.audio.SoundEffectManager;
  * interface. That is the method that is called upon collisions, giving us a
  * chance to define a response.
  */
-public class PlatformScene implements Screen{
+public class PlatformScene implements Screen, Telegraph {
     // SOME EXIT CODES FOR GDXROOT
     /** Exit code for quitting the game */
     public static final int EXIT_QUIT = 0;
@@ -157,20 +168,20 @@ public class PlatformScene implements Screen{
 
     private PooledList<Enemy> enemies = new PooledList<>();
     private LevelContactListener levelContactListener;
-    /** Reference to the goalDoor (for collision detection) */
-    private Shard goalShard;
-    private int totalShards;
-    private int collectedShards;
-    private TextLayout dreamShardCountText;
+
 
     /** Mark set to handle more sophisticated collision callbacks */
     protected ObjectSet<Fixture> sensorFixtures;
     protected ObjectSet<Fixture> shadowSensorFixtures;
 
-    /** Texture for fear meter**/
+    /** Texture for fear meter and visibility indicators **/
     private Texture fearMeterTexture;
+    private Texture visibilityIndicatorTexture;
+
     /** Texture asset for mouse crosshairs */
     private TextureRegion crosshairTexture;
+    private TextureRegion teleportCrosshairTexture;
+    private Animator fearMeterSprite;
 
     private TextureRegion scareEffectTexture;
     private int drawScareLimit;
@@ -186,20 +197,59 @@ public class PlatformScene implements Screen{
     private HashMap<Teleporter, Float> teleporterCreationTimes = new HashMap<>();
     private float timeElapsed = 0f;
 
+    /** Spawn positions of all shards */
     private ArrayList<Vector2> shardPos;
+
+    /** Possible positions shards can be placed by enemies */
+    private ArrayList<Vector2> possibleShardPos;
+
+    // Reference to the shards
+    private int totalShards;
+    private int collectedShards;
+    private TextLayout dreamShardCountText;
+    private Map<Shard,Float> shardPickupTimers = new HashMap<>();
+    public Shard currentInteractingShard = null;
+    private ShapeRenderer vortexRenderer;
+    private float     vortexTimer        = 0f;
+
+    /** if stun mode is on, which changes player m1 to an attack rather than a teleport */
+    private boolean stunModeOn;
+
+    /** How many enemies are aware of player in level (akin to GTA star system) */
+    private int enemiesAlerted;
 
     /** tiled map + map info */
     private TiledMapInfo tiledMap;
     private String tiledLevelName;
 
+
+    /** projectile pooled lists */
     protected PooledList<Door> doors = new PooledList<Door>();
 
     protected PooledList<ShieldWall> shieldWalls = new PooledList<ShieldWall>();
     protected PooledList<Spear> spears = new PooledList<Spear>();
 
+    /** Telegraphing/event communication */
+    private final MessageDispatcher dispatcher = new MessageDispatcher();
+
+    private float timeSinceStart = 0f;
+    /** last time a “see” event arrived (in seconds) */
+    private float lastCritterSawTime = -1f;
+    /** have we already slowed the player? */
+    private boolean playerSlowed = false;
+    /** how slow they go (half speed here) */
+    private float slowSpeedFactor = 0.2f;
+
+
     // global game units
     float units;
     private String mapkey  = "platform-constants";
+
+    private Animator teleportAnimator;
+    private TextureRegion teleportSpritesheet;
+    private boolean isTeleporting = false;
+    private float teleportAnimationTime = 0f;
+    private Vector2 teleportPosition;
 
 
     /*==============================ContactListener Getters/Setters===============================*/
@@ -223,9 +273,22 @@ public class PlatformScene implements Screen{
         queuedHarvestedEnemy.add(enemy);
     }
 
-    public void removeHarvestedEnemy(Enemy enemy) {queuedHarvestedEnemy.remove(enemy);}
+
+    public void removeHarvestedEnemy(Enemy enemy) {
+        queuedHarvestedEnemy.remove(enemy);
+    }
+
+    //public void removeHarvestedEnemy(Enemy enemy) {queuedHarvestedEnemy.remove(enemy);
+    //    enemies.remove(enemy);      }
 
 
+
+
+    // SHARDS //
+
+    public ArrayList<Vector2> getPossibleShardSpots() {
+        return possibleShardPos;
+    }
 
     /**
      * Returns true if debug mode is active.
@@ -351,6 +414,8 @@ public class PlatformScene implements Screen{
         batch = null;
         fearMeterTexture.dispose();
         tiledMap.disposeMap();
+        visibilityIndicatorTexture.dispose();
+        vortexRenderer.dispose();
     }
 
 
@@ -452,7 +517,7 @@ public class PlatformScene implements Screen{
      *
      * The game has default gravity and other settings
      */
-    public PlatformScene(AssetDirectory directory,String mapkey,String tiled) {
+    public PlatformScene(AssetDirectory directory, String mapkey, String tiled) {
         this.directory = directory;
         this.mapkey = mapkey;
         tiledLevelName = tiled;
@@ -482,6 +547,7 @@ public class PlatformScene implements Screen{
         badMessage.layout();
 
         fearMeterTexture = directory.getEntry("fear-meter", Texture.class);
+        visibilityIndicatorTexture = directory.getEntry("visibility-indicator", Texture.class);
 
         complete = false;
         failed = false;
@@ -517,6 +583,13 @@ public class PlatformScene implements Screen{
         uiCamera.update();
         units = height / bounds.height;
 
+        Texture fear = directory.getEntry("fear-meter-sprite-sheet", Texture.class);
+        createAnimators(fear);
+
+        dispatcher.addListener(this, MessageType.ENEMY_SEES_PLAYER);
+        dispatcher.addListener(this, MessageType.ENEMY_LOST_PLAYER);
+
+        vortexRenderer = new ShapeRenderer();
     }
 
     /**
@@ -547,6 +620,13 @@ public class PlatformScene implements Screen{
     }
 
     /**
+     * creates animator objects of sprite sheets
+     */
+    private void createAnimators(Texture fearMeter) {
+        fearMeterSprite = new Animator(fearMeter, 2, 6, 0.033f, 11, 0, 10);
+    }
+
+    /**
      * Lays out the game geography.
      */
     private void populateLevel() {
@@ -555,10 +635,13 @@ public class PlatformScene implements Screen{
         aiManager = new AIManager("behaviors/critter.tree", "behaviors/dweller.tree","behaviors/maintenance.tree", directory);
         aiManager.setPlayer(avatar);
         shardPos = new ArrayList<>();
+        possibleShardPos = new ArrayList<>();
+        enemiesAlerted = 0;
 
         float units = TiledMapInfo.PIXELS_PER_WORLD_METER;
         int level = 0;
-        System.out.println("units: " + units);
+
+        Vector2 playerSpawnPos = new Vector2();
 
         MapLayer spawnLayer = tiledMap.get().getLayers().get("Spawn");
         for (MapObject o : spawnLayer.getObjects()) {
@@ -580,6 +663,9 @@ public class PlatformScene implements Screen{
                     doors.add(door);
                     addSprite(door);
                     door.setFilter();
+                }
+                if (o.getName().startsWith("Player")) {
+                    playerSpawnPos.set(worldX, worldY);
                 }
             }
         }
@@ -629,8 +715,10 @@ public class PlatformScene implements Screen{
                 float mapPixelHeight = tiledMap.get().getProperties().get("height", Integer.class) * TiledMapInfo.PIXELS_PER_WORLD_METER;
                 float worldY = y / units;
                 float worldHeight = height / units;
+                float rotationDeg = o.getProperties().get("rotation", 0f, Float.class);
+                float rotationRad = (float)Math.toRadians(rotationDeg);
 
-                Surface platform = new Surface(worldX, worldY, worldHeight, worldWidth, TiledMapInfo.PIXELS_PER_WORLD_METER, constants.get("platforms"), true);
+                Surface platform = new Surface(worldX, worldY, worldHeight, worldWidth, TiledMapInfo.PIXELS_PER_WORLD_METER, constants.get("platforms"), true, rotationRad);
 
                 platform.setDebugColor(Color.BLUE);
 
@@ -640,10 +728,8 @@ public class PlatformScene implements Screen{
                 } else {
                     platform.getObstacle().setName("platform " + id);
                 }
-                System.out.println(platform.getObstacle().getName());
                 addSprite(platform);
                 platform.setFilter();
-                System.out.println("platform added!");
                 id++;
             }
         }
@@ -683,21 +769,23 @@ public class PlatformScene implements Screen{
 //        }
 
         // Create Player
-        avatar = new Player(units, constants.get("player"));
         texture = directory.getEntry( "player-walk", Texture.class );
-        Texture idle = directory.getEntry("player-idle", Texture.class);
-        Texture jump = directory.getEntry("player-jump", Texture.class);
+        avatar = new Player(units, constants.get("player"), playerSpawnPos);
 
+        Texture dreamwalker = directory.getEntry("player-sprite-sheet", Texture.class);
+        Texture absorb = directory.getEntry("absorb-animation", Texture.class);
         addSprite(avatar);
 
-        avatar.createAnimators(texture, idle, jump);
+
+
+        avatar.createAnimators(dreamwalker, absorb);
         // Have to do after body is created
         avatar.setFilter();
 
         avatar.createSensor();
 
         avatar.createScareSensor();
-
+        avatar.createFallSensor();
         aiManager.setPlayer(avatar);
 
 
@@ -707,7 +795,7 @@ public class PlatformScene implements Screen{
 
         for (int i = 0; i < critterspos.size; i++) {
             texture = directory.getEntry( "curiosity-critter-active", Texture.class );
-            critter = new CuriosityCritter(units, constants.get("curiosity-critter"), critterspos.get(i).asFloatArray(), this);
+            critter = new CuriosityCritter(units, constants.get("curiosity-critter"), critterspos.get(i).asFloatArray(), this, dispatcher);
             critter.setTexture(texture);
             addSprite(critter);
 
@@ -760,14 +848,17 @@ public class PlatformScene implements Screen{
         JsonValue dwellersPos = dreamdwellers.get("pos");
         for (int i = 0; i < dwellersPos.size; i++) {
             texture = directory.getEntry("dream-dweller-active", Texture.class);
-            dreamDweller = new DreamDweller(units, constants.get("dream-dweller"), dwellersPos.get(i).asFloatArray());
+
+            dreamDweller = new DreamDweller(units, constants.get("dream-dweller"), dwellersPos.get(i).asFloatArray(), this);
             dreamDweller.setTexture(texture);
             addSprite(dreamDweller);
             // Have to do after body is created
+            dreamDweller.setFilter();
             dreamDweller.createSensor();
             dreamDweller.createVisionSensor();
             enemies.add(dreamDweller);
-            aiManager.register(dreamDweller);
+            //aiManager.register(maintenance);
+            aiCManager.register(dreamDweller);
             texture = directory.getEntry("vision_cone", Texture.class);
             visionConeRegion = new TextureRegion(texture);
             visionCone = new Sprite(visionConeRegion.getTexture());
@@ -783,11 +874,24 @@ public class PlatformScene implements Screen{
             dreamShardCountText.layout();
         }
 
+        initTeleportAnimation();
+
     }
 
     public Vector2 getShardPos(int index) {
         return shardPos.get(index);
     }
+
+    /** Called when player first touches a shard */
+    public void registerShardForPickup(Shard s) {
+        shardPickupTimers.put(s, 0f);
+    }
+
+    /** Called when player moves off a shard */
+    public void cancelShardPickup(Shard s) {
+        shardPickupTimers.remove(s);
+    }
+
 
     /**
      * Returns whether to process the update loop
@@ -862,10 +966,15 @@ public class PlatformScene implements Screen{
      * @param dt    Number of seconds since last animation frame
      */
     public void update(float dt) {
+        dispatcher.update();
         InputController input = InputController.getInstance();
+        aiManager.update(dt);
+        aiCManager.update(dt);
+        GdxAI.getTimepiece().update(dt);
 
         for (Enemy e: enemies){
             if (e instanceof MindMaintenance && ((MindMaintenance) e).isShooting()){
+                System.out.println("MAINTENANCE IS SHOOTING");
                 ((MindMaintenance) e).resetShootCooldown();
                 units = TiledMapInfo.PIXELS_PER_WORLD_METER;
                 Vector2 position = e.getObstacle().getPosition();
@@ -877,35 +986,32 @@ public class PlatformScene implements Screen{
                 Texture texture = directory.getEntry("platform-bullet", Texture.class);
 
                 ShieldWall wall = new ShieldWall(units, bulletjv, position, direction);
-                System.out.println("Shield wall shot at " + position);
-                System.out.println("Player at " + avatar.getObstacle().getPosition());
                 shieldWalls.add(wall);
                 wall.setTexture(texture);
                 addQueuedObject(wall);
             }
-            if(e instanceof DreamDweller) {
-                DreamDweller dweller = (DreamDweller) e;
-                if (dweller.isShooting() && dweller.getShotsFired() < dweller.getMaxShots()) {
-                    dweller.incrementShotsFired();
+            else  if (e instanceof DreamDweller && ((DreamDweller) e).isShooting()){
 
-                    Vector2 position = dweller.getObstacle().getPosition();
-                    Vector2 playerPos = avatar.getObstacle().getPosition();
-
-                    // Calculate direction vector toward player
-                    Vector2 shootAngle = new Vector2(playerPos.x - position.x, playerPos.y - position.y).nor();
-
-                    JsonValue spearjv = constants.get("bullet");
-                    Texture texture = directory.getEntry("platform-spear", Texture.class); // Ensure this texture exists in your assets
-
-                    Spear spear = new Spear(units, spearjv, position, shootAngle, directory);
-                    spear.setTexture(texture);
-                    spear.setFilter();
-
-                    spears.add(spear);
-                    addQueuedObject(spear);
+                units = TiledMapInfo.PIXELS_PER_WORLD_METER;
+                Vector2 position = e.getObstacle().getPosition();
+                float direction = 1;
+                if (avatar.getObstacle().getPosition().x < position.x){
+                    direction = -1;
                 }
+                JsonValue spearjv = constants.get("spear");
+                Texture texture = directory.getEntry("platform-spear", Texture.class);
+                Texture textureflip = directory.getEntry("platform-spear-right", Texture.class);
+                Spear spear = new Spear(units, spearjv, position, direction);
+                spears.add(spear);
+                if(direction < 0) {
+                    spear.setTexture(texture);
+                } else if (direction > 0) {
+                    spear.setTexture(textureflip);
+                }
+                addQueuedObject(spear);
             }
         }
+
 
         for (Door d: doors){
             if(d.isActive() && checkCollectedAllGoals() && avatar.isTakingDoor()){
@@ -922,24 +1028,39 @@ public class PlatformScene implements Screen{
             }
 
         }
-        for (Spear s : spears) {
-            Vector2 velocity = s.getObstacle().getLinearVelocity();
-            if (velocity.len() < 0.05f || Math.abs(s.getObstacle().getX()) > 100 || Math.abs(s.getObstacle().getY()) > 100) {
-                removeBullet(s);
-                spears.remove(s);
+        for (Spear p : spears) {
+
+            if (p.isDead()){
+                removeBullet(p);
+                spears.remove(p);
             }
         }
 
-        avatar.setStunning(input.didStun());
-        avatar.setTeleporting(input.didM1());
+
+        timeSinceStart += dt;
+
+        if (lastCritterSawTime >= 0
+            && !playerSlowed
+            && timeSinceStart - lastCritterSawTime > 0.5f) {
+            avatar.setMaxSpeed(avatar.getMaxSpeed() * slowSpeedFactor);
+            playerSlowed = true;
+        }
+
+
         avatar.setTakingDoor(input.didTakeDoor());
         avatar.setMovement(input.getHorizontal() *avatar.getForce());
 
-
         avatar.setJumping(input.didPrimary());
-        avatar.setStunning(input.didStun());
+
         avatar.tryStartHarvesting(input.didSecondary());
-        avatar.setTeleporting(input.didM1());
+        if (input.inStunMode()) {
+            stunModeOn = true;
+            avatar.setStunning(input.didM1());
+        } else {
+            stunModeOn = false;
+            avatar.setTeleporting(input.didM1());
+        }
+
 
         if (avatar.isHarvesting())
         {
@@ -950,6 +1071,7 @@ public class PlatformScene implements Screen{
                     if (!harvest_enemy.getObstacle().isRemoved()) {
                         harvest_enemy.getObstacle().markRemoved(true);
                         avatar.setFearMeter(avatar.getFearMeter() + 3);
+                        harvest_enemy.dispatchHarvest();
                     }
                     removeHarvestedEnemy(harvest_enemy);
                 }
@@ -959,7 +1081,58 @@ public class PlatformScene implements Screen{
         if (avatar.isStunning() && avatar.getFearMeter() > STUN_COST) {
             createBullet();
             avatar.setFearMeter(avatar.getFearMeter() - STUN_COST);
+            // also turn avatar to direction of cursor
+
+            // we need a functin for this lol
+            Vector2 crosshairScreen = input.getMouse();
+
+            // Unproject the crosshair screen position to get world coordinates
+            Vector3 crosshairTemp = new Vector3(
+                crosshairScreen.x,
+                crosshairScreen.y,
+                0
+            );
+            camera.unproject(crosshairTemp);
+            Vector2 crosshairWorld = new Vector2(crosshairTemp.x / units, crosshairTemp.y / units);
+
+            avatar.setFaceRight(crosshairWorld.x > avatar.getObstacle().getX());
+
         }
+
+        avatar.setInteracting(input.isInteractDown());
+
+        // shard handling
+        Iterator<Map.Entry<Shard,Float>> iter = shardPickupTimers.entrySet().iterator();
+        while (iter.hasNext()) {
+            Map.Entry<Shard, Float> e = iter.next();
+            Shard s = e.getKey();
+            float t = e.getValue();
+
+            if (input.isInteractDown() && avatar.getHoverInteract()) {
+
+                System.out.println("absorbing shard...");
+                t += dt;
+                if (t >= 3f) {
+
+                    if (!s.getObstacle().isRemoved()) {
+                        s.getObstacle().markRemoved(true);
+                        incrementGoal();
+                    }
+                    iter.remove();
+                    continue;
+                }
+                e.setValue(t);
+            } else {
+                // E released → reset the timer
+                e.setValue(0f);
+            }
+        }
+        if (!shardPickupTimers.isEmpty()) {
+            vortexTimer += dt;
+        } else {
+            vortexTimer = 0f;
+        }
+
 
         for (Teleporter tp : new ArrayList<>(teleporterCreationTimes.keySet())) {
             float creationTime = teleporterCreationTimes.get(tp);
@@ -969,9 +1142,30 @@ public class PlatformScene implements Screen{
             }
         }
 
-        if (avatar.isTeleporting() && avatar.getFearMeter() > TELEPORT_COST)
-        {
+        if (isTeleporting) {
+            teleportAnimationTime += dt;
+            if (teleportAnimationTime >= 0.08f * 12) {
+                isTeleporting = false;
+                teleportAnimationTime = 0f;
+            }
+        }
+
+        if (avatar.isTeleporting() && avatar.getFearMeter() > TELEPORT_COST && !isTeleporting) {
+            // Calculate teleport position
             teleport();
+
+            if (queuedTeleportPosition != null) {
+                // Start teleport animation
+                isTeleporting = true;
+                teleportAnimationTime = 0f;
+                teleportPosition = queuedTeleportPosition.cpy();
+                teleportAnimator.reset();
+
+                // Apply the teleport
+                avatar.getObstacle().setPosition(queuedTeleportPosition);
+                avatar.setFearMeter(Math.max(0, avatar.getFearMeter() - TELEPORT_COST));
+                queuedTeleportPosition = null;
+            }
         }
 
 
@@ -981,9 +1175,6 @@ public class PlatformScene implements Screen{
             queuedTeleportPosition = null; // Clear after applying
         }
 
-        aiManager.update(dt);
-        aiCManager.update(dt);
-        GdxAI.getTimepiece().update(dt);
 
         avatar.applyForce(world);
         if (avatar.isJumping()) {
@@ -992,6 +1183,11 @@ public class PlatformScene implements Screen{
             sounds.play("jump", jumpSound, volume);
              */
         }
+    }
+
+    public void initTeleportAnimation() {
+        Texture teleportTexture = directory.getEntry("teleport-teleport", Texture.class);
+        teleportAnimator = new Animator(teleportTexture, 1, 12, 0.08f, 12, 0, 11, false);
     }
 
     public AIManager getAiManager() {
@@ -1069,7 +1265,6 @@ public class PlatformScene implements Screen{
             return;
         }
 
-        System.out.println("Hitpoint Count: " + callback.getHitPointCount());
         if (callback.getHitPointCount()%2 == 1){
             System.out.println("Cannot teleport inside of surface");
             return;
@@ -1138,11 +1333,7 @@ public class PlatformScene implements Screen{
         Obstacle player = avatar.getObstacle();
         Vector2 shootAngle = crosshairWorld.sub(player.getPosition());
         shootAngle.nor();
-        float direction = 1;
-        if (crosshairWorld.x * units < player.getPosition().x){
-            direction = -1;
-        }
-        System.out.println("Direction = " + crosshairWorld.x + " " + player.getPosition().x);
+
         Texture texture = directory.getEntry("platform-bullet", Texture.class);
 
         Bullet bullet = new Bullet(units, bulletjv, player.getPosition(), shootAngle.nor());
@@ -1216,6 +1407,7 @@ public class PlatformScene implements Screen{
     public void draw(float dt) {
         // Clear the screen (color is homage to the XNA years)
         // This shows off how powerful our new SpriteBatch is
+
         batch.begin(camera);
 
         background = directory.getEntry("background-technical", Texture.class);
@@ -1228,6 +1420,14 @@ public class PlatformScene implements Screen{
 
         dreamShardCountText.setText("Dream Shards: " + (totalShards - collectedShards));
         dreamShardCountText.layout();
+
+        /*if (isTeleporting) {
+            TextureRegion currentFrame = teleportAnimator.getCurrentFrame(Gdx.graphics.getDeltaTime());
+
+            float x = teleportPosition.x * avatar.getObstacle().getPhysicsUnits() ;
+            float y = teleportPosition.y  * avatar.getObstacle().getPhysicsUnits() ;
+            batch.draw(currentFrame, x, y);
+        }*/
 
         if (drawScareEffect)
         {
@@ -1251,16 +1451,60 @@ public class PlatformScene implements Screen{
             }
         }
 
+
         // Draw a final message
         //batch.setColor(foregroundColor);
         //batch.draw(foregroundTexture, 0, 0, width, height);
         batch.end();
+        if (currentInteractingShard != null && avatar.isInteracting()) {
+            vortexRenderer.setProjectionMatrix(camera.combined);
+            vortexRenderer.begin(ShapeRenderer.ShapeType.Line);
+            drawVortex(vortexRenderer, currentInteractingShard, vortexTimer);
+            vortexRenderer.end();
+        }
     }
+    private void drawVortex(ShapeRenderer sr, Shard shard, float time) {
+        // world→screen
+        float units = TiledMapInfo.PIXELS_PER_WORLD_METER;
+        Vector2 center = shard.getObstacle().getPosition();
+        float cx = center.x * units;
+        float cy = center.y * units;
+
+        // how many little segments in our line
+        int   segments = 60;
+        // how many full turns from tail→head
+        float turns    = 2f;
+        // how far the spiral reaches
+        float maxRadius = 2 * units * 1.2f;
+
+        Vector2 prev = new Vector2();
+        for (int i = 0; i <= segments; i++) {
+            float t = i/(float)segments;
+            float angle  = t*turns*MathUtils.PI2 + time*1.5f;
+            float radius = t*maxRadius;
+
+            float x = cx + MathUtils.cos(angle)*radius;
+            float y = cy + MathUtils.sin(angle)*radius;
+
+            // fade the tail out
+            sr.setColor(1,0,0, 1f - t);
+
+            if (i>0) {
+                sr.line(prev.x, prev.y, x, y);
+            }
+            prev.set(x,y);
+        }
+
+        // reset color so it doesn’t bleed into anything else
+        sr.setColor(Color.WHITE);
+    }
+
 
     private void drawUI() {
         uiCamera.update();
         batch.setProjectionMatrix(uiCamera.combined);
         batch.begin();
+
         float scaleFactor = 0.2f;
         float originalWidth = crosshairTexture.getRegionWidth();
         float originalHeight = crosshairTexture.getRegionHeight();
@@ -1290,31 +1534,102 @@ public class PlatformScene implements Screen{
         float crossX = mouseX - scaledWidth/2;
         float crossY = mouseY - scaledHeight/2;
 
-        batch.draw(crosshairTexture, crossX, crossY, scaledWidth, scaledHeight);
+        if (stunModeOn) {
+            batch.setColor(Color.BLUE);
+            batch.draw(crosshairTexture, crossX, crossY, scaledWidth, scaledHeight);
+            batch.setColor(Color.WHITE);
+        } else {
+            boolean canTeleport = false;
+            Vector3 crossTemp = new Vector3(mouseX, mouseY, 0);
+            camera.unproject(crossTemp);
+            Vector2 crossWorld = new Vector2(crossTemp.x / units, crossTemp.y / units);
+            final boolean[] insideSurface = {false};
+            world.QueryAABB(new QueryCallback() {
+                                @Override
+                                public boolean reportFixture(Fixture fixture) {
+                                    if (fixture.getBody().getUserData() instanceof Surface
+                                        && fixture.testPoint(crossWorld)) {
+                                        insideSurface[0] = true;
+                                        return false;
+                                    }
+                                    return true;
+                                }
+                            },
+                crossWorld.x - 0.1f, crossWorld.y - 0.1f,
+                crossWorld.x + 0.1f, crossWorld.y + 0.1f);
 
-        if (fearMeterTexture != null && avatar != null) {
+            if (!insideSurface[0]) {
+                PlatformRayCast teleportCallback = new PlatformRayCast();
+                world.rayCast(teleportCallback, crossWorld, new Vector2(crossWorld.x, 0));
+                if (teleportCallback.getPlatformFixture() != null) {
+                    canTeleport = true;
+                }
+            }
+
+            Color prev = batch.getColor();
+            batch.setColor(canTeleport ? Color.WHITE : Color.BLACK);
+            batch.draw(crosshairTexture, crossX, crossY, scaledWidth, scaledHeight);
+            batch.setColor(prev);
+
+            batch.draw(crosshairTexture, crossX, crossY, scaledWidth, scaledHeight);
+        }
+
+        if (fearMeterSprite != null && avatar != null) {
+            batch.setColor(Color.WHITE);
             int fearLevel = avatar.getFearMeter();
-            int maxFear = avatar.getMaxFearMeter();
-            float meterWidth = 150 * ((float) fearLevel / maxFear);
-            float meterHeight = 20;
-            float meterX = 20;
+            int maxFear   = avatar.getMaxFearMeter();
+            int totalFrames = 11;  // how many frames in the sprite sheet
+            int frameIndex = Math.round((fearLevel/(float)maxFear) * (totalFrames - 1));
+
+            TextureRegion meterFrame = fearMeterSprite.getKeyFrame(frameIndex);
+
+            // where to draw
+            float meterX = 40;
             float meterY = 20;
+            float meterWidth  = 5* meterFrame.getRegionWidth() / units;
+            float meterHeight = 5*meterFrame.getRegionHeight() / units;
 
-            float outlineThickness = 2;
-            batch.setColor(Color.RED);
-            batch.draw(fearMeterTexture, meterX - outlineThickness, meterY - outlineThickness,
-                meterWidth + 2 * outlineThickness, meterHeight + 2 * outlineThickness);
+            // Draw it
+            batch.draw(
+                meterFrame,
+                meterX, meterY,
+                meterWidth, meterHeight
+            );
+            if (visibilityIndicatorTexture != null) {
+                float indicatorWidth  = visibilityIndicatorTexture.getWidth()  / units;
+                float indicatorHeight = visibilityIndicatorTexture.getHeight() / units;
 
-            batch.draw(fearMeterTexture, meterX, meterY, meterWidth, meterHeight);
+                float startX = meterX + 90;
+                float startY = meterY + 20;
 
+                for (int i = 0; i < enemiesAlerted; i++) {
+                    float x = startX + i * (indicatorWidth + 10);  // 2px spacing
+                    batch.draw(
+                        visibilityIndicatorTexture,
+                        x, startY,
+                        indicatorWidth * 3, indicatorHeight * 3
+                    );
+                }
+            }
+        }
+
+        if (avatar.isBlinded()) {
+            float alpha = MathUtils.clamp(1.2f - avatar.getBlindProgress(), 0f, 1.0f);
+            batch.setColor(1, 1, 1, alpha);
+            batch.draw(Texture2D.getBlank(), 0, 0, width, height);
             batch.setColor(Color.WHITE);
         }
+
+
+
 
         if (complete && !failed) {
             batch.drawText(goodMessage, width/2, height/2);
         } else if (failed) {
             batch.drawText(badMessage, width/2, height/2);
         }
+
+        batch.setColor(Color.WHITE);
 
         batch.end();
     }
@@ -1435,6 +1750,43 @@ public class PlatformScene implements Screen{
 
         camera.position.x = MathUtils.clamp(camera.position.x, minX-200, maxX+200);
         camera.position.y = MathUtils.clamp(camera.position.y, minY-100, maxY-50);
+    }
+
+    //telegraph
+    @Override
+    public boolean handleMessage(Telegram msg) {
+        if (msg.message == MessageType.ENEMY_SEES_PLAYER) {
+            CuriosityCritter critter = (CuriosityCritter) msg.extraInfo;
+            onPlayerSpotted((Enemy) critter);
+            return true;
+        }
+        if (msg.message == MessageType.ENEMY_LOST_PLAYER) {
+            CuriosityCritter critter = (CuriosityCritter) msg.extraInfo;
+            onPlayerLost((Enemy) critter);
+            return true;
+        }
+        return false;
+    }
+
+    public void onPlayerSpotted(Enemy enemy) {
+        System.out.println("Message Dispatcher received - enemy raycast sees player");
+        enemiesAlerted++;
+        lastCritterSawTime = timeSinceStart;
+        // reset any previous slow (so repeated sees restart the 1s timer)
+        if (playerSlowed) {
+            avatar.resetMaxSpeed();
+            playerSlowed = false;
+        }
+    }
+
+    public void onPlayerLost(Enemy enemy) {
+        System.out.println("Message Dispatcher received - enemy raycast lost player");
+        enemiesAlerted--;
+        lastCritterSawTime = -1f;
+        if (playerSlowed) {
+            avatar.resetMaxSpeed();
+            playerSlowed = false;
+        }
     }
 
     /**
