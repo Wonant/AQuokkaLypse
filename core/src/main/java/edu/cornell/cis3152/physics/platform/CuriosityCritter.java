@@ -503,6 +503,15 @@ public class CuriosityCritter extends Enemy {
             debugFollowEnd.set(playerFollowRaycast.getHitPoint());
         }
 
+        // message dispatch
+        if (!wasSeen && playerVisible) {
+            dispatcher.dispatchMessage(null, scene, MessageType.ENEMY_SEES_PLAYER);
+        } else if (!playerVisible && wasSeen) {
+            dispatcher.dispatchMessage(null, scene, MessageType.ENEMY_LOST_PLAYER);
+        }
+
+        wasSeen = playerVisible;
+
         playerFollowRaycast.reset();
         return playerVisible;
     }
@@ -591,9 +600,7 @@ public class CuriosityCritter extends Enemy {
 
         // message dispatch
         if (isAware && !wasAware) {
-            dispatcher.dispatchMessage(null, scene, MessageType.ENEMY_SEES_PLAYER);
-        } else if (!isAware && wasAware) {
-            dispatcher.dispatchMessage(null, scene, MessageType.ENEMY_LOST_PLAYER);
+
         }
 
         wasAware = isAware;
