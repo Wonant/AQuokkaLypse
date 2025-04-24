@@ -518,24 +518,6 @@ public class CuriosityCritter extends Enemy {
     }
 
     public void lookForPlayer() {
-        /*World world = obstacle.getBody().getWorld();
-        Player player = scene.getAvatar();
-
-
-        Vector2 pos = obstacle.getPosition();
-        float rayLength = 4f;
-        float followSensorAngle = MathUtils.atan2(player.getObstacle().getPosition().y - pos.y,
-            player.getObstacle().getPosition().x - pos.x);
-
-        Vector2 start = (facingRight) ? new Vector2(pos.x + width/2, pos.y + height/4) :
-            new Vector2(pos.x - width/2, pos.y + height/4);
-        //Vector2 end = (facingRight) ? new Vector2(pos.x + width + rayLength, pos.y + height/4) :
-            new Vector2(pos.x - width - rayLength, pos.y + height/4);
-        Vector2 end = new Vector2(
-            pos.x + rayLength * MathUtils.cos(followSensorAngle),
-            pos.y + rayLength * MathUtils.sin(followSensorAngle)
-        );*/
-
         World world = obstacle.getBody().getWorld();
         Player player = scene.getAvatar();
         Vector2 pos = obstacle.getPosition();
