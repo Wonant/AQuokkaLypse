@@ -325,33 +325,6 @@ public class CuriosityCritter extends Enemy {
     public void createVisionSensor() {
         createHeadBody();
         attachHead();
-        float u = obstacle.getPhysicsUnits();
-        Vector2[] vertices = new Vector2[3];
-
-        PolygonShape visionShape = new PolygonShape();
-
-        FixtureDef visionDef = new FixtureDef();
-
-        // follow sensor
-        float coneWidth = 8.4f;
-        float coneLength = 6f;
-
-        vertices[0] = new Vector2((-coneWidth)/2, coneLength);
-        vertices[1] = new Vector2((coneWidth)/2, coneLength);
-        vertices[2] = new Vector2(0, -3f);
-
-        visionShape.set(vertices);
-        visionDef.shape = visionShape;
-        visionDef.isSensor = true;
-
-        followSensor = headBody.createFixture(visionDef);
-        followSensor.setUserData("follow_sensor");
-        visionFollowOutline = new Path2();
-        visionFollowOutline = factory.makeTriangle(
-            -coneWidth/2 * u, coneLength * u,
-            coneWidth/2 * u, coneLength * u,
-            0, -3f);
-
     }
 
 
@@ -771,20 +744,6 @@ public class CuriosityCritter extends Enemy {
             transform.preTranslate(headPos.x * u, headPos.y * u);
 
             batch.outline(visionTriggerOutline, transform);
-        }
-        if (visionFollowOutline != null) {
-            batch.setTexture(Texture2D.getBlank());
-            batch.setColor(Color.LIME);
-
-            Vector2 headPos = headBody.getPosition();
-            float headAngleDeg = headBody.getAngle() * MathUtils.radiansToDegrees;
-            float u = obstacle.getPhysicsUnits();
-
-            transform.idt();
-            transform.preRotate(headAngleDeg);
-            transform.preTranslate(headPos.x * u, headPos.y * u);
-
-            batch.outline(visionFollowOutline, transform);
         }
         if (walkSensorOutline != null) {
             batch.setTexture(Texture2D.getBlank());
