@@ -91,7 +91,6 @@ public class LevelContactListener implements ContactListener {
         handleWalkSensorEndContact(bd1, bd2, fd1, fd2);
         handleFollowSensorEndContact(fix1, fix2, fd1, fd2);
         handleHarvestingEndContact(bd1, bd2, fd1, fd2);
-        handleTeleporterEndContact(bd1, bd2);
         handleVisionSensorEndContact(fd1, fd2, fix1, fix2);
         handleGroundEndContact(bd1, bd2, fd1, fd2, fix1, fix2);
         handleShieldWallEndContact((ObstacleSprite) bd1, (ObstacleSprite) bd2);
@@ -379,15 +378,6 @@ public class LevelContactListener implements ContactListener {
                     dreamWalkerScene.removeHarvestedEnemy(harvestedEnemy);
                 }
             }
-        }
-    }
-
-    private void handleTeleporterEndContact(Object bd1, Object bd2) {
-        if ((bd1 instanceof Teleporter && bd2 == dreamWalkerScene.getAvatar()) ||
-            (bd1 == dreamWalkerScene.getAvatar() && bd2 instanceof Teleporter)) {
-
-            dreamWalkerScene.setCurrentTeleporter(null);
-            System.out.println("Player moved away from teleporter");
         }
     }
 

@@ -215,6 +215,10 @@
             ABSORB
         }
 
+        public float getWidth() {
+            return width;
+        }
+
         public void setBlinded(boolean blinded) {
             if (blinded) {
                 this.isBlinded = true;
