@@ -272,6 +272,7 @@ public class PlatformScene implements Screen, Telegraph {
     public void performHarvest(Enemy enemy)
     {
         queuedHarvestedEnemy.add(enemy);
+        enemies.remove(enemy);
     }
 
 
