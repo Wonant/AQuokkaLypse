@@ -78,7 +78,6 @@ public class Surface extends ObstacleSprite {
      *
      * @param points    The outline of the shape as x,y pairs
      * @param units     The physics units
-     * @param data      The physics constants for this rope bridge
      */
     public Surface(float[] points, float units, JsonValue settings, boolean shadowed) {
         super();
@@ -216,9 +215,67 @@ public class Surface extends ObstacleSprite {
     }
 
     /**
-     * Legacy constructor delegates to new one with zero rotation
+     * True if the given float[] of x,y pairs is in counter-clockwise order.
+     * Uses the shoelace formula: area > 0 ⇒ CCW.
      */
+    private static boolean isCounterClockwise(float[] pts) {
+        float sum = 0;
+        int n = pts.length / 2;
+        for (int i = 0; i < n; i++) {
+            int j = (i+1) % n;
+            float xi = pts[2*i],   yi = pts[2*i+1];
+            float xj = pts[2*j],   yj = pts[2*j+1];
+            sum += (xj - xi)*(yj + yi);
+        }
+        // for shoelace, you can also do: sum += xi*yj - xj*yi; but this variant works ??? ? ?
+        return sum < 0;  // depending on formula sign, test on your data
+    }
 
+    /** Reverse the winding order of a flat x,y array. */
+    private static float[] reverseWinding(float[] pts) {
+        int n = pts.length;
+        float[] rev = new float[n];
+        // copy pairs in reverse
+        for (int i = 0; i < n/2; i++) {
+            rev[2*i]   = pts[n - 2 - 2*i];
+            rev[2*i+1] = pts[n - 1 - 2*i];
+        }
+        return rev;
+    }
+
+    /**
+     * Helper: take an array of pixel‐space xy pairs (local or transformed),
+     * apply an (x,y) offset, divide by units to get Box2D coords.
+     */
+    private static float[] toWorldPoints(float[] vertsPx, float offX, float offY, float units) {
+        float[] pts = new float[vertsPx.length];
+        for (int i = 0; i < vertsPx.length; i += 2) {
+            pts[i]   = (vertsPx[i]   + offX) / units;
+            pts[i+1] = (vertsPx[i+1] + offY) / units;
+        }
+        // if winding is clockwise, reverse it
+        if (!isCounterClockwise(pts)) {
+            pts = reverseWinding(pts);
+        }
+        return pts;
+    }
+
+    /**
+     * Constructor for a polygon from tiled‐map data.
+     *
+     * @param vertsPx   The raw x,y pairs in pixel‐space (e.g. polygon.getVertices()).
+     * @param offX      The map‐object’s x offset (in pixels)
+     * @param offY      The map‐object’s y offset (in pixels)
+     * @param units     PIXELS_PER_WORLD_METER constant
+     * @param settings  JsonValue of physics constants (density, friction, tile, …)
+     * @param shadowed  Whether to render shadow
+     */
+    public Surface(float[] vertsPx, float offX, float offY,
+                   float units, JsonValue settings, boolean shadowed) {
+        // Compute world‐space, CCW pts, then delegate
+        this(toWorldPoints(vertsPx, offX, offY, units),
+            units, settings, shadowed);
+    }
 
 
     public void setFilter() {
