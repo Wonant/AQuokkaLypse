@@ -622,7 +622,7 @@
 
             obstacle.setDensity( data.getFloat( "density", 0 ) );
             obstacle.setFriction( data.getFloat( "friction", 0 ) );
-            obstacle.setRestitution( data.getFloat( "restitution", 0 ) );
+            obstacle.setRestitution(0f);
             obstacle.setFixedRotation(true);
             obstacle.setPhysicsUnits( units );
             obstacle.setUserData( this );
