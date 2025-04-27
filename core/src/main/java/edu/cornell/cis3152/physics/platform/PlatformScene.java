@@ -1628,7 +1628,7 @@ public class PlatformScene implements Screen, Telegraph {
         float mouseX = Gdx.input.getX();
         float mouseY = Gdx.graphics.getHeight() - Gdx.input.getY();
 
-        batch.drawText(dreamShardCountText, 11, height - 50);
+        batch.drawText(dreamShardCountText, 11, 50);
 
         float units = TiledMapInfo.PIXELS_PER_WORLD_METER;
         Vector3 playerWorldPos = new Vector3(avatar.getObstacle().getX() * units,
@@ -1698,10 +1698,10 @@ public class PlatformScene implements Screen, Telegraph {
             TextureRegion meterFrame = fearMeterSprite.getKeyFrame(frameIndex);
 
             // where to draw
-            float meterX = 40;
-            float meterY = height - 20;
-            float meterWidth  = 5* meterFrame.getRegionWidth() / units;
-            float meterHeight = 5*meterFrame.getRegionHeight() / units;
+            float meterX = 0;
+            float meterY = height - 7*meterFrame.getRegionHeight() / units;
+            float meterWidth  = 7* meterFrame.getRegionWidth() / units;
+            float meterHeight = 7*meterFrame.getRegionHeight() / units;
 
             // Draw it
             batch.draw(
