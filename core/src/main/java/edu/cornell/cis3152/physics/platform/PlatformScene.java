@@ -188,11 +188,9 @@ public class PlatformScene implements Screen, Telegraph {
 
     private Vector2 queuedTeleportPosition = null;
     private PooledList<Enemy> queuedHarvestedEnemy = new PooledList<Enemy>();
-    private Teleporter currentTeleporter = null;
 
     protected PooledList<Surface> shadowPlatformQueue = new PooledList<Surface>();
     private HashMap<DreamDweller, Sprite> visionCones3;
-    private HashMap<Teleporter, Float> teleporterCreationTimes = new HashMap<>();
     private float timeElapsed = 0f;
 
     /** Spawn positions of all shards */
@@ -256,8 +254,11 @@ public class PlatformScene implements Screen, Telegraph {
     private Animator teleportAnimator;
     private TextureRegion teleportSpritesheet;
     private boolean isTeleporting = false;
+
     private float teleportAnimationTime = 0f;
+    private Vector2 preTeleportPosition;
     private Vector2 teleportPosition;
+    private float teleportAngle;
     private boolean teleportDirectionRight;
 
 
@@ -277,8 +278,6 @@ public class PlatformScene implements Screen, Telegraph {
     }
 
     public boolean checkCollectedAllGoals() {return collectedShards == totalShards;}
-
-    public void setCurrentTeleporter(Teleporter tele) {currentTeleporter = tele; }
 
     //CHANGE: QUEUE OF ENEMIES ADDED EACH COLLISION. HARVEST SHOULD REMOVE ALL IN QUEUE.
     public void performHarvest(Enemy enemy)
@@ -661,7 +660,7 @@ public class PlatformScene implements Screen, Telegraph {
         enemiesAlerted = 0;
 
         float units = TiledMapInfo.PIXELS_PER_WORLD_METER;
-        System.out.println("units: " + units);
+        int level = 0;
 
 
         // entity spawn handling from tiled
@@ -687,7 +686,7 @@ public class PlatformScene implements Screen, Telegraph {
                 float worldY = y / units;
                 float worldHeight = height / units;
                 if (o.getName().startsWith("door")) {
-                    Door door = new Door(units, worldX, worldY, worldWidth, worldHeight);
+                    Door door = new Door(units, worldX, worldY, worldWidth, worldHeight, level + 1);
                     doors.add(door);
                     addSprite(door);
                     door.setFilter();
@@ -844,10 +843,8 @@ public class PlatformScene implements Screen, Telegraph {
                 } else {
                     platform.getObstacle().setName("platform " + id);
                 }
-                System.out.println(platform.getObstacle().getName());
                 addSprite(platform);
                 platform.setFilter();
-                System.out.println("platform added!");
                 id++;
             }
         }
@@ -886,11 +883,16 @@ public class PlatformScene implements Screen, Telegraph {
         JsonValue maintenancePos = maintainers.get("pos");
 
         for (int i = 0; i < maintenancePos.size; i++) {
-            texture = directory.getEntry("mind-maintenance-active", Texture.class);
+
+            texture = directory.getEntry( "maintenance-walk", Texture.class );
+            Texture turning = directory.getEntry("maintenance-turn", Texture.class);
+
+            //texture = directory.getEntry("mind-maintenance-active", Texture.class);
 
             maintenance = new MindMaintenance(units, constants.get("mind-maintenance"), maintenancePos.get(i).asFloatArray(), this);
-            maintenance.setTexture(texture);
+            //maintenance.setTexture(texture);
             addSprite(maintenance);
+            maintenance.createAnimators(texture, turning);
             // Have to do after body is created
             maintenance.setFilter();
             maintenance.createSensor();
@@ -1030,9 +1032,13 @@ public class PlatformScene implements Screen, Telegraph {
     public void update(float dt) {
         dispatcher.update();
         InputController input = InputController.getInstance();
+        aiManager.update(dt);
+        aiCManager.update(dt);
+        GdxAI.getTimepiece().update(dt);
 
         for (Enemy e: enemies){
             if (e instanceof MindMaintenance && ((MindMaintenance) e).isShooting()){
+                System.out.println("MAINTENANCE IS SHOOTING");
                 ((MindMaintenance) e).resetShootCooldown();
                 units = TiledMapInfo.PIXELS_PER_WORLD_METER;
                 Vector2 position = e.getObstacle().getPosition();
@@ -1044,8 +1050,6 @@ public class PlatformScene implements Screen, Telegraph {
                 Texture texture = directory.getEntry("platform-bullet", Texture.class);
 
                 ShieldWall wall = new ShieldWall(units, bulletjv, position, direction);
-                System.out.println("Shield wall shot at " + position);
-                System.out.println("Player at " + avatar.getObstacle().getPosition());
                 shieldWalls.add(wall);
                 wall.setTexture(texture);
                 addQueuedObject(wall);
@@ -1194,14 +1198,6 @@ public class PlatformScene implements Screen, Telegraph {
         }
 
 
-        for (Teleporter tp : new ArrayList<>(teleporterCreationTimes.keySet())) {
-            float creationTime = teleporterCreationTimes.get(tp);
-            if(timeElapsed - creationTime >= 2.0f) {
-                tp.getObstacle().markRemoved(true);
-                teleporterCreationTimes.remove(tp);
-            }
-        }
-
         if (isTeleporting) {
             teleportAnimationTime += dt;
             // I dont like the last frames so I'm cutting it. Also this is bad hardcoding but the
@@ -1222,6 +1218,8 @@ public class PlatformScene implements Screen, Telegraph {
                 isTeleporting = true;
                 teleportAnimationTime = 0f;
                 teleportPosition = queuedTeleportPosition.cpy();
+                Vector2 dir = new Vector2(preTeleportPosition).sub(teleportPosition);
+                teleportAngle = dir.angleDeg();
                 teleportAnimator.reset();
 
                 // Apply the teleport
@@ -1232,9 +1230,11 @@ public class PlatformScene implements Screen, Telegraph {
         }
 
 
-        aiManager.update(dt);
-        aiCManager.update(dt);
-        GdxAI.getTimepiece().update(dt);
+        if (queuedTeleportPosition != null) {
+            avatar.getObstacle().setPosition(queuedTeleportPosition);
+            avatar.setFearMeter(Math.max(0,avatar.getFearMeter() - TELEPORT_COST));
+            queuedTeleportPosition = null; // Clear after applying
+        }
 
         avatar.applyForce(world);
         if (avatar.isJumping()) {
@@ -1255,6 +1255,7 @@ public class PlatformScene implements Screen, Telegraph {
     }
 
     private void teleport() {
+        preTeleportPosition = avatar.getObstacle().getPosition().cpy();
         InputController input = InputController.getInstance();
         float units = TiledMapInfo.PIXELS_PER_WORLD_METER;
         Vector2 playerPosition = avatar.getObstacle().getPosition();
@@ -1325,7 +1326,6 @@ public class PlatformScene implements Screen, Telegraph {
             return;
         }
 
-        System.out.println("Hitpoint Count: " + callback.getHitPointCount());
         if (callback.getHitPointCount()%2 == 1){
             System.out.println("Cannot teleport inside of surface");
             return;
@@ -1394,11 +1394,7 @@ public class PlatformScene implements Screen, Telegraph {
         Obstacle player = avatar.getObstacle();
         Vector2 shootAngle = crosshairWorld.sub(player.getPosition());
         shootAngle.nor();
-        float direction = 1;
-        if (crosshairWorld.x * units < player.getPosition().x){
-            direction = -1;
-        }
-        System.out.println("Direction = " + crosshairWorld.x + " " + player.getPosition().x);
+
         Texture texture = directory.getEntry("platform-bullet", Texture.class);
 
         Bullet bullet = new Bullet(units, bulletjv, player.getPosition(), shootAngle.nor());
@@ -1538,38 +1534,46 @@ public class PlatformScene implements Screen, Telegraph {
             float width = currentFrame.getRegionWidth();
             float height = currentFrame.getRegionHeight();
 
-
-            // You might also want to scale it down if it's too large
-            float scale = 0.15f; // Adjust as needed
+            float scale = 0.15f;
             float scaledWidth = width * scale;
             float scaledHeight = height * scale;
 
+            float angleToTeleport = teleportAngle + 180;
+
             float xOffset;
-            boolean shouldFlip = !teleportDirectionRight; // Flip if facing left
 
             if (teleportDirectionRight) {
-                // Position behind player when facing right
                 xOffset = -avatar.getWidth() * units * 1.75f;
             } else {
-                // Position behind player when facing left
-                //xOffset = avatar.getWidth() * units * 0.1f;
-                xOffset = -avatar.getWidth() * units * 0.50f;;
+                xOffset = -avatar.getWidth() * units * 0.50f;
             }
 
-            // Center the animation horizontally and vertically at the teleport position
-            float x = teleportPosition.x * units  + xOffset;
+            float x = teleportPosition.x * units + xOffset;
             float y = teleportPosition.y * units - scaledHeight * 3/5;
 
             TextureRegion frameToDraw = new TextureRegion(currentFrame);
 
-            // Flip the texture horizontally if needed
-            if (shouldFlip) {
-                frameToDraw.flip(true, false);
-            }
-
             batch.setColor(Color.WHITE);
-            batch.draw(frameToDraw, x, y, scaledWidth, scaledHeight);
+
+            Sprite sprite = new Sprite(frameToDraw);
+            sprite.setSize(scaledWidth, scaledHeight);
+            sprite.setOriginCenter();
+            sprite.setRotation(angleToTeleport); // Now consistent
+            sprite.setPosition(x, y);
+            sprite.draw(batch);
+
+            // Draw at teleport origin
+            x = preTeleportPosition.x * units + xOffset;
+            y = preTeleportPosition.y * units - scaledHeight * 3/5;
+
+            sprite = new Sprite(frameToDraw);
+            sprite.setSize(scaledWidth, scaledHeight);
+            sprite.setOriginCenter();
+            sprite.setRotation(teleportAngle);
+            sprite.setPosition(x, y);
+            sprite.draw(batch);
         }
+
     }
     private void drawVortex(ShapeRenderer sr, Shard shard, float time) {
         // world→screen

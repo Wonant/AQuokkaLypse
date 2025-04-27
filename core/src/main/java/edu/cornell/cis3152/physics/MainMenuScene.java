@@ -159,6 +159,7 @@ public class MainMenuScene implements Screen, InputProcessor {
         AudioEngine engine = (AudioEngine)Gdx.audio;
         music = engine.newMusicQueue( false, 44100 );
         music.addSource( samples[0] );
+        music.setLooping(true);
 
         //VOLUME CONTROL SHOULD PROBABLY BE IN A SETTINGS SCREEN
         if (music != null) {
@@ -194,6 +195,11 @@ public class MainMenuScene implements Screen, InputProcessor {
      */
     private void update(float delta) {
 
+        if (music.getPosition() + 10 > music.getDuration()){
+            music.stop();
+            music.removeSource(0);
+            music.addSource( samples[0] );
+        }
     }
 
     /**
@@ -209,7 +215,6 @@ public class MainMenuScene implements Screen, InputProcessor {
 
         // Draw background
         if (background != null) {
-            System.out.println("Drawing Background");
             batch.draw(background, 0, 0, width, height);
         } else {
             System.out.println("Background Drawing Failed");

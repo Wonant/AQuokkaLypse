@@ -1,5 +1,7 @@
 package edu.cornell.cis3152.physics.platform;
 
+import com.badlogic.gdx.Gdx;
+import com.badlogic.gdx.graphics.g2d.TextureRegion;
 import com.badlogic.gdx.math.*;
 import com.badlogic.gdx.graphics.*;
 import com.badlogic.gdx.physics.box2d.*;
@@ -7,6 +9,7 @@ import com.badlogic.gdx.physics.box2d.*;
 import com.badlogic.gdx.physics.box2d.joints.RevoluteJoint;
 import com.badlogic.gdx.physics.box2d.joints.RevoluteJointDef;
 import com.badlogic.gdx.utils.JsonValue;
+import com.badlogic.gdx.utils.Null;
 import edu.cornell.gdiac.assets.AssetDirectory;
 import edu.cornell.gdiac.assets.ParserUtils;
 import edu.cornell.gdiac.graphics.SpriteBatch;
@@ -61,13 +64,10 @@ public class MindMaintenance extends Enemy {
     // time before enemy resumes normal behavior after detecting player
     private float susCooldown = 100;
     private float susCountdown = susCooldown;
+
     /** game logic stuff */
 
-    // each npc ai character will have a unique one
-    private int entityID;
-    // indicates if this critter is interactable with or not. once harvested critteres are inactive
-    private boolean active;
-    // where the critter is looking, 0 is relative down of the critter's central location, iterates clockwise
+    // where the maintenance is looking, 0 is relative down of the critter's central location, iterates clockwise
     private float visionAngle;
 
     // should be seconds in how long it takes for the critter to reset from aware of player to idle
@@ -79,6 +79,26 @@ public class MindMaintenance extends Enemy {
     private Path2 harvestOutline;
 
     private boolean safeToWalk;
+
+    /** animation */
+    private Animator idleSprite;
+    private Animator walkingSprite;
+    private Animator turnSprite;
+    private MindMaintenance.AnimationState animationState;
+
+
+    private enum AnimationState {
+        WALK,
+        IDLE,
+        TURN,
+        STAIR
+    }
+
+    public void createAnimators(Texture walkTexture, Texture turnTexture) {
+        //idleSprite = new Animator();
+        walkingSprite = new Animator(walkTexture, 1, 16, 0.08f, 16, 0,15);
+        turnSprite = new Animator(turnTexture, 2, 16, 0.08f, 23,0,22);
+    }
 
     public float getMovement() {
         return movement;
@@ -101,6 +121,8 @@ public class MindMaintenance extends Enemy {
         float desiredAngle = theta * MathUtils.degreesToRadians; // Convert to radians
         headBody.setTransform(headBody.getPosition(), desiredAngle);
     }
+
+    public boolean isSafeToWalk(){return safeToWalk;}
 
     public boolean isSus(){return susCountdown > 0;}
 
@@ -245,34 +267,6 @@ public class MindMaintenance extends Enemy {
         factory.makeRect((sensorCenter.x - w / 2) * u, (sensorCenter.y - h / 2) * u, w * u, h * u, sensorOutline);
         sensorShape.dispose();
 
-        createHarvestSensor(width, height);
-    }
-
-    public void createHarvestSensor(float harvestWidth, float harvestHeight) {
-        float u = obstacle.getPhysicsUnits();
-
-        // Create the harvest outline (for visualization)
-        PathFactory factory = new PathFactory();
-        harvestOutline = new Path2();
-
-        factory.makeRoundedRect(-harvestWidth/2 * u, -harvestHeight/2 * u,
-            harvestWidth * u, harvestHeight * u,
-            (harvestWidth/2) * u, harvestOutline);
-
-        // Create a sensor fixture for the harvest area
-        PolygonShape harvestShape = new PolygonShape();
-        harvestShape.setAsBox(harvestWidth/2, harvestHeight/2);
-
-        FixtureDef harvestDef = new FixtureDef();
-        harvestDef.shape = harvestShape;
-        harvestDef.isSensor = true;
-
-        Body body = obstacle.getBody();
-        Fixture harvestFixture = body.createFixture(harvestDef);
-
-        harvestFixture.setUserData("harvest_sensor");
-
-        harvestShape.dispose();
     }
 
     public void createHeadBody() {
@@ -502,20 +496,19 @@ public class MindMaintenance extends Enemy {
     @Override
     public void update(float dt) {
         lookForPlayer();
-
-        if (isPlatformStep(scene.world, stepRayLength)) {
-            System.out.println("Critter's seen a step");
+        if (movement == 0) {
+            animationState = MindMaintenance.AnimationState.TURN;
         }
+        else{
+            animationState = MindMaintenance.AnimationState.WALK;
+        }
+
         if (!canContinue()) {
             safeToWalk = false;
-            setMovement(0);
-            applyForce();
         } else {
             safeToWalk = true;
         }
-        if (!safeToWalk) {
-            setMovement(0);
-        }
+
         if (isJumping()) {
             jumpCooldown = jumpLimit;
         } else {
@@ -542,17 +535,47 @@ public class MindMaintenance extends Enemy {
      */
     @Override
     public void draw(SpriteBatch batch) {
-        if (facingRight) {
-            flipCache.setToScaling(1, 1);
-        } else {
-            flipCache.setToScaling(-1, 1);
+        TextureRegion frame = new TextureRegion();
+        switch (animationState) {
+            case WALK:
+                frame = walkingSprite.getCurrentFrame(Gdx.graphics.getDeltaTime());
+                break;
+            default:
+                frame = turnSprite.getCurrentFrame(Gdx.graphics.getDeltaTime());
+                break;
         }
+
+        if(facingRight){
+            frame.flip(true,false);
+        }
+
+        float u = obstacle.getPhysicsUnits();
+
+        float posX = obstacle.getX() * u;
+        float posY = obstacle.getY() * u;
+        float drawWidth = width * u * 4f;
+        float drawHeight = height * u * 1.5f;
+
+        float originX = drawWidth / 2f;
+        float originY = drawHeight / 2f;
+
+        batch.draw(frame,
+            posX - originX, // lower-left x position
+            posY - originY, // lower-left y position
+            originX,        // originX used for scaling and rotation
+            originY,        // originY
+            drawWidth,      // width
+            drawHeight,     // height
+            1f,             // scaleX
+            1f,             // scaleY
+            0f              // rotation (in degrees)
+        );
+        /*
         if (obstacle != null && mesh != null) {
             float scaleFactor = 1.4f; // Increase sprite size by 20%
             float x = obstacle.getX();
             float y = obstacle.getY();
             float a = obstacle.getAngle();
-            float u = obstacle.getPhysicsUnits();
 
             transform.idt();
             transform.preScale(scaleFactor, scaleFactor); // Scale up sprite only
@@ -563,6 +586,8 @@ public class MindMaintenance extends Enemy {
             batch.drawMesh(mesh, transform, false);
             batch.setTexture((Texture) null);
         }
+
+         */
     }
 
     public void lookForPlayer() {
