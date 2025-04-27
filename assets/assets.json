@@ -76,6 +76,7 @@
         "player-walk" : "platform/walk.png",
         "player-idle" : "platform/idle.png",
         "player-jump" : "platform/jump.png",
+        "maintenance-sprite-sheet" : "platform/tall sprite sheet.png",
         "maintenance-walk" : "platform/maintenance_walk.png",
         "maintenance-turn" : "platform/maintenance_turn.png",
         "player-stair" : "platform/stair.png",

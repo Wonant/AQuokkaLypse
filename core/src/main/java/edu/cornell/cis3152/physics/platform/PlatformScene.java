@@ -727,7 +727,10 @@ public class PlatformScene implements Screen, Telegraph {
                     maintenance = new MindMaintenance(units, constants.get("mind-maintenance"), new float[]{worldX, worldY}, this);
                     maintenance.setTexture(texture);
                     addSprite(maintenance);
+
+                    texture = directory.getEntry( "maintenance-sprite-sheet", Texture.class);
                     // Have to do after body is created
+                    maintenance.createAnimators(texture);
                     maintenance.setFilter();
                     maintenance.createSensor();
                     maintenance.createVisionSensor();
@@ -892,7 +895,7 @@ public class PlatformScene implements Screen, Telegraph {
             maintenance = new MindMaintenance(units, constants.get("mind-maintenance"), maintenancePos.get(i).asFloatArray(), this);
             //maintenance.setTexture(texture);
             addSprite(maintenance);
-            maintenance.createAnimators(texture, turning);
+//            maintenance.createAnimators(texture, turning);
             // Have to do after body is created
             maintenance.setFilter();
             maintenance.createSensor();
@@ -1412,7 +1415,6 @@ public class PlatformScene implements Screen, Telegraph {
     public void removeBullet(ObstacleSprite bullet) {
         bullet.getObstacle().markRemoved(true);
         SoundEffectManager sounds = SoundEffectManager.getInstance();
-        sounds.play("plop", plopSound, volume);
     }
 
     /**
@@ -1697,7 +1699,7 @@ public class PlatformScene implements Screen, Telegraph {
 
             // where to draw
             float meterX = 40;
-            float meterY = 20;
+            float meterY = height - 20;
             float meterWidth  = 5* meterFrame.getRegionWidth() / units;
             float meterHeight = 5*meterFrame.getRegionHeight() / units;
 

@@ -51,6 +51,7 @@ public class MindMaintenance extends Enemy {
 
     // Caches for force calculation and affine transform for sprite flipping
     private final Vector2 forceCache = new Vector2();
+    private final Vector2 velocityCache = new Vector2();
     private final Affine2 flipCache = new Affine2();
 
     private Fixture visionSensor;
@@ -84,20 +85,37 @@ public class MindMaintenance extends Enemy {
     private Animator idleSprite;
     private Animator walkingSprite;
     private Animator turnSprite;
+    private Animator alertSprite;
+    private Animator alertWalk;
+    private Animator attackSprite;
+    private Animator stunnedSprite;
     private MindMaintenance.AnimationState animationState;
+
+    private final int ATTACK_FRAME_DURATION = 29;
+    private final int STUN_FRAME_DURATION   = 20;
+    private boolean inAttackAnimation = false;
+    private int     attackFrameCounter = 0;
+    private boolean inStunAnimation   = false;
+    private int     stunFrameCounter  = 0;;
 
 
     private enum AnimationState {
         WALK,
         IDLE,
         TURN,
-        STAIR
+        STAIR,
+        ALERT,
+        ATTACK,
+        STUN
     }
 
-    public void createAnimators(Texture walkTexture, Texture turnTexture) {
+    public void createAnimators(Texture mindmaintenance) {
         //idleSprite = new Animator();
-        walkingSprite = new Animator(walkTexture, 1, 16, 0.08f, 16, 0,15);
-        turnSprite = new Animator(turnTexture, 2, 16, 0.08f, 23,0,22);
+        walkingSprite = new Animator(mindmaintenance, 10, 13, 0.08f, 130, 0,15);
+        turnSprite = new Animator(mindmaintenance, 10, 13, 0.08f, 130, 17,27);
+        alertSprite = new Animator(mindmaintenance, 10, 13, 0.08f, 130, 42,67);
+        attackSprite = new Animator(mindmaintenance, 10, 13, 0.08f, 130, 87,115, false);
+        stunnedSprite = new Animator(mindmaintenance, 10, 13, 0.08f, 130, 116, 135, false);
     }
 
     public float getMovement() {
@@ -454,10 +472,32 @@ public class MindMaintenance extends Enemy {
         return groundExists && !wallExists;
     }
 
-    /**
-     * Applies forces to the physics body based on the current input.
-     * This includes horizontal movement (with damping) and jumping impulses.
-     */
+    public void setHorizontalVelocity() {
+        if (!obstacle.isActive()) {
+            return;
+        }
+
+        Vector2 pos = obstacle.getPosition();
+        float vx = obstacle.getVX();
+        float vy = obstacle.getVY();
+        Body body = obstacle.getBody();
+
+
+        if (getMovement() == 0f) {
+            velocityCache.set(0, vy);
+            body.setLinearVelocity(velocityCache);
+        }
+
+        if (Math.abs(vx) >= getMaxSpeed()) {
+            obstacle.setVX(Math.signum(vx) * getMaxSpeed());
+        } else {
+            velocityCache.set(getMovement(), vy);
+            body.setLinearVelocity(velocityCache);
+        }
+
+
+    }
+
     public void applyForce() {
         if (!obstacle.isActive()) {
             return;
@@ -469,17 +509,20 @@ public class MindMaintenance extends Enemy {
 
         // Apply damping when no horizontal input is provided
         if (getMovement() == 0f) {
-            float slowFactor = 2.0f; // Adjust this to fine-tune slowdown speed
-            forceCache.set(-slowFactor * vx, 0);
-            body.applyForce(forceCache, pos, true);
+            // Force a full stop horizontally
+            body.setLinearVelocity(0, body.getLinearVelocity().y);
+        } else {
+            // Otherwise, set the horizontal velocity toward getMovement()
+            if (Math.abs(vx) >= getMaxSpeed()) {
+                obstacle.setVX(Math.signum(vx) * getMaxSpeed());
+            } else {
+                setHorizontalVelocity();
+            }
         }
 
         // Clamp horizontal velocity to the maximum speed
         if (Math.abs(vx) >= getMaxSpeed()) {
             obstacle.setVX(Math.signum(vx) * getMaxSpeed());
-        } else {
-            forceCache.set(getMovement(), 0);
-            body.applyForce(forceCache, pos, true);
         }
 
         // Apply a vertical impulse if a jump is initiated
@@ -496,7 +539,36 @@ public class MindMaintenance extends Enemy {
     @Override
     public void update(float dt) {
         lookForPlayer();
-        if (movement == 0) {
+        if (isStunned()) {
+            animationState = AnimationState.STUN;
+            super.update(dt);
+            return;
+        }
+
+
+        if (inAttackAnimation) {
+            animationState = AnimationState.ATTACK;
+            attackFrameCounter++;
+            if (attackFrameCounter >= ATTACK_FRAME_DURATION) {
+                inAttackAnimation = false;
+                resetShootCooldown();
+            }
+            super.update(dt);
+            return;
+        }
+
+        if (isShooting()) {
+            if (!inAttackAnimation) {
+                inAttackAnimation    = true;
+                attackFrameCounter   = 0;
+                attackSprite.reset();
+            }
+        }
+
+        if (isAwareOfPlayer()) {
+            animationState = AnimationState.ALERT;
+        }
+        else if (movement == 0) {
             animationState = MindMaintenance.AnimationState.TURN;
         }
         else{
@@ -540,8 +612,20 @@ public class MindMaintenance extends Enemy {
             case WALK:
                 frame = walkingSprite.getCurrentFrame(Gdx.graphics.getDeltaTime());
                 break;
-            default:
+            case TURN:
                 frame = turnSprite.getCurrentFrame(Gdx.graphics.getDeltaTime());
+                break;
+            case ATTACK:
+                frame = attackSprite.getCurrentFrame(Gdx.graphics.getDeltaTime());
+                break;
+            case STUN:
+                frame = stunnedSprite.getCurrentFrame(Gdx.graphics.getDeltaTime());
+                break;
+            case ALERT:
+                frame = alertSprite.getCurrentFrame(Gdx.graphics.getDeltaTime());
+                break;
+            default:
+                frame = alertSprite.getCurrentFrame(Gdx.graphics.getDeltaTime());
                 break;
         }
 
@@ -554,7 +638,7 @@ public class MindMaintenance extends Enemy {
         float posX = obstacle.getX() * u;
         float posY = obstacle.getY() * u;
         float drawWidth = width * u * 4f;
-        float drawHeight = height * u * 1.5f;
+        float drawHeight = height * u * 1.15f;
 
         float originX = drawWidth / 2f;
         float originY = drawHeight / 2f;
