@@ -23,14 +23,12 @@ import com.badlogic.gdx.graphics.glutils.ShaderProgram;
 import com.badlogic.gdx.graphics.glutils.ShapeRenderer;
 import com.badlogic.gdx.maps.MapLayer;
 import com.badlogic.gdx.maps.MapObject;
+import com.badlogic.gdx.maps.objects.PolygonMapObject;
 import com.badlogic.gdx.maps.objects.RectangleMapObject;
 import edu.cornell.cis3152.physics.AIControllerManager;
 import edu.cornell.cis3152.physics.ObstacleGroup;
 
-import java.util.ArrayList;
-import java.util.HashMap;
-import java.util.Iterator;
-import java.util.Map;
+import java.util.*;
 
 import com.badlogic.gdx.*;
 import com.badlogic.gdx.graphics.*;
@@ -201,7 +199,17 @@ public class PlatformScene implements Screen, Telegraph {
     private ArrayList<Vector2> shardPos;
 
     /** Possible positions shards can be placed by enemies */
-    private ArrayList<Vector2> possibleShardPos;
+    private HashMap<Integer, Vector2> possibleShardPos;
+
+    /** hashset of ids to keep track of shards that might be currently moving*/
+    private Set<Integer> removedShards = new HashSet<>();
+
+    private static class PendingShard {
+        public final Vector2 location;
+        public final Shard shard;
+        public PendingShard(Vector2 loc, Shard s) { location = loc; shard = s; }
+    }
+    private final List<PendingShard> pendingShardSpawns = new ArrayList<>();
 
     // Reference to the shards
     private int totalShards;
@@ -264,6 +272,10 @@ public class PlatformScene implements Screen, Telegraph {
         return totalShards;
     }
 
+    public void queueShardSpawn(Vector2 world, Shard dropped) {
+        pendingShardSpawns.add(new PendingShard(world.cpy(), dropped));
+    }
+
     public boolean checkCollectedAllGoals() {return collectedShards == totalShards;}
 
     public void setCurrentTeleporter(Teleporter tele) {currentTeleporter = tele; }
@@ -288,7 +300,7 @@ public class PlatformScene implements Screen, Telegraph {
 
     // SHARDS //
 
-    public ArrayList<Vector2> getPossibleShardSpots() {
+    public HashMap<Integer, Vector2> getPossibleShardSpots() {
         return possibleShardPos;
     }
 
@@ -382,6 +394,14 @@ public class PlatformScene implements Screen, Telegraph {
      */
     public SpriteBatch getSpriteBatch() {
         return batch;
+    }
+
+    public boolean isShardRemoved(int id) {
+        return removedShards.contains(id);
+    }
+
+    public void markShardRemoved(int id) {
+        removedShards.add(id);
     }
 
     /**
@@ -637,11 +657,17 @@ public class PlatformScene implements Screen, Telegraph {
         aiManager = new AIManager("behaviors/critter.tree", "behaviors/dweller.tree","behaviors/maintenance.tree", directory);
         aiManager.setPlayer(avatar);
         shardPos = new ArrayList<>();
-        possibleShardPos = new ArrayList<>();
+        possibleShardPos = new HashMap<>();
         enemiesAlerted = 0;
 
         float units = TiledMapInfo.PIXELS_PER_WORLD_METER;
         System.out.println("units: " + units);
+
+
+        // entity spawn handling from tiled
+
+        // json constants for physics
+        JsonValue critters = constants.get("curiosity-critter");
 
         Vector2 playerSpawnPos = new Vector2();
 
@@ -669,12 +695,53 @@ public class PlatformScene implements Screen, Telegraph {
                 if (o.getName().startsWith("Player")) {
                     playerSpawnPos.set(worldX, worldY);
                 }
+                if (o.getName().startsWith("curiosity critter")) {
+                    Texture texture = directory.getEntry( "curiosity-critter-active", Texture.class );
+                    critter = new CuriosityCritter(units, constants.get("curiosity-critter"), new float[]{worldX,worldY}, this, dispatcher);
+                    critter.setTexture(texture);
+                    addSprite(critter);
+
+                    // Have to do after body is created
+                    critter.setFilter();
+                    critter.createSensor();
+                    critter.createVisionSensor();
+                    enemies.add(critter);
+                    aiManager.register(critter);
+                }
+                if (o.getName().startsWith("dream dweller")) {
+                    Texture texture = directory.getEntry("dream-dweller-active", Texture.class);
+
+                    dreamDweller = new DreamDweller(units, constants.get("dream-dweller"), new float[]{worldX, worldY}, this);
+                    dreamDweller.setTexture(texture);
+                    addSprite(dreamDweller);
+                    // Have to do after body is created
+                    dreamDweller.setFilter();
+                    dreamDweller.createSensor();
+                    dreamDweller.createVisionSensor();
+                    enemies.add(dreamDweller);
+                    //aiManager.register(maintenance);
+                    aiCManager.register(dreamDweller);
+                }
+                if (o.getName().startsWith("mind maintenance")) {
+                    Texture texture = directory.getEntry("mind-maintenance-active", Texture.class);
+
+                    maintenance = new MindMaintenance(units, constants.get("mind-maintenance"), new float[]{worldX, worldY}, this);
+                    maintenance.setTexture(texture);
+                    addSprite(maintenance);
+                    // Have to do after body is created
+                    maintenance.setFilter();
+                    maintenance.createSensor();
+                    maintenance.createVisionSensor();
+                    enemies.add(maintenance);
+                    //aiManager.register(maintenance);
+                    aiCManager.register(maintenance);
+                }
             }
         }
 
-        // Add level goal
-        Texture texture = directory.getEntry( "shared-goal", Texture.class );
 
+        // dream shard creation from tiled layer
+        Texture texture = directory.getEntry( "shared-goal", Texture.class );
         MapLayer shardLayer = tiledMap.get().getLayers().get("Shards");
         JsonValue goal = constants.get("goal");
         totalShards = shardLayer.getProperties().get("totalShards", Integer.class);
@@ -688,19 +755,66 @@ public class PlatformScene implements Screen, Telegraph {
                 float worldX = x / units;
                 float worldY = y / units;
 
-                Shard goalShard = new Shard(units, goal, worldX, worldY, shardID);
-                shardPos.add(shardID, new Vector2(x, y));
-                goalShard.setTexture(texture);
-                goalShard.getObstacle().setName("goal_" + shardID);
-                addSprite(goalShard);
-                goalShard.setFilter();
-                shardID++;
+                MapObject reposition = o.getProperties().get("path", MapObject.class);
+
+                System.out.println(worldX);
+                if (reposition != null) {
+                    System.out.println(reposition.getProperties().get("x", Float.class) / 32f);
+                    possibleShardPos.put(shardID, new Vector2(reposition.getProperties().get("x", Float.class) / 32f, reposition.getProperties().get("y", Float.class) / 32f));
+                }
+                if (o.getName() == null) {
+                    Shard goalShard = new Shard(units, goal, worldX, worldY, shardID);
+                    shardPos.add(shardID, new Vector2(x, y));
+                    goalShard.setTexture(texture);
+                    goalShard.getObstacle().setName("goal_" + shardID);
+                    addSprite(goalShard);
+                    goalShard.setFilter();
+                    shardID++;
+                }
+
+
+
             }
         }
 
         MapLayer collisionLayer = tiledMap.get().getLayers().get("CollisionLayer");
         int id = 0;
         for (MapObject o : collisionLayer.getObjects()) {
+            if (o instanceof PolygonMapObject) {
+                PolygonMapObject polyObj = (PolygonMapObject) o;
+                Polygon poly = polyObj.getPolygon();
+                float[] localVtx = poly.getVertices();
+                for (int i = 0; i < localVtx.length; i++) {
+                    if (i % 2 == 0) {
+                        System.out.print("x: " + localVtx[i] + " ");
+                    } else {
+                        System.out.println("y: " + localVtx[i]);
+                    }
+                }
+                // The object’s own position in pixels
+                float offsetX = poly.getX();
+                float offsetY = poly.getY();
+
+                Surface surface = new Surface(
+                    localVtx,
+                    offsetX,
+                    offsetY,
+                    TiledMapInfo.PIXELS_PER_WORLD_METER,
+                    constants.get("platforms"),
+                    true
+                );
+
+                surface.setDebugColor(Color.BLUE);
+                if (o.getProperties().get("isStair", Boolean.class)) {
+                    surface.getObstacle().setName("stair " + id);
+                } else {
+                    surface.getObstacle().setName("platform " + id);
+                }
+                addSprite(surface);
+                surface.setFilter();
+
+                id++;
+            }
             if (o instanceof RectangleMapObject) {
                 Rectangle rect = ((RectangleMapObject) o).getRectangle();
                 // want to create "surfaces" where rects are in our tiled layer
@@ -744,37 +858,9 @@ public class PlatformScene implements Screen, Telegraph {
 
 
 
-//        Surface wall;
-//        String wname = "wall";
-//        JsonValue walls = constants.get("walls");
-//        JsonValue walljv = walls.get("positions");
-//        for (int ii = 0; ii < walljv.size; ii++) {
-//            wall = new Surface(walljv.get(ii).asFloatArray(), units, walls, false);
-//            wall.getObstacle().setName(wname+ii);
-//            wall.setTexture( texture );
-//            addSprite(wall);
-//        }
-//
-//        Surface platform;
-//        String pname = "platform";
-//        JsonValue plats = constants.get("platforms");
-//        JsonValue platjv = plats.get("positions");
-//        JsonValue platShadow = plats.get("shadowed");
-//        for (int ii = 0; ii < platjv.size; ii++) {
-//            platform = new Surface(platjv.get(ii).asFloatArray(), units, walls, platShadow.getBoolean(ii) );
-//            platform.getObstacle().setName(pname+ii);
-//            if (platform.isShadowed()) {
-//                platform.setTexture(shadowedTexture);
-//                shadowPlatformQueue.add(platform);
-//            } else {
-//                platform.setTexture(texture);
-//            }
-//            addSprite(platform);
-//        }
-
         // Create Player
         texture = directory.getEntry( "player-walk", Texture.class );
-        avatar = new Player(units, constants.get("player"), playerSpawnPos);
+        avatar = new Player(units, constants.get("player"), playerSpawnPos, this);
 
         Texture dreamwalker = directory.getEntry("player-sprite-sheet", Texture.class);
         Texture absorb = directory.getEntry("absorb-animation", Texture.class);
@@ -794,30 +880,7 @@ public class PlatformScene implements Screen, Telegraph {
 
 
 
-        JsonValue critters = constants.get("curiosity-critter");
-        JsonValue critterspos = critters.get("pos");
 
-        for (int i = 0; i < critterspos.size; i++) {
-            texture = directory.getEntry( "curiosity-critter-active", Texture.class );
-            critter = new CuriosityCritter(units, constants.get("curiosity-critter"), critterspos.get(i).asFloatArray(), this, dispatcher);
-            critter.setTexture(texture);
-            addSprite(critter);
-
-            // Have to do after body is created
-            critter.setFilter();
-            critter.createSensor();
-            critter.createVisionSensor();
-            enemies.add(critter);
-            aiManager.register(critter);
-            texture = directory.getEntry("vision_cone", Texture.class);
-            visionConeRegion = new TextureRegion(texture);
-            visionCone = new Sprite(visionConeRegion.getTexture());
-            visionCone.setRegion(visionConeRegion);
-            visionCone.setSize(240, 200);
-            visionCone.setOrigin(visionCone.getWidth() / 2, 0);
-
-
-        }
 
         JsonValue maintainers = constants.get("mind-maintenance");
         JsonValue maintenancePos = maintainers.get("pos");
@@ -1378,6 +1441,12 @@ public class PlatformScene implements Screen, Telegraph {
         // But that is harder and a topic of the advanced class
         world.step(dt,WORLD_VELOC,WORLD_POSIT);
 
+        for (PendingShard ps : pendingShardSpawns) {
+            Gdx.app.log("PlatformScene", "– spawning shard at " + ps.location);
+            spawnShardAtLocation(ps.location, ps.shard);
+        }
+        pendingShardSpawns.clear();
+
         // Garbage collect the deleted objects.
         // Note how we use the linked list nodes to delete O(1) in place.
         // This is O(n) without copying.
@@ -1789,6 +1858,24 @@ public class PlatformScene implements Screen, Telegraph {
 
         camera.position.x = MathUtils.clamp(camera.position.x, minX-200, maxX+200);
         camera.position.y = MathUtils.clamp(camera.position.y, minY-100, maxY-50);
+    }
+
+    public void spawnShardAtLocation(Vector2 world, Shard s) {
+        JsonValue goal = constants.get("goal");
+        Shard newShard = new Shard(
+            TiledMapInfo.PIXELS_PER_WORLD_METER,
+            goal,
+            world.x, world.y,
+            s.id
+        );
+
+        // set up the sprite
+        newShard.setTexture(directory.getEntry("shared-goal", Texture.class));
+        newShard.getObstacle().setName("goal_" + newShard.id);
+        addSprite(newShard);
+        newShard.setFilter();
+        // record it in your internal lists
+        shardPos.add(newShard.id, new Vector2(world.x, world.y));
     }
 
     //telegraph

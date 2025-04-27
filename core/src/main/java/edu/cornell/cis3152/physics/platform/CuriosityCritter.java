@@ -88,8 +88,8 @@ public class CuriosityCritter extends Enemy {
     // where to move the shard(ideally) in world positions if this critter is carrying it
     // movement target in world coordinates
     private Vector2 worldTarget;
-
     public Shard heldShard;
+    public boolean inMoveTask;
 
     public boolean playerInFollowRange = false;
     private boolean safeToWalk;
@@ -503,15 +503,6 @@ public class CuriosityCritter extends Enemy {
             debugFollowEnd.set(playerFollowRaycast.getHitPoint());
         }
 
-        // message dispatch
-        if (!wasSeen && playerVisible) {
-            dispatcher.dispatchMessage(null, scene, MessageType.ENEMY_SEES_PLAYER);
-        } else if (!playerVisible && wasSeen) {
-            dispatcher.dispatchMessage(null, scene, MessageType.ENEMY_LOST_PLAYER);
-        }
-
-        wasSeen = playerVisible;
-
         playerFollowRaycast.reset();
         return playerVisible;
     }
@@ -600,7 +591,9 @@ public class CuriosityCritter extends Enemy {
 
         // message dispatch
         if (isAware && !wasAware) {
-
+            dispatcher.dispatchMessage(null, scene, MessageType.ENEMY_SEES_PLAYER);
+        } else if (!isAware && wasAware) {
+            dispatcher.dispatchMessage(null, scene, MessageType.ENEMY_LOST_PLAYER);
         }
 
         wasAware = isAware;
@@ -644,7 +637,7 @@ public class CuriosityCritter extends Enemy {
 
 
     public void setTarget() {
-
+        worldTarget = scene.getPossibleShardSpots().get(heldShard.id);
     }
 
     public void giveShard(Shard shard) {
@@ -655,8 +648,7 @@ public class CuriosityCritter extends Enemy {
         hasShard = true;
 
         // compute target
-
-
+        setTarget();
     }
 
     public Shard dropShard() {
@@ -690,14 +682,18 @@ public class CuriosityCritter extends Enemy {
         }
         if (isAwareOfPlayer()) {
             scene.getAvatar().setTakingDamage(true);
+            //dispatcher.dispatchMessage(null, scene, MessageType.ENEMY_SEES_PLAYER);
             //updateFollowSensor(scene.getAvatar());
             if (checkFollowRaycast()) {
+                isFollowing = true;
                 updateFollowSensor(scene.getAvatar());
                 playerInFollowRange = true;
             } else {
                 setAwareOfPlayer(false);
                 playerInFollowRange = false;
             }
+        } else {
+            //dispatcher.dispatchMessage(null, scene, MessageType.ENEMY_LOST_PLAYER);
         }
         if (isJumping()) {
             jumpCooldown = jumpLimit;

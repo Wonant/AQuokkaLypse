@@ -7,8 +7,6 @@ import com.badlogic.gdx.math.MathUtils;
 import edu.cornell.cis3152.physics.platform.Enemy;
 
 public class ShardNearGuard extends LeafTask<Enemy> {
-    @TaskAttribute(required = true)
-    public boolean random;
 
     @Override
     public void start() {
@@ -20,17 +18,8 @@ public class ShardNearGuard extends LeafTask<Enemy> {
         Enemy enemy = getObject();
         if(!enemy.isDreamShardNear()) {
             return Status.FAILED;
-        }
-        float roll = MathUtils.random(); // float in [0,1)
-
-        if (!random) {
-            return Status.SUCCEEDED;
-        }
-
-        if (roll < 0.8) {
-            return Status.SUCCEEDED;
         } else {
-            return Status.FAILED;
+            return Status.SUCCEEDED;
         }
     }
 
