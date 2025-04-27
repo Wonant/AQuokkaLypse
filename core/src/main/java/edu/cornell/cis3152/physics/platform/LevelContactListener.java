@@ -334,15 +334,32 @@ public class LevelContactListener implements ContactListener {
         if(( (dreamWalkerScene.getAvatar().getScareSensorName().equals(fd1) && bd2 instanceof Enemy)
             || (dreamWalkerScene.getAvatar().getScareSensorName().equals(fd2) && bd1 instanceof Enemy) )){
             Enemy harvestedEnemy;
-            // if the enemy is not a Mind Maintenance
                 if (dreamWalkerScene.getAvatar().getScareSensorName().equals(fd1) && fd2 != "walk_sensor" && fd2 != "follow_sensor" && fd2 != "vision_sensor" )
                 {
                     harvestedEnemy = (Enemy) bd2;
+                    if (harvestedEnemy instanceof CuriosityCritter) {
+                        CuriosityCritter critter = (CuriosityCritter) harvestedEnemy;
+                        if (critter.heldShard != null) {
+                            dreamWalkerScene.queueShardSpawn(
+                                critter.getObstacle().getPosition(),
+                                critter.dropShard()
+                            );
+                        }
+                    }
                     dreamWalkerScene.performHarvest(harvestedEnemy);
 
                 } else if (dreamWalkerScene.getAvatar().getScareSensorName().equals(fd2) && fd1 != "walk_sensor" && fd1 != "follow_sensor" && fd1 != "vision_sensor")
                 {
                     harvestedEnemy = (Enemy) bd1;
+                    if (harvestedEnemy instanceof CuriosityCritter) {
+                        CuriosityCritter critter = (CuriosityCritter) harvestedEnemy;
+                        if (critter.heldShard != null) {
+                            dreamWalkerScene.queueShardSpawn(
+                                critter.getObstacle().getPosition(),
+                                critter.dropShard()
+                            );
+                        }
+                    }
                     dreamWalkerScene.performHarvest(harvestedEnemy);
 
                 }

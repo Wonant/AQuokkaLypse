@@ -204,6 +204,13 @@ public class PlatformScene implements Screen, Telegraph {
     /** hashset of ids to keep track of shards that might be currently moving*/
     private Set<Integer> removedShards = new HashSet<>();
 
+    private static class PendingShard {
+        public final Vector2 location;
+        public final Shard shard;
+        public PendingShard(Vector2 loc, Shard s) { location = loc; shard = s; }
+    }
+    private final List<PendingShard> pendingShardSpawns = new ArrayList<>();
+
     // Reference to the shards
     private int totalShards;
     private int collectedShards;
@@ -263,6 +270,10 @@ public class PlatformScene implements Screen, Telegraph {
 
     public int getTotalShards() {
         return totalShards;
+    }
+
+    public void queueShardSpawn(Vector2 world, Shard dropped) {
+        pendingShardSpawns.add(new PendingShard(world.cpy(), dropped));
     }
 
     public boolean checkCollectedAllGoals() {return collectedShards == totalShards;}
@@ -794,7 +805,11 @@ public class PlatformScene implements Screen, Telegraph {
                 );
 
                 surface.setDebugColor(Color.BLUE);
-                surface.getObstacle().setName("polygon " + id);
+                if (o.getProperties().get("isStair", Boolean.class)) {
+                    surface.getObstacle().setName("stair " + id);
+                } else {
+                    surface.getObstacle().setName("platform " + id);
+                }
                 addSprite(surface);
                 surface.setFilter();
 
@@ -1426,6 +1441,12 @@ public class PlatformScene implements Screen, Telegraph {
         // But that is harder and a topic of the advanced class
         world.step(dt,WORLD_VELOC,WORLD_POSIT);
 
+        for (PendingShard ps : pendingShardSpawns) {
+            Gdx.app.log("PlatformScene", "– spawning shard at " + ps.location);
+            spawnShardAtLocation(ps.location, ps.shard);
+        }
+        pendingShardSpawns.clear();
+
         // Garbage collect the deleted objects.
         // Note how we use the linked list nodes to delete O(1) in place.
         // This is O(n) without copying.
@@ -1847,13 +1868,14 @@ public class PlatformScene implements Screen, Telegraph {
             world.x, world.y,
             s.id
         );
+
         // set up the sprite
         newShard.setTexture(directory.getEntry("shared-goal", Texture.class));
         newShard.getObstacle().setName("goal_" + newShard.id);
         addSprite(newShard);
         newShard.setFilter();
         // record it in your internal lists
-        shardPos.add(newShard.id, new Vector2(world.x * units, world.y * units));
+        shardPos.add(newShard.id, new Vector2(world.x, world.y));
     }
 
     //telegraph
