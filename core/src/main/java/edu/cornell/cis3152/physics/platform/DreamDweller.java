@@ -447,7 +447,7 @@ public class DreamDweller extends Enemy {
             transform.idt();
             transform.preScale(scaleFactor, scaleFactor); // Scale up sprite only
             transform.preRotate((float) ((double) (a * 180.0F) / Math.PI));
-            transform.preTranslate(x * u, y * u);
+            transform.preTranslate(x * u, (y - height / 12f) * u);
 
             batch.setTextureRegion(sprite);
             batch.drawMesh(mesh, transform, false);
