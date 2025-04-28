@@ -23,14 +23,12 @@ import com.badlogic.gdx.graphics.glutils.ShaderProgram;
 import com.badlogic.gdx.graphics.glutils.ShapeRenderer;
 import com.badlogic.gdx.maps.MapLayer;
 import com.badlogic.gdx.maps.MapObject;
+import com.badlogic.gdx.maps.objects.PolygonMapObject;
 import com.badlogic.gdx.maps.objects.RectangleMapObject;
 import edu.cornell.cis3152.physics.AIControllerManager;
 import edu.cornell.cis3152.physics.ObstacleGroup;
 
-import java.util.ArrayList;
-import java.util.HashMap;
-import java.util.Iterator;
-import java.util.Map;
+import java.util.*;
 
 import com.badlogic.gdx.*;
 import com.badlogic.gdx.graphics.*;
@@ -190,18 +188,26 @@ public class PlatformScene implements Screen, Telegraph {
 
     private Vector2 queuedTeleportPosition = null;
     private PooledList<Enemy> queuedHarvestedEnemy = new PooledList<Enemy>();
-    private Teleporter currentTeleporter = null;
 
     protected PooledList<Surface> shadowPlatformQueue = new PooledList<Surface>();
     private HashMap<DreamDweller, Sprite> visionCones3;
-    private HashMap<Teleporter, Float> teleporterCreationTimes = new HashMap<>();
     private float timeElapsed = 0f;
 
     /** Spawn positions of all shards */
     private ArrayList<Vector2> shardPos;
 
     /** Possible positions shards can be placed by enemies */
-    private ArrayList<Vector2> possibleShardPos;
+    private HashMap<Integer, Vector2> possibleShardPos;
+
+    /** hashset of ids to keep track of shards that might be currently moving*/
+    private Set<Integer> removedShards = new HashSet<>();
+
+    private static class PendingShard {
+        public final Vector2 location;
+        public final Shard shard;
+        public PendingShard(Vector2 loc, Shard s) { location = loc; shard = s; }
+    }
+    private final List<PendingShard> pendingShardSpawns = new ArrayList<>();
 
     // Reference to the shards
     private int totalShards;
@@ -248,8 +254,11 @@ public class PlatformScene implements Screen, Telegraph {
     private Animator teleportAnimator;
     private TextureRegion teleportSpritesheet;
     private boolean isTeleporting = false;
+
     private float teleportAnimationTime = 0f;
+    private Vector2 preTeleportPosition;
     private Vector2 teleportPosition;
+    private float teleportAngle;
     private boolean teleportDirectionRight;
 
 
@@ -264,14 +273,17 @@ public class PlatformScene implements Screen, Telegraph {
         return totalShards;
     }
 
-    public boolean checkCollectedAllGoals() {return collectedShards == totalShards;}
+    public void queueShardSpawn(Vector2 world, Shard dropped) {
+        pendingShardSpawns.add(new PendingShard(world.cpy(), dropped));
+    }
 
-    public void setCurrentTeleporter(Teleporter tele) {currentTeleporter = tele; }
+    public boolean checkCollectedAllGoals() {return collectedShards == totalShards;}
 
     //CHANGE: QUEUE OF ENEMIES ADDED EACH COLLISION. HARVEST SHOULD REMOVE ALL IN QUEUE.
     public void performHarvest(Enemy enemy)
     {
         queuedHarvestedEnemy.add(enemy);
+        enemies.remove(enemy);
     }
 
 
@@ -287,7 +299,7 @@ public class PlatformScene implements Screen, Telegraph {
 
     // SHARDS //
 
-    public ArrayList<Vector2> getPossibleShardSpots() {
+    public HashMap<Integer, Vector2> getPossibleShardSpots() {
         return possibleShardPos;
     }
 
@@ -381,6 +393,14 @@ public class PlatformScene implements Screen, Telegraph {
      */
     public SpriteBatch getSpriteBatch() {
         return batch;
+    }
+
+    public boolean isShardRemoved(int id) {
+        return removedShards.contains(id);
+    }
+
+    public void markShardRemoved(int id) {
+        removedShards.add(id);
     }
 
     /**
@@ -636,11 +656,17 @@ public class PlatformScene implements Screen, Telegraph {
         aiManager = new AIManager("behaviors/critter.tree", "behaviors/dweller.tree","behaviors/maintenance.tree", directory);
         aiManager.setPlayer(avatar);
         shardPos = new ArrayList<>();
-        possibleShardPos = new ArrayList<>();
+        possibleShardPos = new HashMap<>();
         enemiesAlerted = 0;
 
         float units = TiledMapInfo.PIXELS_PER_WORLD_METER;
-        System.out.println("units: " + units);
+        int level = 0;
+
+
+        // entity spawn handling from tiled
+
+        // json constants for physics
+        JsonValue critters = constants.get("curiosity-critter");
 
         Vector2 playerSpawnPos = new Vector2();
 
@@ -660,7 +686,7 @@ public class PlatformScene implements Screen, Telegraph {
                 float worldY = y / units;
                 float worldHeight = height / units;
                 if (o.getName().startsWith("door")) {
-                    Door door = new Door(units, worldX, worldY, worldWidth, worldHeight);
+                    Door door = new Door(units, worldX, worldY, worldWidth, worldHeight, level + 1);
                     doors.add(door);
                     addSprite(door);
                     door.setFilter();
@@ -668,12 +694,56 @@ public class PlatformScene implements Screen, Telegraph {
                 if (o.getName().startsWith("Player")) {
                     playerSpawnPos.set(worldX, worldY);
                 }
+                if (o.getName().startsWith("curiosity critter")) {
+                    Texture texture = directory.getEntry( "curiosity-critter-active", Texture.class );
+                    critter = new CuriosityCritter(units, constants.get("curiosity-critter"), new float[]{worldX,worldY}, this, dispatcher);
+                    critter.setTexture(texture);
+                    addSprite(critter);
+
+                    // Have to do after body is created
+                    critter.setFilter();
+                    critter.createSensor();
+                    critter.createVisionSensor();
+                    enemies.add(critter);
+                    aiManager.register(critter);
+                }
+                if (o.getName().startsWith("dream dweller")) {
+                    Texture texture = directory.getEntry("dream-dweller-active", Texture.class);
+
+                    dreamDweller = new DreamDweller(units, constants.get("dream-dweller"), new float[]{worldX, worldY}, this);
+                    dreamDweller.setTexture(texture);
+                    addSprite(dreamDweller);
+                    // Have to do after body is created
+                    dreamDweller.setFilter();
+                    dreamDweller.createSensor();
+                    dreamDweller.createVisionSensor();
+                    enemies.add(dreamDweller);
+                    //aiManager.register(maintenance);
+                    aiCManager.register(dreamDweller);
+                }
+                if (o.getName().startsWith("mind maintenance")) {
+                    Texture texture = directory.getEntry("mind-maintenance-active", Texture.class);
+
+                    maintenance = new MindMaintenance(units, constants.get("mind-maintenance"), new float[]{worldX, worldY}, this);
+                    maintenance.setTexture(texture);
+                    addSprite(maintenance);
+
+                    texture = directory.getEntry( "maintenance-sprite-sheet", Texture.class);
+                    // Have to do after body is created
+                    maintenance.createAnimators(texture);
+                    maintenance.setFilter();
+                    maintenance.createSensor();
+                    maintenance.createVisionSensor();
+                    enemies.add(maintenance);
+                    //aiManager.register(maintenance);
+                    aiCManager.register(maintenance);
+                }
             }
         }
 
-        // Add level goal
-        Texture texture = directory.getEntry( "shared-goal", Texture.class );
 
+        // dream shard creation from tiled layer
+        Texture texture = directory.getEntry( "shared-goal", Texture.class );
         MapLayer shardLayer = tiledMap.get().getLayers().get("Shards");
         JsonValue goal = constants.get("goal");
         totalShards = shardLayer.getProperties().get("totalShards", Integer.class);
@@ -687,19 +757,66 @@ public class PlatformScene implements Screen, Telegraph {
                 float worldX = x / units;
                 float worldY = y / units;
 
-                Shard goalShard = new Shard(units, goal, worldX, worldY, shardID);
-                shardPos.add(shardID, new Vector2(x, y));
-                goalShard.setTexture(texture);
-                goalShard.getObstacle().setName("goal_" + shardID);
-                addSprite(goalShard);
-                goalShard.setFilter();
-                shardID++;
+                MapObject reposition = o.getProperties().get("path", MapObject.class);
+
+                System.out.println(worldX);
+                if (reposition != null) {
+                    System.out.println(reposition.getProperties().get("x", Float.class) / 32f);
+                    possibleShardPos.put(shardID, new Vector2(reposition.getProperties().get("x", Float.class) / 32f, reposition.getProperties().get("y", Float.class) / 32f));
+                }
+                if (o.getName() == null) {
+                    Shard goalShard = new Shard(units, goal, worldX, worldY, shardID);
+                    shardPos.add(shardID, new Vector2(x, y));
+                    goalShard.setTexture(texture);
+                    goalShard.getObstacle().setName("goal_" + shardID);
+                    addSprite(goalShard);
+                    goalShard.setFilter();
+                    shardID++;
+                }
+
+
+
             }
         }
 
         MapLayer collisionLayer = tiledMap.get().getLayers().get("CollisionLayer");
         int id = 0;
         for (MapObject o : collisionLayer.getObjects()) {
+            if (o instanceof PolygonMapObject) {
+                PolygonMapObject polyObj = (PolygonMapObject) o;
+                Polygon poly = polyObj.getPolygon();
+                float[] localVtx = poly.getVertices();
+                for (int i = 0; i < localVtx.length; i++) {
+                    if (i % 2 == 0) {
+                        System.out.print("x: " + localVtx[i] + " ");
+                    } else {
+                        System.out.println("y: " + localVtx[i]);
+                    }
+                }
+                // The object’s own position in pixels
+                float offsetX = poly.getX();
+                float offsetY = poly.getY();
+
+                Surface surface = new Surface(
+                    localVtx,
+                    offsetX,
+                    offsetY,
+                    TiledMapInfo.PIXELS_PER_WORLD_METER,
+                    constants.get("platforms"),
+                    true
+                );
+
+                surface.setDebugColor(Color.BLUE);
+                if (o.getProperties().get("isStair", Boolean.class)) {
+                    surface.getObstacle().setName("stair " + id);
+                } else {
+                    surface.getObstacle().setName("platform " + id);
+                }
+                addSprite(surface);
+                surface.setFilter();
+
+                id++;
+            }
             if (o instanceof RectangleMapObject) {
                 Rectangle rect = ((RectangleMapObject) o).getRectangle();
                 // want to create "surfaces" where rects are in our tiled layer
@@ -729,10 +846,8 @@ public class PlatformScene implements Screen, Telegraph {
                 } else {
                     platform.getObstacle().setName("platform " + id);
                 }
-                System.out.println(platform.getObstacle().getName());
                 addSprite(platform);
                 platform.setFilter();
-                System.out.println("platform added!");
                 id++;
             }
         }
@@ -743,37 +858,9 @@ public class PlatformScene implements Screen, Telegraph {
 
 
 
-//        Surface wall;
-//        String wname = "wall";
-//        JsonValue walls = constants.get("walls");
-//        JsonValue walljv = walls.get("positions");
-//        for (int ii = 0; ii < walljv.size; ii++) {
-//            wall = new Surface(walljv.get(ii).asFloatArray(), units, walls, false);
-//            wall.getObstacle().setName(wname+ii);
-//            wall.setTexture( texture );
-//            addSprite(wall);
-//        }
-//
-//        Surface platform;
-//        String pname = "platform";
-//        JsonValue plats = constants.get("platforms");
-//        JsonValue platjv = plats.get("positions");
-//        JsonValue platShadow = plats.get("shadowed");
-//        for (int ii = 0; ii < platjv.size; ii++) {
-//            platform = new Surface(platjv.get(ii).asFloatArray(), units, walls, platShadow.getBoolean(ii) );
-//            platform.getObstacle().setName(pname+ii);
-//            if (platform.isShadowed()) {
-//                platform.setTexture(shadowedTexture);
-//                shadowPlatformQueue.add(platform);
-//            } else {
-//                platform.setTexture(texture);
-//            }
-//            addSprite(platform);
-//        }
-
         // Create Player
         texture = directory.getEntry( "player-walk", Texture.class );
-        avatar = new Player(units, constants.get("player"), playerSpawnPos);
+        avatar = new Player(units, constants.get("player"), playerSpawnPos, this);
 
         Texture dreamwalker = directory.getEntry("player-sprite-sheet", Texture.class);
         Texture absorb = directory.getEntry("absorb-animation", Texture.class);
@@ -793,40 +880,23 @@ public class PlatformScene implements Screen, Telegraph {
 
 
 
-        JsonValue critters = constants.get("curiosity-critter");
-        JsonValue critterspos = critters.get("pos");
 
-        for (int i = 0; i < critterspos.size; i++) {
-            texture = directory.getEntry( "curiosity-critter-active", Texture.class );
-            critter = new CuriosityCritter(units, constants.get("curiosity-critter"), critterspos.get(i).asFloatArray(), this, dispatcher);
-            critter.setTexture(texture);
-            addSprite(critter);
-
-            // Have to do after body is created
-            critter.setFilter();
-            critter.createSensor();
-            critter.createVisionSensor();
-            enemies.add(critter);
-            aiManager.register(critter);
-            texture = directory.getEntry("vision_cone", Texture.class);
-            visionConeRegion = new TextureRegion(texture);
-            visionCone = new Sprite(visionConeRegion.getTexture());
-            visionCone.setRegion(visionConeRegion);
-            visionCone.setSize(240, 200);
-            visionCone.setOrigin(visionCone.getWidth() / 2, 0);
-
-
-        }
 
         JsonValue maintainers = constants.get("mind-maintenance");
         JsonValue maintenancePos = maintainers.get("pos");
 
         for (int i = 0; i < maintenancePos.size; i++) {
-            texture = directory.getEntry("mind-maintenance-active", Texture.class);
+
+            texture = directory.getEntry( "maintenance-walk", Texture.class );
+            Texture turning = directory.getEntry("maintenance-turn", Texture.class);
+
+            //texture = directory.getEntry("mind-maintenance-active", Texture.class);
+
 
             maintenance = new MindMaintenance(units, constants.get("mind-maintenance"), maintenancePos.get(i).asFloatArray(), this, dispatcher);
-            maintenance.setTexture(texture);
+            //maintenance.setTexture(texture);
             addSprite(maintenance);
+//            maintenance.createAnimators(texture, turning);
             // Have to do after body is created
             maintenance.setFilter();
             maintenance.createSensor();
@@ -966,9 +1036,13 @@ public class PlatformScene implements Screen, Telegraph {
     public void update(float dt) {
         dispatcher.update();
         InputController input = InputController.getInstance();
+        aiManager.update(dt);
+        aiCManager.update(dt);
+        GdxAI.getTimepiece().update(dt);
 
         for (Enemy e: enemies){
             if (e instanceof MindMaintenance && ((MindMaintenance) e).isShooting()){
+                System.out.println("MAINTENANCE IS SHOOTING");
                 ((MindMaintenance) e).resetShootCooldown();
                 units = TiledMapInfo.PIXELS_PER_WORLD_METER;
                 Vector2 position = e.getObstacle().getPosition();
@@ -980,8 +1054,6 @@ public class PlatformScene implements Screen, Telegraph {
                 Texture texture = directory.getEntry("platform-bullet", Texture.class);
 
                 ShieldWall wall = new ShieldWall(units, bulletjv, position, direction);
-                System.out.println("Shield wall shot at " + position);
-                System.out.println("Player at " + avatar.getObstacle().getPosition());
                 shieldWalls.add(wall);
                 wall.setTexture(texture);
                 addQueuedObject(wall);
@@ -1130,14 +1202,6 @@ public class PlatformScene implements Screen, Telegraph {
         }
 
 
-        for (Teleporter tp : new ArrayList<>(teleporterCreationTimes.keySet())) {
-            float creationTime = teleporterCreationTimes.get(tp);
-            if(timeElapsed - creationTime >= 2.0f) {
-                tp.getObstacle().markRemoved(true);
-                teleporterCreationTimes.remove(tp);
-            }
-        }
-
         if (isTeleporting) {
             teleportAnimationTime += dt;
             // I dont like the last frames so I'm cutting it. Also this is bad hardcoding but the
@@ -1158,6 +1222,8 @@ public class PlatformScene implements Screen, Telegraph {
                 isTeleporting = true;
                 teleportAnimationTime = 0f;
                 teleportPosition = queuedTeleportPosition.cpy();
+                Vector2 dir = new Vector2(preTeleportPosition).sub(teleportPosition);
+                teleportAngle = dir.angleDeg();
                 teleportAnimator.reset();
 
                 // Apply the teleport
@@ -1168,9 +1234,11 @@ public class PlatformScene implements Screen, Telegraph {
         }
 
 
-        aiManager.update(dt);
-        aiCManager.update(dt);
-        GdxAI.getTimepiece().update(dt);
+        if (queuedTeleportPosition != null) {
+            avatar.getObstacle().setPosition(queuedTeleportPosition);
+            avatar.setFearMeter(Math.max(0,avatar.getFearMeter() - TELEPORT_COST));
+            queuedTeleportPosition = null; // Clear after applying
+        }
 
         avatar.applyForce(world);
         if (avatar.isJumping()) {
@@ -1191,6 +1259,7 @@ public class PlatformScene implements Screen, Telegraph {
     }
 
     private void teleport() {
+        preTeleportPosition = avatar.getObstacle().getPosition().cpy();
         InputController input = InputController.getInstance();
         float units = TiledMapInfo.PIXELS_PER_WORLD_METER;
         Vector2 playerPosition = avatar.getObstacle().getPosition();
@@ -1261,7 +1330,6 @@ public class PlatformScene implements Screen, Telegraph {
             return;
         }
 
-        System.out.println("Hitpoint Count: " + callback.getHitPointCount());
         if (callback.getHitPointCount()%2 == 1){
             System.out.println("Cannot teleport inside of surface");
             return;
@@ -1330,11 +1398,7 @@ public class PlatformScene implements Screen, Telegraph {
         Obstacle player = avatar.getObstacle();
         Vector2 shootAngle = crosshairWorld.sub(player.getPosition());
         shootAngle.nor();
-        float direction = 1;
-        if (crosshairWorld.x * units < player.getPosition().x){
-            direction = -1;
-        }
-        System.out.println("Direction = " + crosshairWorld.x + " " + player.getPosition().x);
+
         Texture texture = directory.getEntry("platform-bullet", Texture.class);
 
         Bullet bullet = new Bullet(units, bulletjv, player.getPosition(), shootAngle.nor());
@@ -1352,7 +1416,6 @@ public class PlatformScene implements Screen, Telegraph {
     public void removeBullet(ObstacleSprite bullet) {
         bullet.getObstacle().markRemoved(true);
         SoundEffectManager sounds = SoundEffectManager.getInstance();
-        sounds.play("plop", plopSound, volume);
     }
 
     /**
@@ -1376,6 +1439,12 @@ public class PlatformScene implements Screen, Telegraph {
         // NORMALLY we would use a fixed step, not dt
         // But that is harder and a topic of the advanced class
         world.step(dt,WORLD_VELOC,WORLD_POSIT);
+
+        for (PendingShard ps : pendingShardSpawns) {
+            Gdx.app.log("PlatformScene", "– spawning shard at " + ps.location);
+            spawnShardAtLocation(ps.location, ps.shard);
+        }
+        pendingShardSpawns.clear();
 
         // Garbage collect the deleted objects.
         // Note how we use the linked list nodes to delete O(1) in place.
@@ -1468,38 +1537,46 @@ public class PlatformScene implements Screen, Telegraph {
             float width = currentFrame.getRegionWidth();
             float height = currentFrame.getRegionHeight();
 
-
-            // You might also want to scale it down if it's too large
-            float scale = 0.15f; // Adjust as needed
+            float scale = 0.15f;
             float scaledWidth = width * scale;
             float scaledHeight = height * scale;
 
+            float angleToTeleport = teleportAngle + 180;
+
             float xOffset;
-            boolean shouldFlip = !teleportDirectionRight; // Flip if facing left
 
             if (teleportDirectionRight) {
-                // Position behind player when facing right
                 xOffset = -avatar.getWidth() * units * 1.75f;
             } else {
-                // Position behind player when facing left
-                //xOffset = avatar.getWidth() * units * 0.1f;
-                xOffset = -avatar.getWidth() * units * 0.50f;;
+                xOffset = -avatar.getWidth() * units * 0.50f;
             }
 
-            // Center the animation horizontally and vertically at the teleport position
-            float x = teleportPosition.x * units  + xOffset;
+            float x = teleportPosition.x * units + xOffset;
             float y = teleportPosition.y * units - scaledHeight * 3/5;
 
             TextureRegion frameToDraw = new TextureRegion(currentFrame);
 
-            // Flip the texture horizontally if needed
-            if (shouldFlip) {
-                frameToDraw.flip(true, false);
-            }
-
             batch.setColor(Color.WHITE);
-            batch.draw(frameToDraw, x, y, scaledWidth, scaledHeight);
+
+            Sprite sprite = new Sprite(frameToDraw);
+            sprite.setSize(scaledWidth, scaledHeight);
+            sprite.setOriginCenter();
+            sprite.setRotation(angleToTeleport); // Now consistent
+            sprite.setPosition(x, y);
+            sprite.draw(batch);
+
+            // Draw at teleport origin
+            x = preTeleportPosition.x * units + xOffset;
+            y = preTeleportPosition.y * units - scaledHeight * 3/5;
+
+            sprite = new Sprite(frameToDraw);
+            sprite.setSize(scaledWidth, scaledHeight);
+            sprite.setOriginCenter();
+            sprite.setRotation(teleportAngle);
+            sprite.setPosition(x, y);
+            sprite.draw(batch);
         }
+
     }
     private void drawVortex(ShapeRenderer sr, Shard shard, float time) {
         // world→screen
@@ -1552,7 +1629,7 @@ public class PlatformScene implements Screen, Telegraph {
         float mouseX = Gdx.input.getX();
         float mouseY = Gdx.graphics.getHeight() - Gdx.input.getY();
 
-        batch.drawText(dreamShardCountText, 11, height - 50);
+        batch.drawText(dreamShardCountText, 11, 50);
 
         float units = TiledMapInfo.PIXELS_PER_WORLD_METER;
         Vector3 playerWorldPos = new Vector3(avatar.getObstacle().getX() * units,
@@ -1622,10 +1699,10 @@ public class PlatformScene implements Screen, Telegraph {
             TextureRegion meterFrame = fearMeterSprite.getKeyFrame(frameIndex);
 
             // where to draw
-            float meterX = 40;
-            float meterY = 20;
-            float meterWidth  = 5* meterFrame.getRegionWidth() / units;
-            float meterHeight = 5*meterFrame.getRegionHeight() / units;
+            float meterX = 0;
+            float meterY = height - 7*meterFrame.getRegionHeight() / units;
+            float meterWidth  = 7* meterFrame.getRegionWidth() / units;
+            float meterHeight = 7*meterFrame.getRegionHeight() / units;
 
             // Draw it
             batch.draw(
@@ -1788,6 +1865,24 @@ public class PlatformScene implements Screen, Telegraph {
 
         camera.position.x = MathUtils.clamp(camera.position.x, minX-200, maxX+200);
         camera.position.y = MathUtils.clamp(camera.position.y, minY-100, maxY-50);
+    }
+
+    public void spawnShardAtLocation(Vector2 world, Shard s) {
+        JsonValue goal = constants.get("goal");
+        Shard newShard = new Shard(
+            TiledMapInfo.PIXELS_PER_WORLD_METER,
+            goal,
+            world.x, world.y,
+            s.id
+        );
+
+        // set up the sprite
+        newShard.setTexture(directory.getEntry("shared-goal", Texture.class));
+        newShard.getObstacle().setName("goal_" + newShard.id);
+        addSprite(newShard);
+        newShard.setFilter();
+        // record it in your internal lists
+        shardPos.add(newShard.id, new Vector2(world.x, world.y));
     }
 
     //telegraph

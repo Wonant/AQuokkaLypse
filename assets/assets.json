@@ -76,13 +76,15 @@
         "player-walk" : "platform/walk.png",
         "player-idle" : "platform/idle.png",
         "player-jump" : "platform/jump.png",
+        "maintenance-sprite-sheet" : "platform/tall sprite sheet.png",
+        "maintenance-walk" : "platform/maintenance_walk.png",
+        "maintenance-turn" : "platform/maintenance_turn.png",
         "player-stair" : "platform/stair.png",
         "player-sprite-sheet" : "platform/dreamwalker.png",
         "absorb-animation" : "platform/absorb.png",
         "fear-meter-sprite-sheet" : "platform/healthbar_spritesheet.png",
         "visibility-indicator" : "platform/v1.png",
         "teleport-teleport" : "platform/teleport_sheet.png",
-
         "background-proto" : "platform/dreamBackground.png",
         "background-technical" : "shared/backgroundTemple.png",
         "curiosity-critter-active": "shared/CuriosityCritterActive.png",
@@ -208,6 +210,6 @@
         }
     },
     "samples": {
-        "theme": "music/theme2.ogg"
+        "theme": "music/theme.ogg"
   }
 }

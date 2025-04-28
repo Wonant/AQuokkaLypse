@@ -26,6 +26,7 @@ public class Enemy extends ObstacleSprite {
 
     private boolean awareOfPlayer;
     protected boolean wasAware;
+    protected boolean isFollowing;
     private boolean stunned;
     private boolean seesWall;
     protected Body headBody;
@@ -99,7 +100,6 @@ public class Enemy extends ObstacleSprite {
     }
 
     public boolean isDreamShardNear() {
-        System.out.println("Checking for nearby shards to enemy " + this);
         for (int i = 0; i < scene.getTotalShards(); i++) {
             if (getObstacle().getPosition().dst(scene.getShardPos(i)) < shardAwareness) {
                 shardTarget = scene.getShardPos(i);

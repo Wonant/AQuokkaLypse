@@ -36,7 +36,7 @@ public class DreamDweller extends Enemy {
     private int jumpCooldown;
     private boolean isJumping;
     private int shootCooldown;
-    private int shootLimit = 40;
+    private int shootLimit = 80;
     private boolean isGrounded;
     private boolean isShooting;
 
@@ -400,18 +400,21 @@ public class DreamDweller extends Enemy {
 
     @Override
     public void update(float dt) {
+        Player player = scene.getAvatar();
         lookForPlayer();
-        if (isJumping()) {
-            jumpCooldown = jumpLimit;
-        } else {
-            jumpCooldown = Math.max(0, jumpCooldown - 1);
-        }
         if (isAwareOfPlayer()) {
-            updateFollowSensor(scene.getAvatar());
+            updateFollowSensor(player);
             susCountdown = susCooldown;
-        }
-        else{
+
+            if (hasLineOfSight(player) && !scene.isFailure()) {
+                setShooting(true);
+            } else {
+                setShooting(false);
+            }
+
+        } else {
             susCountdown--;
+            setShooting(false);
         }
         if (isShooting()) {
             shootCooldown = shootLimit;
@@ -621,8 +624,24 @@ public class DreamDweller extends Enemy {
     public Body getHeadBody() {
         return headBody;
     }
-}
 
+    private boolean hasLineOfSight(Player player) {
+        Vector2 from = this.getObstacle().getPosition().cpy();
+        Vector2 to = player.getObstacle().getPosition().cpy();
+
+        final boolean[] hit = {false};
+
+        scene.world.rayCast((fixture, point, normal, fraction) -> {
+            if (fixture.getBody() == this.getObstacle().getBody()) return -1;
+            if (fixture.isSensor() || fixture.getBody() == player.getObstacle().getBody()) return -1;
+
+            hit[0] = true;
+            return 0;
+        }, from, to);
+
+        return !hit[0];
+    }
+}
 
 
 
