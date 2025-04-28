@@ -18,7 +18,8 @@ public class Spear extends ObstacleSprite {
     private float maxAge = 5f; // 存活5秒
     private boolean dead = false;
     private float direction; // -1 for left, 1 for right
-    private float speed = 22.5f; // 飞行速度
+    private float speed = 22.5f;
+
 
     public Spear(float units, JsonValue settings, Vector2 pos, Vector2 velocity) {
         timeAlive = 0f;
@@ -86,7 +87,6 @@ public class Spear extends ObstacleSprite {
     public boolean isDead() {
         return dead;
     }
-
 }
 
 

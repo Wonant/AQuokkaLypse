@@ -215,6 +215,11 @@ public class PlatformScene implements Screen, Telegraph {
     private ShapeRenderer vortexRenderer;
     private float     vortexTimer        = 0f;
 
+    private Array<Spear> pendingSpears = new Array<>();
+    private float spearTimer = 0f;
+    private int spearIndex = 0;
+    private static final float SPEAR_FIRE_INTERVAL = 0.1f;
+
     /** if stun mode is on, which changes player m1 to an attack rather than a teleport */
     private boolean stunModeOn;
 
@@ -999,23 +1004,25 @@ public class PlatformScene implements Screen, Telegraph {
                 Texture texture = directory.getEntry("platform-spear", Texture.class);
                 Texture textureflip = directory.getEntry("platform-spear-right", Texture.class);
 
-                float direction = (playerPos.x < position.x) ? -1f : 1f; // 左边朝左，右边朝右
+                float direction = (playerPos.x < position.x) ? -1f : 1f;
 
-                // 手动直接指定角度（单位: 度）
                 float[] angleOffsets = new float[] { -20f, -7f, 7f, 20f };
-                float[] yOffsets = new float[] { -0.6f, -0.2f, 0.2f, 0.6f }; // 出生高度手动指定
+                float[] yOffsets = new float[] { -0.6f, -0.2f, 0.2f, 0.6f };
+
+                pendingSpears.clear();
+                spearTimer = 0f;
+                spearIndex = 0;
 
                 for (int i = 0; i < angleOffsets.length; i++) {
                     Vector2 spawnPos = new Vector2(position.x, position.y + yOffsets[i]);
 
-                    // 基础朝向：右是0°，左是180°
                     float baseAngleDeg = (direction > 0) ? 0f : 180f;
-                    float angleDeg = baseAngleDeg + angleOffsets[i]; // 直接用手动角度
-                    float angleRad = (float)Math.toRadians(angleDeg);
+                    float angleDeg = baseAngleDeg + angleOffsets[i];
+                    float angleRad = (float) Math.toRadians(angleDeg);
 
                     Vector2 velocity = new Vector2(
-                        speed * (float)Math.cos(angleRad),
-                        speed * (float)Math.sin(angleRad)
+                        speed * (float) Math.cos(angleRad),
+                        speed * (float) Math.sin(angleRad)
                     );
 
                     Spear spear = new Spear(units, spearjv, spawnPos, velocity);
@@ -1026,9 +1033,18 @@ public class PlatformScene implements Screen, Telegraph {
                         spear.setTexture(textureflip);
                     }
 
-                    spears.add(spear);
-                    addQueuedObject(spear);
+                    pendingSpears.add(spear);
                 }
+            }
+        }
+        if (pendingSpears.size > 0 && spearIndex < pendingSpears.size) {
+            spearTimer += dt;
+            if (spearTimer >= SPEAR_FIRE_INTERVAL) {
+                Spear spear = pendingSpears.get(pendingSpears.size - 1 - spearIndex);
+                spears.add(spear);
+                addQueuedObject(spear);
+                spearIndex++;
+                spearTimer = 0f;
             }
         }
 
