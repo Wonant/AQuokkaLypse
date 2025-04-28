@@ -15,13 +15,14 @@ public class Spear extends ObstacleSprite {
 
     private boolean filterActivated;
     private float timeAlive;
-    private float maxAge = 5;
+    private float maxAge = 5f; // 存活5秒
     private boolean dead = false;
     private float direction; // -1 for left, 1 for right
+    private float speed = 22.5f; // 飞行速度
 
-    public Spear(float units, JsonValue settings, Vector2 pos, float direction) {
-        timeAlive = 0;
-        this.direction = direction;
+    public Spear(float units, JsonValue settings, Vector2 pos, Vector2 velocity) {
+        timeAlive = 0f;
+        this.direction = velocity.x >= 0 ? 1 : -1;
 
         float width = 1.0f;
         float height = 0.2f;
@@ -38,12 +39,11 @@ public class Spear extends ObstacleSprite {
         obstacle.setName("spear");
         obstacle.setFixedRotation(true);
 
-        float speed = 22.5f;
-        obstacle.setVX(speed * direction);
-        obstacle.setVY(0);
+        // 设置给定的速度（注意：不是默认22.5f * direction了）
+        obstacle.setVX(velocity.x);
+        obstacle.setVY(velocity.y);
 
         mesh.set(-halfW*32, -halfH*28, 2 * halfW*16, 2 * halfH*16);
-
     }
 
     public void update(float dt) {
@@ -57,6 +57,11 @@ public class Spear extends ObstacleSprite {
         }
         else if (obstacle.getBody() != null) {
             setFilter();
+        }
+        Vector2 vel = new Vector2(obstacle.getVX(), obstacle.getVY());
+        if (vel.len2() > 0.01f) {
+            float angle = (vel.angleDeg() + 180f) % 360f; // 取得当前速度向量的角度
+            obstacle.setAngle((float)Math.toRadians(angle));
         }
     }
 
@@ -81,5 +86,11 @@ public class Spear extends ObstacleSprite {
     public boolean isDead() {
         return dead;
     }
+
 }
+
+
+
+
+
 

@@ -56,6 +56,9 @@ import edu.cornell.gdiac.audio.SoundEffect;
 import edu.cornell.gdiac.audio.SoundEffectManager;
 
 import com.badlogic.gdx.graphics.g2d.TextureRegion;
+import com.badlogic.gdx.utils.Timer;
+import java.util.ArrayList;
+import java.util.List;
 
 /**
  * The game scene for the platformer game.
@@ -968,13 +971,13 @@ public class PlatformScene implements Screen, Telegraph {
         dispatcher.update();
         InputController input = InputController.getInstance();
 
-        for (Enemy e: enemies){
-            if (e instanceof MindMaintenance && ((MindMaintenance) e).isShooting()){
+        for (Enemy e: enemies) {
+            if (e instanceof MindMaintenance && ((MindMaintenance) e).isShooting()) {
                 ((MindMaintenance) e).resetShootCooldown();
                 units = TiledMapInfo.PIXELS_PER_WORLD_METER;
                 Vector2 position = e.getObstacle().getPosition();
                 float direction = 1;
-                if (avatar.getObstacle().getPosition().x < position.x){
+                if (avatar.getObstacle().getPosition().x < position.x) {
                     direction = -1;
                 }
                 JsonValue bulletjv = constants.get("bullet");
@@ -986,26 +989,46 @@ public class PlatformScene implements Screen, Telegraph {
                 shieldWalls.add(wall);
                 wall.setTexture(texture);
                 addQueuedObject(wall);
-            }
-            else  if (e instanceof DreamDweller && ((DreamDweller) e).isShooting()){
-
+            } else if (e instanceof DreamDweller && ((DreamDweller) e).isShooting()) {
                 units = TiledMapInfo.PIXELS_PER_WORLD_METER;
                 Vector2 position = e.getObstacle().getPosition();
-                float direction = 1;
-                if (avatar.getObstacle().getPosition().x < position.x){
-                    direction = -1;
-                }
+                Vector2 playerPos = avatar.getObstacle().getPosition();
+
+                float speed = 22.5f;
                 JsonValue spearjv = constants.get("spear");
                 Texture texture = directory.getEntry("platform-spear", Texture.class);
                 Texture textureflip = directory.getEntry("platform-spear-right", Texture.class);
-                Spear spear = new Spear(units, spearjv, position, direction);
-                spears.add(spear);
-                if(direction < 0) {
-                    spear.setTexture(texture);
-                } else if (direction > 0) {
-                    spear.setTexture(textureflip);
+
+                float direction = (playerPos.x < position.x) ? -1f : 1f; // 左边朝左，右边朝右
+
+                // 手动直接指定角度（单位: 度）
+                float[] angleOffsets = new float[] { -20f, -7f, 7f, 20f };
+                float[] yOffsets = new float[] { -0.6f, -0.2f, 0.2f, 0.6f }; // 出生高度手动指定
+
+                for (int i = 0; i < angleOffsets.length; i++) {
+                    Vector2 spawnPos = new Vector2(position.x, position.y + yOffsets[i]);
+
+                    // 基础朝向：右是0°，左是180°
+                    float baseAngleDeg = (direction > 0) ? 0f : 180f;
+                    float angleDeg = baseAngleDeg + angleOffsets[i]; // 直接用手动角度
+                    float angleRad = (float)Math.toRadians(angleDeg);
+
+                    Vector2 velocity = new Vector2(
+                        speed * (float)Math.cos(angleRad),
+                        speed * (float)Math.sin(angleRad)
+                    );
+
+                    Spear spear = new Spear(units, spearjv, spawnPos, velocity);
+
+                    if (velocity.x < 0) {
+                        spear.setTexture(texture);
+                    } else {
+                        spear.setTexture(textureflip);
+                    }
+
+                    spears.add(spear);
+                    addQueuedObject(spear);
                 }
-                addQueuedObject(spear);
             }
         }
 
