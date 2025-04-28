@@ -824,7 +824,7 @@ public class PlatformScene implements Screen, Telegraph {
         for (int i = 0; i < maintenancePos.size; i++) {
             texture = directory.getEntry("mind-maintenance-active", Texture.class);
 
-            maintenance = new MindMaintenance(units, constants.get("mind-maintenance"), maintenancePos.get(i).asFloatArray(), this);
+            maintenance = new MindMaintenance(units, constants.get("mind-maintenance"), maintenancePos.get(i).asFloatArray(), this, dispatcher);
             maintenance.setTexture(texture);
             addSprite(maintenance);
             // Have to do after body is created

@@ -1,5 +1,6 @@
 package edu.cornell.cis3152.physics.platform;
 
+import com.badlogic.gdx.ai.msg.MessageDispatcher;
 import com.badlogic.gdx.math.*;
 import com.badlogic.gdx.graphics.*;
 import com.badlogic.gdx.physics.box2d.*;
@@ -49,6 +50,11 @@ public class MindMaintenance extends Enemy {
     // Caches for force calculation and affine transform for sprite flipping
     private final Vector2 forceCache = new Vector2();
     private final Affine2 flipCache = new Affine2();
+
+    private Vector2 debugFollowStart;
+    private Vector2 debugFollowEnd;
+    private Vector2 debugGroundStart;
+    private Vector2 debugGroundEnd;
 
     private Fixture visionSensor;
     private float followAngle;
@@ -149,8 +155,8 @@ public class MindMaintenance extends Enemy {
     }
 
 
-    public MindMaintenance(float units, JsonValue data, float[] points, PlatformScene scene) {
-        super(null);
+    public MindMaintenance(float units, JsonValue data, float[] points, PlatformScene scene, MessageDispatcher dispatcher) {
+        super(dispatcher);
         this.data = data;
         this.scene = scene;
 
@@ -204,6 +210,7 @@ public class MindMaintenance extends Enemy {
 
         mesh.set(-drawWidth/1.5f, -drawHeight/1.6f, drawWidth*1.5f, drawHeight*1.5f);
     }
+
     public void setActiveTexture(AssetDirectory directory){
         Texture texture = directory.getEntry( "mind-maintenance-active", Texture.class );
         this.setTexture(texture);
@@ -307,76 +314,6 @@ public class MindMaintenance extends Enemy {
     public void createVisionSensor() {
         createHeadBody();
         attachHead();
-        float coneWidth = 5.0f;
-        float coneLength = 7.0f;
-        Vector2[] vertices = new Vector2[3];
-        vertices[0] = new Vector2(-coneWidth/2, coneLength);
-        vertices[1] = new Vector2(coneWidth/2, coneLength);
-        vertices[2] = new Vector2(0, 0);
-        PolygonShape visionShape = new PolygonShape();
-        visionShape.set(vertices);
-
-        FixtureDef visionDef = new FixtureDef();
-        visionDef.shape = visionShape;
-        visionDef.isSensor = true;
-
-        visionSensor = headBody.createFixture(visionDef);
-        visionSensor.setUserData("vision_sensor");
-
-
-        PathFactory factory = new PathFactory();
-        visionSensorOutline = new Path2();
-        float u = obstacle.getPhysicsUnits();
-        visionSensorOutline = factory.makeTriangle(
-            -coneWidth/2 * u, coneLength * u,
-            coneWidth/2 * u, coneLength * u,
-            0, 0);
-
-        // follow sensor
-        coneWidth *= 1.8f;
-
-
-        //okay idk why this works but it works for having the vision cone follow the player once aggro'd
-        vertices[0] = new Vector2((-coneWidth)/2, coneLength);
-        vertices[1] = new Vector2((coneWidth)/2, coneLength);
-        vertices[2] = new Vector2(0, -3f);
-
-        visionShape.set(vertices);
-        visionDef = new FixtureDef();
-        visionDef.shape = visionShape;
-        visionDef.isSensor = true;
-
-        followSensor = headBody.createFixture(visionDef);
-        followSensor.setUserData("follow_sensor");
-        visionFollowOutline = new Path2();
-        visionFollowOutline = factory.makeTriangle(
-            -coneWidth/2 * u, coneLength * u,
-            coneWidth/2 * u, coneLength * u,
-            0, -3f);
-
-        //walk sensor
-        coneWidth = 0.4f;
-        coneLength = 2.5f;
-        vertices[0] = new Vector2(-coneWidth/2, coneLength);
-        vertices[1] = new Vector2(coneWidth/2, coneLength);
-        vertices[2] = new Vector2(0, 0);
-
-        visionShape.set(vertices);
-
-        FixtureDef walkDef = new FixtureDef();
-        walkDef.shape = visionShape;
-        walkDef.isSensor = true;
-
-        walkSensor = headBody.createFixture(walkDef);
-        walkSensor.setUserData("walk_sensor");
-
-        walkSensorOutline = new Path2();
-        walkSensorOutline = factory.makeTriangle(
-            -coneWidth/2 * u, coneLength * u,
-            coneWidth/2 * u, coneLength * u,
-            0, 0);
-
-        visionShape.dispose();
     }
 
     public void updateFollowSensor(Player player) {
@@ -433,18 +370,22 @@ public class MindMaintenance extends Enemy {
         float groundRayLength = stepRayLength * 4.5f;
         float wallRayLength = width * 0.5f;
 
-        Vector2 groundStart = (facingRight) ? new Vector2(pos.x + width, pos.y) :
-            new Vector2(pos.x - width, pos.y);
+        debugGroundStart = (facingRight) ? new Vector2(pos.x + width * 1.5f, pos.y) :
+            new Vector2(pos.x - width * 1.5f, pos.y);
         Vector2 wallStart = (facingRight) ? new Vector2(pos.x + width/2, pos.y) :
             new Vector2(pos.x - width/2, pos.y);
 
-        Vector2 groundEnd = groundStart.cpy().add(0, -groundRayLength);
+        debugGroundEnd = debugGroundStart.cpy().add(0, -groundRayLength);
         EnemyVisionRaycast wallVisionRaycast =
             new EnemyVisionRaycast(EnemyVisionRaycast.VisionMode.WALL_CHECK, stepRayLength);
         EnemyVisionRaycast groundVisionRaycast =
             new EnemyVisionRaycast(EnemyVisionRaycast.VisionMode.FALL_CHECK, stepRayLength);
-        world.rayCast(groundVisionRaycast, groundStart, groundEnd);
+        world.rayCast(groundVisionRaycast, debugGroundStart, debugGroundEnd);
         boolean groundExists = (groundVisionRaycast.getHitFixture() != null);
+        if (!groundExists)
+        {
+            System.out.println("Don't see the GROUND RUN!!");
+        }
         groundVisionRaycast.reset();
 
         Vector2 wallEnd = new Vector2();
@@ -504,25 +445,23 @@ public class MindMaintenance extends Enemy {
         lookForPlayer();
 
         if (isPlatformStep(scene.world, stepRayLength)) {
-            System.out.println("Critter's seen a step");
+            System.out.println("MM's seen a step");
         }
         if (!canContinue()) {
             safeToWalk = false;
-            setMovement(0);
+            setMovement(-getMovement());
             applyForce();
         } else {
             safeToWalk = true;
         }
-        if (!safeToWalk) {
-            setMovement(0);
-        }
+
         if (isJumping()) {
             jumpCooldown = jumpLimit;
         } else {
             jumpCooldown = Math.max(0, jumpCooldown - 1);
         }
         if (isAwareOfPlayer()) {
-            updateFollowSensor(scene.getAvatar());
+            //updateFollowSensor(scene.getAvatar());
             susCountdown = susCooldown;
         }
         else{
@@ -533,6 +472,112 @@ public class MindMaintenance extends Enemy {
         }
         super.update(dt);
     }
+
+
+    public boolean checkFollowRaycast() {
+        World world = obstacle.getBody().getWorld();
+        Player player = scene.getAvatar();
+        Vector2 pos = obstacle.getPosition();
+
+        float rayLength = 7f;
+        float followSensorAngle = MathUtils.atan2(player.getObstacle().getPosition().y - pos.y,
+            player.getObstacle().getPosition().x - pos.x);
+
+        Vector2 start = (facingRight) ? new Vector2(pos.x + width/2, pos.y + height/4) :
+            new Vector2(pos.x - width/2, pos.y + height/4);
+        //Vector2 end = (facingRight) ? new Vector2(pos.x + width + rayLength, pos.y + height/4) :
+        new Vector2(pos.x - width - rayLength, pos.y + height/4);
+        Vector2 end = new Vector2(
+            pos.x + rayLength * MathUtils.cos(followSensorAngle),
+            pos.y + rayLength * MathUtils.sin(followSensorAngle)
+        );
+
+        EnemyVisionRaycast playerFollowRaycast = new EnemyVisionRaycast(EnemyVisionRaycast.VisionMode.PLAYER_CHECK, 4f);
+        world.rayCast(playerFollowRaycast, start, end);
+
+        debugFollowStart.set(start);
+        debugFollowEnd.set(end);
+
+        boolean playerVisible = (playerFollowRaycast.getHitPlayer() != null);
+
+        if (playerVisible)
+        {
+            debugFollowEnd.set(playerFollowRaycast.getHitPoint());
+        }
+        if (playerFollowRaycast.getHitFixture() != null) {
+            debugFollowEnd.set(playerFollowRaycast.getHitPoint());
+        }
+
+        playerFollowRaycast.reset();
+        return playerVisible;
+    }
+
+    public void lookForPlayer() {
+        World world = obstacle.getBody().getWorld();
+        Player player = scene.getAvatar();
+        Vector2 pos = obstacle.getPosition();
+        float rayLength = 5.2f;
+        Vector2 start, end;
+
+        start = (facingRight) ? new Vector2(pos.x + width/2, pos.y + height/4) :
+            new Vector2(pos.x - width/2, pos.y + height/4);
+
+        float angleToPlayer = MathUtils.atan2(
+            player.getObstacle().getPosition().y - pos.y,
+            player.getObstacle().getPosition().x - pos.x
+        );
+
+        float forwardAngle = facingRight ? 0 : MathUtils.PI;
+
+        if (isAwareOfPlayer()) {
+            end = new Vector2(
+                pos.x + rayLength * MathUtils.cos(angleToPlayer),
+                pos.y + rayLength * MathUtils.sin(angleToPlayer)
+            );
+        } else {
+            float maxAngleOffset = 30 * MathUtils.degreesToRadians; // 30 degrees in radians
+
+            float angleDiff = angleToPlayer - forwardAngle;
+            if (angleDiff > MathUtils.PI) angleDiff -= MathUtils.PI2;
+            if (angleDiff < -MathUtils.PI) angleDiff += MathUtils.PI2;
+
+            float clampedDiff = MathUtils.clamp(angleDiff, -maxAngleOffset, maxAngleOffset);
+
+            float clampedAngle = forwardAngle + clampedDiff;
+
+            end = new Vector2(
+                pos.x + rayLength * MathUtils.cos(clampedAngle),
+                pos.y + rayLength * MathUtils.sin(clampedAngle)
+            );
+        }
+
+        EnemyVisionRaycast playerRaycast = new EnemyVisionRaycast(EnemyVisionRaycast.VisionMode.PLAYER_CHECK, 4f);
+        world.rayCast(playerRaycast, start, end);
+
+        debugLookStart.set(start);
+        debugLookEnd.set(end);
+
+        boolean isAware = (playerRaycast.getHitPlayer() != null);
+        if (isAware) {
+            setAwareOfPlayer(true);
+            debugLookEnd.set(playerRaycast.getHitPoint());
+
+        } else if (playerRaycast.getHitFixture() != null) {
+            debugLookEnd.set(playerRaycast.getHitPoint());
+        }
+
+        // message dispatch
+        if (isAware && !wasAware) {
+            dispatcher.dispatchMessage(null, scene, MessageType.ENEMY_SEES_PLAYER);
+        } else if (!isAware && wasAware) {
+            dispatcher.dispatchMessage(null, scene, MessageType.ENEMY_LOST_PLAYER);
+        }
+
+        wasAware = isAware;
+
+        playerRaycast.reset();
+    }
+
 
     /**
      * Draws the player sprite.
@@ -565,45 +610,6 @@ public class MindMaintenance extends Enemy {
         }
     }
 
-    public void lookForPlayer() {
-        World world = obstacle.getBody().getWorld();
-        Player player = scene.getAvatar();
-
-
-        Vector2 pos = obstacle.getPosition();
-        float rayLength = 5f;
-        float followSensorAngle = MathUtils.atan2(player.getObstacle().getPosition().y - pos.y,
-            player.getObstacle().getPosition().x - pos.x);
-
-        Vector2 start = (facingRight) ? new Vector2(pos.x + width/2, pos.y + height/4) :
-            new Vector2(pos.x - width/2, pos.y + height/4);
-        //Vector2 end = (facingRight) ? new Vector2(pos.x + width + rayLength, pos.y + height/4) :
-        new Vector2(pos.x - width - rayLength, pos.y + height/4);
-        Vector2 end = new Vector2(
-            pos.x + rayLength * MathUtils.cos(followSensorAngle),
-            pos.y + rayLength * MathUtils.sin(followSensorAngle)
-        );
-
-        EnemyVisionRaycast playerRaycast = new EnemyVisionRaycast(EnemyVisionRaycast.VisionMode.PLAYER_CHECK, 4f);
-        world.rayCast(playerRaycast, start, end);
-
-        debugLookStart.set(start);
-        debugLookEnd.set(end);
-
-        if (playerRaycast.getHitPlayer() != null) {
-            setAwareOfPlayer(true);
-            debugLookEnd.set(playerRaycast.getHitPoint());
-            System.out.println("Seen the player");
-
-        } else if (playerRaycast.getHitFixture() != null) {
-            debugLookEnd.set(playerRaycast.getHitPoint());
-        }
-        else{
-            setAwareOfPlayer(false);
-        }
-
-        playerRaycast.reset();
-    }
 
     /**
      * Draws the debug outlines for the physics body and sensor.
@@ -627,34 +633,6 @@ public class MindMaintenance extends Enemy {
             transform.preTranslate(p.x * u, p.y * u);
 
             batch.outline(sensorOutline, transform);
-        }
-        if (visionSensorOutline != null) {
-            batch.setTexture(Texture2D.getBlank());
-            batch.setColor(Color.GREEN);
-
-            Vector2 headPos = headBody.getPosition();
-            float headAngleDeg = headBody.getAngle() * MathUtils.radiansToDegrees;
-            float u = obstacle.getPhysicsUnits();
-
-            transform.idt();
-            transform.preRotate(headAngleDeg);
-            transform.preTranslate(headPos.x * u, headPos.y * u);
-
-            batch.outline(visionSensorOutline, transform);
-        }
-        if (visionFollowOutline != null) {
-            batch.setTexture(Texture2D.getBlank());
-            batch.setColor(Color.LIME);
-
-            Vector2 headPos = headBody.getPosition();
-            float headAngleDeg = headBody.getAngle() * MathUtils.radiansToDegrees;
-            float u = obstacle.getPhysicsUnits();
-
-            transform.idt();
-            transform.preRotate(headAngleDeg);
-            transform.preTranslate(headPos.x * u, headPos.y * u);
-
-            batch.outline(visionFollowOutline, transform);
         }
         if (walkSensorOutline != null) {
             batch.setTexture(Texture2D.getBlank());
@@ -687,14 +665,23 @@ public class MindMaintenance extends Enemy {
 
             batch.setColor(Color.WHITE);
         }
-        drawRayDebug(batch);
+        batch.setColor(Color.PURPLE);
+        drawRayDebug(batch, debugRayStart, debugRayEnd);
+        if (isAwareOfPlayer()) {
+            batch.setColor(Color.GREEN);
+            drawRayDebug(batch, debugFollowStart, debugFollowEnd);
+        }
+        batch.setColor(Color.PURPLE);
+        drawRayDebug(batch, debugLookStart, debugLookEnd);
+        batch.setColor(Color.WHITE);
+        drawFallCheckDebug(batch);
     }
 
-    public void drawRayDebug(SpriteBatch batch) {
-        if (debugRayStart != null && debugRayEnd != null) {
+    public void drawRayDebug(SpriteBatch batch, Vector2 debugStart, Vector2 debugEnd) {
+        if (debugStart != null && debugEnd != null) {
             float u = obstacle.getPhysicsUnits();
-            Vector2 localStart = new Vector2(debugRayStart).sub(obstacle.getPosition());
-            Vector2 localEnd = new Vector2(debugRayEnd).sub(obstacle.getPosition());
+            Vector2 localStart = new Vector2(debugStart).sub(obstacle.getPosition());
+            Vector2 localEnd = new Vector2(debugEnd).sub(obstacle.getPosition());
 
             PathFactory factory = new PathFactory();
             Path2 rayOutline = new Path2();
@@ -702,7 +689,6 @@ public class MindMaintenance extends Enemy {
                 localEnd.x * u, localEnd.y * u, rayOutline);
 
             batch.setTexture(Texture2D.getBlank());
-            batch.setColor(Color.PURPLE);
             transform.idt();
             float a = obstacle.getAngle();
             Vector2 p = obstacle.getPosition();
@@ -710,25 +696,29 @@ public class MindMaintenance extends Enemy {
             transform.preTranslate(p.x * u, p.y * u);
             batch.outline(rayOutline, transform);
         }
-        if (debugLookEnd != null && debugLookStart != null) {
-            float u = obstacle.getPhysicsUnits();
-            Vector2 localStart = new Vector2(debugLookStart).sub(obstacle.getPosition());
-            Vector2 localEnd = new Vector2(debugLookEnd).sub(obstacle.getPosition());
+    }
 
-            PathFactory factory = new PathFactory();
-            Path2 rayOutline = new Path2();
-            factory.makeLine(localStart.x * u, localStart.y * u,
-                localEnd.x * u, localEnd.y * u, rayOutline);
+    public void drawFallCheckDebug(SpriteBatch batch) {
+        // Get the world and critter position.
+        World world = obstacle.getBody().getWorld();
+        Vector2 pos = obstacle.getBody().getPosition();
 
-            batch.setTexture(Texture2D.getBlank());
-            batch.setColor(Color.PURPLE);
-            transform.idt();
-            float a = obstacle.getAngle();
-            Vector2 p = obstacle.getPosition();
-            transform.preRotate((float)(a * 180.0f / Math.PI));
-            transform.preTranslate(p.x * u, p.y * u);
-            batch.outline(rayOutline, transform);
-        }
+
+
+        // Convert world coordinates to screen units using your physics unit conversion.
+        float u = obstacle.getPhysicsUnits();
+        Path2 fallRayPath = new Path2();
+        PathFactory factory = new PathFactory();
+        factory.makeLine(debugGroundStart.x * u, debugGroundStart.y * u,
+            debugGroundEnd.x * u, debugGroundEnd.y * u, fallRayPath);
+
+        // Draw the fall check ray in a distinct color (yellow in this example)
+        batch.setTexture(Texture2D.getBlank());
+        batch.setColor(Color.PURPLE);
+        // For simplicity, we use an identity transform here.
+        Affine2 transform = new Affine2();
+        transform.idt();
+        batch.outline(fallRayPath, transform);
     }
 
     public Body getHeadBody() {

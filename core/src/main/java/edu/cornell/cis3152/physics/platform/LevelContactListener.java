@@ -95,7 +95,7 @@ public class LevelContactListener implements ContactListener {
         //Object bodyDataB = fix2.getBody().getUserData();
 
         handleWalkSensorEndContact(bd1, bd2, fd1, fd2);
-        handleFollowSensorEndContact(fix1, fix2, fd1, fd2);
+        //handleFollowSensorEndContact(fix1, fix2, fd1, fd2);
         handleHarvestingEndContact(bd1, bd2, fd1, fd2);
         handleTeleporterEndContact(bd1, bd2);
         handleVisionSensorEndContact(fd1, fd2, fix1, fix2);
