@@ -96,7 +96,7 @@ public class LevelContactListener implements ContactListener {
         //System.out.println(fd1 + " " + fd2 + " " + bd1 + " " + bd2);
 
         handleWalkSensorEndContact(bd1, bd2, fd1, fd2);
-        handleFollowSensorEndContact(fix1, fix2, fd1, fd2);
+        //handleFollowSensorEndContact(fix1, fix2, fd1, fd2);
         handleHarvestingEndContact(bd1, bd2, fd1, fd2);
         handleVisionSensorEndContact(fd1, fd2, fix1, fix2);
         handleGroundEndContact(bd1, bd2, fd1, fd2, fix1, fix2);
