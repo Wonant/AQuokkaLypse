@@ -724,7 +724,7 @@ public class PlatformScene implements Screen, Telegraph {
                 if (o.getName().startsWith("mind maintenance")) {
                     Texture texture = directory.getEntry("mind-maintenance-active", Texture.class);
 
-                    maintenance = new MindMaintenance(units, constants.get("mind-maintenance"), new float[]{worldX, worldY}, this);
+                    maintenance = new MindMaintenance(units, constants.get("mind-maintenance"), new float[]{worldX, worldY}, this, dispatcher);
                     maintenance.setTexture(texture);
                     addSprite(maintenance);
 

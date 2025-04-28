@@ -545,6 +545,7 @@ public class MindMaintenance extends Enemy {
         super.update(dt);
     }
 
+
     /**
      * Draws the player sprite.
      * The sprite is flipped horizontally if the player is facing left.
@@ -725,12 +726,14 @@ public class MindMaintenance extends Enemy {
     }
 
 
+
     /**
      * Draws the player sprite.
      * The sprite is flipped horizontally if the player is facing left.
      *
      * @param batch  The sprite batch used for drawing.
      */
+    /*
     @Override
     public void draw(SpriteBatch batch) {
         if (facingRight) {
@@ -755,7 +758,7 @@ public class MindMaintenance extends Enemy {
             batch.setTexture((Texture) null);
         }
     }
-
+     */
 
     /**
      * Draws the debug outlines for the physics body and sensor.
