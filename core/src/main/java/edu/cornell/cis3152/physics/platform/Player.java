@@ -271,10 +271,10 @@
                 movement = 0;
                 return;
             }
-            if (isLanding) {
-                movement = value * 0.1f;
-                return;
-            }
+//            if (isLanding) {
+//                movement = value;
+//                return;
+//            }
 
             movement = value;
             // Change facing if appropriate
@@ -829,9 +829,6 @@
         public void applyForce(World world) {
             // ANY animation lock we don't handle movement(maybe messes stuff up so disable input instead?)
 
-
-
-
             if (!obstacle.isActive()) {
                 return;
             }
@@ -851,10 +848,7 @@
 
 
             // Don't want to be moving. Damp out player motion
-            if (getMovement() == 0f) {
-                forceCache.set(-getDamping()*vx,0);
-                body.applyForce(forceCache,pos,true);
-            }
+
 
             // Velocity too high, clamp it
             if (Math.abs(vx) >= getMaxSpeed()) {
@@ -862,6 +856,10 @@
             } else {
                 forceCache.set(getMovement(),0);
                 body.applyForce(forceCache,pos,true);
+            }
+
+            if (getMovement() == 0f) {
+                body.setLinearVelocity(0, obstacle.getVY());
             }
 
             if (startedHarvest){

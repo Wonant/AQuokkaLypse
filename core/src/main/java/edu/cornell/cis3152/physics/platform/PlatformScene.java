@@ -224,6 +224,9 @@ public class PlatformScene implements Screen, Telegraph {
     /** How many enemies are aware of player in level (akin to GTA star system) */
     private int enemiesAlerted;
 
+    /** How many critters are aware of the player (to manage slow factor) */
+    private int crittersAlerted;
+
     /** tiled map + map info */
     private TiledMapInfo tiledMap;
     private String tiledLevelName;
@@ -658,6 +661,7 @@ public class PlatformScene implements Screen, Telegraph {
         shardPos = new ArrayList<>();
         possibleShardPos = new HashMap<>();
         enemiesAlerted = 0;
+        crittersAlerted = 0;
 
         float units = TiledMapInfo.PIXELS_PER_WORLD_METER;
         int level = 0;
@@ -1699,9 +1703,9 @@ public class PlatformScene implements Screen, Telegraph {
 
             // where to draw
             float meterX = 40;
-            float meterY = height - 20;
-            float meterWidth  = 5* meterFrame.getRegionWidth() / units;
-            float meterHeight = 5*meterFrame.getRegionHeight() / units;
+            float meterY = 600;
+            float meterWidth  = 7* meterFrame.getRegionWidth() / units;
+            float meterHeight = 7*meterFrame.getRegionHeight() / units;
 
             // Draw it
             batch.draw(
@@ -1903,21 +1907,30 @@ public class PlatformScene implements Screen, Telegraph {
     public void onPlayerSpotted(Enemy enemy) {
         System.out.println("Message Dispatcher received - enemy raycast sees player");
         enemiesAlerted++;
-        lastCritterSawTime = timeSinceStart;
-        // reset any previous slow (so repeated sees restart the 1s timer)
-        if (playerSlowed) {
-            avatar.resetMaxSpeed();
-            playerSlowed = false;
+        if (enemy instanceof CuriosityCritter) {
+            crittersAlerted++;
+            lastCritterSawTime = timeSinceStart;
+            // reset any previous slow (so repeated sees restart the 1s timer)
+            if (playerSlowed) {
+                avatar.resetMaxSpeed();
+                playerSlowed = false;
+            }
         }
     }
 
     public void onPlayerLost(Enemy enemy) {
         System.out.println("Message Dispatcher received - enemy raycast lost player");
         enemiesAlerted--;
-        lastCritterSawTime = -1f;
-        if (playerSlowed) {
-            avatar.resetMaxSpeed();
-            playerSlowed = false;
+        if (enemy instanceof CuriosityCritter) {
+            crittersAlerted--;
+            //last critter lost player
+            if (crittersAlerted == 0) {
+                lastCritterSawTime = -1f;
+                if (playerSlowed) {
+                    avatar.resetMaxSpeed();
+                    playerSlowed = false;
+                }
+            }
         }
     }
 
