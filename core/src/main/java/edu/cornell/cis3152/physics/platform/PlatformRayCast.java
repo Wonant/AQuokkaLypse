@@ -14,7 +14,6 @@ public class PlatformRayCast implements RayCastCallback {
     @Override
     public float reportRayFixture(Fixture fixture, Vector2 point, Vector2 normal, float fraction) {
         Object userData = fixture.getBody().getUserData();
-        System.out.println(fixture.getBody().getUserData());
         if (userData instanceof Surface) {
             Surface surface = (Surface)userData;
             String obstacleName = surface.getObstacle().getName();

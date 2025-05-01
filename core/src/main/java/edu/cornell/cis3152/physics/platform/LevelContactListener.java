@@ -295,7 +295,6 @@ public class LevelContactListener implements ContactListener {
         } else if (enemy instanceof MindMaintenance) {
             MindMaintenance maintenance = (MindMaintenance) enemy;
             maintenance.setStunned(true);
-            maintenance.setStunTexture(dreamWalkerScene.directory);
             System.out.println("Maintenance is stunned");
         } else if (enemy instanceof DreamDweller) {
             DreamDweller dweller = (DreamDweller) enemy;

@@ -938,9 +938,6 @@
         @Override
         public void update(float dt) {
 
-            System.out.println(animationState);
-
-
             // animation locks
             if (absorbing) {
                 if (isInteracting) {
