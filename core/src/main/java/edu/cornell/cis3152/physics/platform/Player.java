@@ -17,6 +17,7 @@
     package edu.cornell.cis3152.physics.platform;
 
     import com.badlogic.gdx.Gdx;
+    import com.badlogic.gdx.ai.msg.MessageDispatcher;
     import com.badlogic.gdx.graphics.g2d.TextureRegion;
     import com.badlogic.gdx.math.*;
     import com.badlogic.gdx.graphics.*;
@@ -49,6 +50,9 @@
      * simple fixture so that we can attach it to the obstacle WITHOUT using joints.
      */
     public class Player extends ObstacleSprite {
+
+        private PlatformScene scene;
+
         /** The initializing data (to avoid magic numbers) */
         private final JsonValue data;
         /** The width of Player's avatar */
@@ -174,7 +178,7 @@
         private Animator absorbSprite;
         private AnimationState animationState;
 
-        /** animation constants/variables */
+        // animation constants/variables //
         private boolean isClimbing = false;
         private int climbCounter = 0;
         private final int CLIMB_DURATION = 11;
@@ -197,10 +201,13 @@
         private boolean hoverInteract;
         private boolean absorbing;
 
-        /** isblinded */
+        // if i am blinded by dd
         private boolean isBlinded = false;
         private float blindTimer = 0f;
         private static final float MAX_BLIND_TIME = 2.0f;
+
+        // message dispatcher for telegraphing player state to platform scene
+        private final MessageDispatcher dispatcher = new MessageDispatcher();
 
 
         private enum AnimationState {
@@ -401,7 +408,9 @@
          * @return true if CatDemon is actively harvesting.
          */
         public boolean isTeleporting() {
+            dispatcher.dispatchMessage(null, scene, MessageType.ENEMY_LOST_PLAYER);
             return isTeleporting && teleportCooldown <= 0;
+
         }
 
 
@@ -591,7 +600,7 @@
          * @param units     The physics units
          * @param data      The physics constants for Player
          */
-        public Player(float units, JsonValue data, Vector2 spawn) {
+        public Player(float units, JsonValue data, Vector2 spawn, PlatformScene scene) {
             this.data = data;
             JsonValue debugInfo = data.get("debug");
 
@@ -608,12 +617,12 @@
             // "inner" is the fraction of the original size for the capsule
             width = s*data.get("inner").getFloat(0);
             height = s*data.get("inner").getFloat(1);
-            obstacle = new BoxObstacle(x, y, width, height*0.9f);
-            //((CapsuleObstacle)obstacle).setTolerance( debugInfo.getFloat("tolerance", 0.5f) );
+            obstacle = new CapsuleObstacle(x, y, width, height*0.9f);
+            ((CapsuleObstacle)obstacle).setTolerance( debugInfo.getFloat("tolerance", 0.5f) );
 
             obstacle.setDensity( data.getFloat( "density", 0 ) );
             obstacle.setFriction( data.getFloat( "friction", 0 ) );
-            obstacle.setRestitution( data.getFloat( "restitution", 0 ) );
+            obstacle.setRestitution(0f);
             obstacle.setFixedRotation(true);
             obstacle.setPhysicsUnits( units );
             obstacle.setUserData( this );
@@ -667,7 +676,7 @@
 
             playerVisionRaycast = new PlayerVisionRaycast(PlayerVisionRaycast.VisionMode.STAIR_CHECK, stepRayLength * units);
 
-
+            scene = scene;
 
         }
 
@@ -720,7 +729,7 @@
             sensorDef.isSensor = true;
 
             JsonValue sensorjv = data.get("sensor");
-            float w = sensorjv.getFloat("shrink",0)*width;
+            float w = sensorjv.getFloat("shrink",0)*width * 0.2f;
             float h = sensorjv.getFloat("height",0);
             PolygonShape sensorShape = new PolygonShape();
             sensorShape.setAsBox(w, h, sensorCenter, 0.0f);

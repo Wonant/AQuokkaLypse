@@ -40,7 +40,7 @@ import edu.cornell.gdiac.physics2.ObstacleSprite;
  */
 public class Shard extends ObstacleSprite {
     private boolean pickedUp;
-    private int id;
+    public int id;
 
 
     /**
@@ -87,7 +87,7 @@ public class Shard extends ObstacleSprite {
             // Treat this shard as SCENERY for collision category
             filter.categoryBits = CollisionFiltering.CATEGORY_SCENERY;
             // Only collide with the player
-            filter.maskBits = CollisionFiltering.CATEGORY_PLAYER;
+            filter.maskBits = CollisionFiltering.CATEGORY_PLAYER | CollisionFiltering.CATEGORY_ENEMY;
             fixture.setFilterData(filter);
         }
     }

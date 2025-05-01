@@ -35,8 +35,8 @@ public class GDXRoot extends Game implements ScreenListener {
     /** Index of the current Arena */
     private int current;
     /** Array of map keys for each level */
-    private String[] maps = {"platform-constants", "platform-constants1", "platform-constants2"};
-    private String[] tiled = {"maps/tutorial1.tmx", "maps/tutorial2.tmx", "maps/easy_level.tmx"};
+    private String[] maps = {"platform-constants2", "platform-constants", "platform-constants"};
+    private String[] tiled = {"maps/easy_level.tmx", "maps/tutorial_2.tmx", "maps/tutorial1.tmx" };
     /** Current map index for switching levels */
     private int currentMapIndex = 0;
 

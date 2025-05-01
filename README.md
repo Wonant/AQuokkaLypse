@@ -11,9 +11,13 @@ Controls:
 
 W : Jump
 
+S : Take Door (Must be in front of door)
+
 A : Move Left
 
 D : Move Right
+
+Hold E : Pick up Dream Shard
 
 Space Bar : Harvest Dash (used to defeat and drain fear meter from enemies). 0 cost to use. +3 if player successfully harvested an enemy.
 

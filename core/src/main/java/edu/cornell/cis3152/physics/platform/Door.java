@@ -12,6 +12,9 @@ public class Door extends ObstacleSprite {
     /** Whether the player is currently in front of the door */
     private boolean active;
 
+    /** The level the door leads to */
+    private int destination;
+
     /**
      * Creates a door obstacle.
      *
@@ -23,9 +26,11 @@ public class Door extends ObstacleSprite {
      * @param x      The x-coordinate of the door’s center.
      * @param y      The y-coordinate of the door’s center.
      */
-    public Door(float units, float x, float y, float width, float height) {
+    public Door(float units, float x, float y, float width, float height, int destination) {
         super();
         active = false;
+        this.destination = destination;
+
         obstacle = new BoxObstacle(x + width/2, y + height/2, width, height);
         obstacle.setPhysicsUnits(units);
         obstacle.setBodyType(BodyDef.BodyType.StaticBody);
