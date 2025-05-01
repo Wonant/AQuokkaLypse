@@ -127,7 +127,7 @@ public class Enemy extends ObstacleSprite {
 
     public void dispatchHarvest() {
         if (dispatcher != null) {
-            dispatcher.dispatchMessage(null, scene, MessageType.ENEMY_LOST_PLAYER);
+            dispatcher.dispatchMessage(null, scene, MessageType.CRITTER_LOST_PLAYER);
         }
     }
 
