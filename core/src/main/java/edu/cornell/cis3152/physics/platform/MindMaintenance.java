@@ -98,12 +98,15 @@ public class MindMaintenance extends Enemy {
     private Animator stunnedSprite;
     private MindMaintenance.AnimationState animationState;
 
+    private final int TURN_FRAME_DURATION = 24;
     private final int ATTACK_FRAME_DURATION = 29;
     private final int STUN_FRAME_DURATION   = 20;
     private boolean inAttackAnimation = false;
     private int     attackFrameCounter = 0;
     private boolean inStunAnimation   = false;
-    private int     stunFrameCounter  = 0;;
+    private int     stunFrameCounter  = 0;
+    private boolean inTurnAnimation   = false;
+    private int     turnFrameCounter  = 0;
 
 
     private enum AnimationState {
@@ -158,6 +161,11 @@ public class MindMaintenance extends Enemy {
     public void setShooting(boolean value) {
         isShooting = value;
     }
+
+    public void setTurning(boolean value) {
+        inTurnAnimation = value;
+    }
+
 
     public boolean isJumping() {
         return isJumping && isGrounded && jumpCooldown <= 0;
@@ -512,8 +520,14 @@ public class MindMaintenance extends Enemy {
         if (isAwareOfPlayer()) {
             animationState = AnimationState.ALERT;
         }
-        else if (movement == 0) {
+
+        else if (inTurnAnimation){
             animationState = MindMaintenance.AnimationState.TURN;
+            turnFrameCounter++;
+            if (turnFrameCounter >= TURN_FRAME_DURATION) {
+                inTurnAnimation = false;
+                turnFrameCounter = 0;
+            }
         }
         else{
             animationState = MindMaintenance.AnimationState.WALK;
@@ -575,6 +589,7 @@ public class MindMaintenance extends Enemy {
                 frame = alertSprite.getCurrentFrame(Gdx.graphics.getDeltaTime());
                 break;
         }
+
 
         if(facingRight){
             frame.flip(true,false);

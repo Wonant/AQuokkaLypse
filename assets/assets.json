@@ -184,6 +184,7 @@
         }
     },
     "jsons"  : {
+        "level_select_constants": "platform/level_select_constants.json",
         "platform-constants": "platform/constants.json",
         "platform-constants1": "platform/constant1.json",
         "platform-constants2": "platform/constant2.json",

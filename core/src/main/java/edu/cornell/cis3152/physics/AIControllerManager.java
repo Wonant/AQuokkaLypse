@@ -522,6 +522,7 @@ public class AIControllerManager {
             if (data.stateTimer > data.stateDuration) {
                 transitionMaintenanceState(data, MaintenanceFSM.IDLE_LOOK);
             } else if (data.maintenance.isSeesWall() || !data.maintenance.isSafeToWalk()) {
+                data.maintenance.setTurning(true);
                 data.horizontal = -data.horizontal;
                 data.maintenance.setMovement(data.horizontal);
                 data.movingRight = !data.movingRight;
@@ -549,9 +550,10 @@ public class AIControllerManager {
                 break;
 
             case IDLE_WALK:
-                data.stateDuration = 10.0f;
+                data.stateDuration = 12.0f;
                 if (data.maintenance.isSeesWall() || !data.maintenance.isSafeToWalk()) {
                     data.movingRight = !data.movingRight;
+                    data.maintenance.setTurning(true);
                     data.maintenance.setSeesWall(false);
                 }
 

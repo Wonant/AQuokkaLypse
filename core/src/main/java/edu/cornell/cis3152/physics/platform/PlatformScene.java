@@ -130,15 +130,9 @@ public class PlatformScene implements Screen, Telegraph {
     /** Countdown active for winning or losing */
     protected int countdown;
 
+    /** Used to slightly modify the PlatformScene for Level Select usage */
+    private boolean isLevelSelect;
 
-    /** Texture asset for character avatar */
-    private TextureRegion avatarTexture;
-    /** Texture asset for the spinning barrier */
-    private TextureRegion barrierTexture;
-    /** Texture asset for the bullet */
-    private TextureRegion bulletTexture;
-    /** Texture asset for the bridge plank */
-    private TextureRegion bridgeTexture;
 
     /** The jump sound. We only want to play once. */
     private SoundEffect jumpSound;
@@ -155,9 +149,6 @@ public class PlatformScene implements Screen, Telegraph {
     private MindMaintenance maintenance;
     private DreamDweller dreamDweller;
     private TextureRegion visionConeRegion;
-    private Texture vision;
-    private Texture light;
-    private int prev_debug;
     private Sprite visionCone;
 
     /** manages ai control for all entities */
@@ -249,10 +240,9 @@ public class PlatformScene implements Screen, Telegraph {
 
     // global game units
     float units;
-    private String mapkey  = "platform-constants";
+    private String mapkey;
 
     private Animator teleportAnimator;
-    private TextureRegion teleportSpritesheet;
     private boolean isTeleporting = false;
 
     private float teleportAnimationTime = 0f;
@@ -538,7 +528,8 @@ public class PlatformScene implements Screen, Telegraph {
      *
      * The game has default gravity and other settings
      */
-    public PlatformScene(AssetDirectory directory, String mapkey, String tiled) {
+    public PlatformScene(AssetDirectory directory, String mapkey, String tiled, Boolean isLevelSelect) {
+        this.isLevelSelect = isLevelSelect;
         this.directory = directory;
         this.mapkey = mapkey;
         tiledLevelName = tiled;
@@ -686,10 +677,13 @@ public class PlatformScene implements Screen, Telegraph {
                 float worldY = y / units;
                 float worldHeight = height / units;
                 if (o.getName().startsWith("door")) {
-                    Door door = new Door(units, worldX, worldY, worldWidth, worldHeight, level + 1);
-                    doors.add(door);
-                    addSprite(door);
-                    door.setFilter();
+                    if(!isLevelSelect) {
+                        Door door = new Door(units, worldX, worldY, worldWidth, worldHeight,
+                            level + 1);
+                        doors.add(door);
+                        addSprite(door);
+                        door.setFilter();
+                    }
                 }
                 if (o.getName().startsWith("Player")) {
                     playerSpawnPos.set(worldX, worldY);
@@ -746,6 +740,7 @@ public class PlatformScene implements Screen, Telegraph {
         Texture texture = directory.getEntry( "shared-goal", Texture.class );
         MapLayer shardLayer = tiledMap.get().getLayers().get("Shards");
         JsonValue goal = constants.get("goal");
+
         totalShards = shardLayer.getProperties().get("totalShards", Integer.class);
         collectedShards = 0;
 
@@ -840,12 +835,15 @@ public class PlatformScene implements Screen, Telegraph {
 
                 platform.setDebugColor(Color.BLUE);
 
-
+                platform.getObstacle().setName("platform " + id);
+                /*
                 if (o.getProperties().get("isStair", Boolean.class)) {
                     platform.getObstacle().setName("stair " + id);
                 } else {
                     platform.getObstacle().setName("platform " + id);
                 }
+
+                 */
                 addSprite(platform);
                 platform.setFilter();
                 id++;
@@ -1268,17 +1266,13 @@ public class PlatformScene implements Screen, Telegraph {
         Vector2 crosshairScreen = input.getMouse();
 
         // Unproject the crosshair screen position to get world coordinates
-        Vector3 crosshairTemp = new Vector3(
-            crosshairScreen.x,
-            crosshairScreen.y,
-            0
-        );
+        Vector3 crosshairTemp = new Vector3(crosshairScreen.x, crosshairScreen.y, 0);
         camera.unproject(crosshairTemp);
         Vector2 crosshairWorld = new Vector2(crosshairTemp.x / units, crosshairTemp.y / units);
 
         // clamp
         Vector2 delta = new Vector2(crosshairWorld).sub(playerPosition);
-        // Convert teleport range from (screen or arbitrary) units to world units.
+        // Convert teleport range from screen units to world units.
         float teleportRangeWorld = avatar.getTeleportRangeRadius() / units;
         if (delta.len() > teleportRangeWorld) {
             delta.nor().scl(teleportRangeWorld);
@@ -1310,31 +1304,12 @@ public class PlatformScene implements Screen, Telegraph {
             return;
         }
 
-        Vector2 rayStart = new Vector2(playerPosition.x, playerPosition.y);
-        Vector2 rayEnd = new Vector2(crosshairWorld.x, 0);
         PlatformRayCast callback = new PlatformRayCast();
-        world.rayCast(callback, rayStart, rayEnd);
-
-        if (callback.getPlatformFixture() == null) {
-            System.out.println("Player is not shadowed, cannot teleport");
-            return;
-        }
-
-        // Use raycast to find platform below cursor
-        rayStart = new Vector2(crosshairWorld.x, crosshairWorld.y);
-        rayEnd = new Vector2(crosshairWorld.x, 0);
-        world.rayCast(callback, rayStart, rayEnd);
-
-        if (callback.getPlatformFixture() == null) {
-            System.out.println("Teleport location is not shadowed, cannot teleport");
-            return;
-        }
 
         if (callback.getHitPointCount()%2 == 1){
             System.out.println("Cannot teleport inside of surface");
             return;
         }
-        Vector2 hitPoint = callback.getHitPoint();
         Vector2 initialPosition = new Vector2(crosshairWorld.x, crosshairWorld.y + 0.75f);
         Vector2 teleporterPosition = new Vector2(crosshairWorld.x, crosshairWorld.y + 0.75f);
 
@@ -1354,23 +1329,6 @@ public class PlatformScene implements Screen, Telegraph {
                 playerPosition.x + direction.x * maxTeleportRange,
                 playerPosition.y + direction.y * maxTeleportRange
             );
-        }
-
-        // Raycast to check if the clamped position is above a surface
-        Vector2 rayStartForClamped = new Vector2(teleporterPosition.x, teleporterPosition.y);
-        Vector2 rayEndForClamped = new Vector2(teleporterPosition.x, 0);
-        PlatformRayCast clampedCallback = new PlatformRayCast();
-        world.rayCast(clampedCallback, rayStartForClamped, rayEndForClamped);
-
-        if (clampedCallback.getPlatformFixture() != null) {
-            Vector2 clampedHitPoint = clampedCallback.getHitPoint();
-            // Ensure the teleporter position is above the surface
-            if (teleporterPosition.y <= clampedHitPoint.y) {
-                teleporterPosition.y = clampedHitPoint.y + 0.75f; // Adjust to be above the surface
-            }
-        } else {
-            System.out.println("No platform found at clamped position");
-            return;
         }
 
         queuedTeleportPosition = teleporterPosition;
