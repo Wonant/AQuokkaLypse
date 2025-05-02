@@ -224,6 +224,9 @@ public class PlatformScene implements Screen, Telegraph {
     /** How many enemies are aware of player in level (akin to GTA star system) */
     private int enemiesAlerted;
 
+    /** How many critters are aware of the player (to manage slow factor) */
+    private int crittersAlerted;
+
     /** tiled map + map info */
     private TiledMapInfo tiledMap;
     private String tiledLevelName;
@@ -607,8 +610,8 @@ public class PlatformScene implements Screen, Telegraph {
         Texture fear = directory.getEntry("fear-meter-sprite-sheet", Texture.class);
         createAnimators(fear);
 
-        dispatcher.addListener(this, MessageType.ENEMY_SEES_PLAYER);
-        dispatcher.addListener(this, MessageType.ENEMY_LOST_PLAYER);
+        dispatcher.addListener(this, MessageType.CRITTER_SEES_PLAYER);
+        dispatcher.addListener(this, MessageType.CRITTER_LOST_PLAYER);
 
         vortexRenderer = new ShapeRenderer();
     }
@@ -658,6 +661,7 @@ public class PlatformScene implements Screen, Telegraph {
         shardPos = new ArrayList<>();
         possibleShardPos = new HashMap<>();
         enemiesAlerted = 0;
+        crittersAlerted = 0;
 
         float units = TiledMapInfo.PIXELS_PER_WORLD_METER;
         int level = 0;
@@ -829,6 +833,7 @@ public class PlatformScene implements Screen, Telegraph {
                 float worldX = x / units;
                 float worldWidth = width/units;
 
+
                 // tiles * pixel per tile
                 float mapPixelHeight = tiledMap.get().getProperties().get("height", Integer.class) * TiledMapInfo.PIXELS_PER_WORLD_METER;
                 float worldY = y / units;
@@ -841,11 +846,7 @@ public class PlatformScene implements Screen, Telegraph {
                 platform.setDebugColor(Color.BLUE);
 
 
-                if (o.getProperties().get("isStair", Boolean.class)) {
-                    platform.getObstacle().setName("stair " + id);
-                } else {
-                    platform.getObstacle().setName("platform " + id);
-                }
+                platform.getObstacle().setName("platform " + id);
                 addSprite(platform);
                 platform.setFilter();
                 id++;
@@ -1241,12 +1242,7 @@ public class PlatformScene implements Screen, Telegraph {
         }
 
         avatar.applyForce(world);
-        if (avatar.isJumping()) {
-            /* This jump sound is annoying
-            SoundEffectManager sounds = SoundEffectManager.getInstance();
-            sounds.play("jump", jumpSound, volume);
-             */
-        }
+
     }
 
     public void initTeleportAnimation() {
@@ -1699,8 +1695,10 @@ public class PlatformScene implements Screen, Telegraph {
             TextureRegion meterFrame = fearMeterSprite.getKeyFrame(frameIndex);
 
             // where to draw
-            float meterX = 0;
-            float meterY = height - 7*meterFrame.getRegionHeight() / units;
+
+            float meterX = 40;
+            float meterY = 600;
+
             float meterWidth  = 7* meterFrame.getRegionWidth() / units;
             float meterHeight = 7*meterFrame.getRegionHeight() / units;
 
@@ -1737,6 +1735,10 @@ public class PlatformScene implements Screen, Telegraph {
 
 
 
+        String cameraPositionText = "Camera Position: (" + camera.position.x + ", " + camera.position.y + ", zoom " + camera.zoom + ")" +
+            "\n Viewport: (" + camera.viewportWidth + ", " + camera.viewportHeight + ")" +
+            "\n Bounds: (" + bounds.width + ", " + bounds.height + ")";
+        displayFont.draw(batch, cameraPositionText, 10, height - 100);
 
         if (complete && !failed) {
             batch.drawText(goodMessage, width/2, height/2);
@@ -1819,7 +1821,7 @@ public class PlatformScene implements Screen, Telegraph {
                 float speed = 0.1f;
                 camera.position.x += moveX * speed;
                 camera.position.y += moveY * speed;
-                clampCamera();
+                //clampCamera();
                 camera.update();
             } else {
                 Vector3 position = this.camera.position;
@@ -1834,7 +1836,7 @@ public class PlatformScene implements Screen, Telegraph {
                 position.x += (this.avatar.getObstacle().getX() * units - position.x) * lerp * delta;
                 position.y += (this.avatar.getObstacle().getY() * units - position.y) * lerp * delta;
                 camera.position.set(position);
-                camera.zoom = 0.7f;
+                camera.zoom = 0.8f;
                 clampCamera();
                 camera.update();
             }
@@ -1858,13 +1860,13 @@ public class PlatformScene implements Screen, Telegraph {
         float halfViewportHeight = camera.viewportHeight / 2;
 
         // Convert world bounds to screen coordinates
-        float minX = bounds.x * units + halfViewportWidth;
-        float maxX = (bounds.x + bounds.width) * units - halfViewportWidth;
-        float minY = bounds.y * units + halfViewportHeight;
-        float maxY = (bounds.y + bounds.height) * units - halfViewportHeight;
+        float minX = 0 + halfViewportWidth * camera.zoom;
+        float maxX = bounds.width * units - (halfViewportWidth * camera.zoom);
+        float minY = 0 + halfViewportHeight * camera.zoom;
+        float maxY = bounds.height * units - (halfViewportHeight * camera.zoom);
 
-        camera.position.x = MathUtils.clamp(camera.position.x, minX-200, maxX+200);
-        camera.position.y = MathUtils.clamp(camera.position.y, minY-100, maxY-50);
+        camera.position.x = MathUtils.clamp(camera.position.x, minX, maxX);
+        camera.position.y = MathUtils.clamp(camera.position.y, minY, maxY + 50);
     }
 
     public void spawnShardAtLocation(Vector2 world, Shard s) {
@@ -1888,22 +1890,23 @@ public class PlatformScene implements Screen, Telegraph {
     //telegraph
     @Override
     public boolean handleMessage(Telegram msg) {
-        if (msg.message == MessageType.ENEMY_SEES_PLAYER) {
+        if (msg.message == MessageType.CRITTER_SEES_PLAYER) {
             CuriosityCritter critter = (CuriosityCritter) msg.extraInfo;
-            onPlayerSpotted((Enemy) critter);
+            onPlayerSpotted(critter);
             return true;
         }
-        if (msg.message == MessageType.ENEMY_LOST_PLAYER) {
+        if (msg.message == MessageType.CRITTER_LOST_PLAYER) {
             CuriosityCritter critter = (CuriosityCritter) msg.extraInfo;
-            onPlayerLost((Enemy) critter);
+            onPlayerLost(critter);
             return true;
         }
         return false;
     }
 
-    public void onPlayerSpotted(Enemy enemy) {
+    public void onPlayerSpotted(CuriosityCritter enemy) {
         System.out.println("Message Dispatcher received - enemy raycast sees player");
         enemiesAlerted++;
+        crittersAlerted++;
         lastCritterSawTime = timeSinceStart;
         // reset any previous slow (so repeated sees restart the 1s timer)
         if (playerSlowed) {
@@ -1912,13 +1915,17 @@ public class PlatformScene implements Screen, Telegraph {
         }
     }
 
-    public void onPlayerLost(Enemy enemy) {
+    public void onPlayerLost(CuriosityCritter enemy) {
         System.out.println("Message Dispatcher received - enemy raycast lost player");
         enemiesAlerted--;
-        lastCritterSawTime = -1f;
-        if (playerSlowed) {
-            avatar.resetMaxSpeed();
-            playerSlowed = false;
+        crittersAlerted--;
+        //last critter lost player
+        if (crittersAlerted == 0) {
+            lastCritterSawTime = -1f;
+            if (playerSlowed) {
+                avatar.resetMaxSpeed();
+                playerSlowed = false;
+            }
         }
     }
 
