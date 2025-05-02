@@ -673,9 +673,9 @@ public class MindMaintenance extends Enemy {
 
         // message dispatch
         if (isAware && !wasAware) {
-            dispatcher.dispatchMessage(null, scene, MessageType.ENEMY_SEES_PLAYER);
+            dispatcher.dispatchMessage(null, scene, MessageType.MAINTENANCE_SEES_PLAYER);
         } else if (!isAware && wasAware) {
-            dispatcher.dispatchMessage(null, scene, MessageType.ENEMY_LOST_PLAYER);
+            dispatcher.dispatchMessage(null, scene, MessageType.MAINTENANCE_LOST_PLAYER);
         }
 
         wasAware = isAware;

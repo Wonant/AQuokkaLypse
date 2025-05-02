@@ -118,6 +118,8 @@
         private float   movement;
         /** Which direction is the character facing */
         private boolean faceRight;
+
+        private boolean didChangeDir = false;
         /** Whether our feet are on the ground */
         private boolean isGrounded;
         /** Whether our feet are on a shadowed tile*/
@@ -267,17 +269,20 @@
          * @param value the left/right movement of this character.
          */
         public void setMovement(float value) {
-            if (isClimbing || isInteracting) {
+            if (isInteracting) {
                 movement = 0;
                 return;
             }
-            if (isLanding) {
-                movement = value * 0.1f;
-                return;
-            }
+//            if (isLanding) {
+//                movement = value;
+//                return;
+//            }
 
             movement = value;
             // Change facing if appropriate
+            didChangeDir = movement < 0 && isFacingRight() || movement > 0 && isFacingRight();
+
+
             if (movement < 0) {
                 faceRight = false;
             } else if (movement > 0) {
@@ -408,7 +413,7 @@
          * @return true if CatDemon is actively harvesting.
          */
         public boolean isTeleporting() {
-            dispatcher.dispatchMessage(null, scene, MessageType.ENEMY_LOST_PLAYER);
+            dispatcher.dispatchMessage(null, scene, MessageType.CRITTER_LOST_PLAYER);
             return isTeleporting && teleportCooldown <= 0;
 
         }
@@ -609,7 +614,7 @@
             float y = spawn.y;
             float s = data.getFloat( "size" );
             float sizeWidth = s*units;
-            float sizeHeight = s*units*1.5f;
+            float sizeHeight = s*units*1.8f;
 
 
 
@@ -634,7 +639,7 @@
 
             maxspeed = data.getFloat("maxspeed", 0);
             defaultMaxSpeed = maxspeed;
-            damping = data.getFloat("damping", 0);
+            damping = 0;
             force = data.getFloat("force", 0);
             jump_force = data.getFloat( "jump_force", 0 );
             dash_force = data.getFloat("dash_force", 0);
@@ -672,7 +677,7 @@
             // see this when you enable debug mode.
             mesh.set(-sizeWidth/2.0f,-sizeHeight/2.0f,sizeWidth * 2 ,sizeHeight * 2);
 
-            stepRayLength = height/2.5f;
+            stepRayLength = height/2.0f;
 
             playerVisionRaycast = new PlayerVisionRaycast(PlayerVisionRaycast.VisionMode.STAIR_CHECK, stepRayLength * units);
 
@@ -684,7 +689,7 @@
             walkingSprite = new Animator(dreamwalker, 11, 16, 0.033f, 176, 0, 15);
             idleSprite = new Animator(dreamwalker, 11, 16, 0.033f, 176, 37, 56);
             jumpSprite = new Animator(dreamwalker, 11, 16, 0.066f, 176, 20, 26, false);
-            stairSprite = new Animator(dreamwalker, 11, 16, 0.033f, 176, 126, 137, false);
+            stairSprite = new Animator(dreamwalker, 11, 16, 0.033f, 176, 126, 133);
             fallSprite = new Animator(dreamwalker, 11, 16, 0.033f, 176, 134, 134);
             landingSprite = new Animator(dreamwalker, 11, 16, 0.033f, 176, 138, 156, false);
             stunningSprite = new Animator(dreamwalker, 11, 16, 0.033f, 176, 157, 174, false);
@@ -729,8 +734,8 @@
             sensorDef.isSensor = true;
 
             JsonValue sensorjv = data.get("sensor");
-            float w = sensorjv.getFloat("shrink",0)*width * 0.2f;
-            float h = sensorjv.getFloat("height",0);
+            float w = sensorjv.getFloat("shrink",0)*width * 0.3f;
+            float h = sensorjv.getFloat("height",0) * 1.2f;
             PolygonShape sensorShape = new PolygonShape();
             sensorShape.setAsBox(w, h, sensorCenter, 0.0f);
             sensorDef.shape = sensorShape;
@@ -753,21 +758,19 @@
             PathFactory factory = new PathFactory();
             sensorOutline = new Path2();
             factory.makeRect( (sensorCenter.x-w/2)*u,(sensorCenter.y-h/2)*u, w*u, h*u,  sensorOutline);
-
-
         }
 
         public void createFallSensor() {
             float units = obstacle.getPhysicsUnits();
-            float fallDepth = data.getFloat("fall_sensor_depth", 0.5f);
+            float fallDepth = data.getFloat("fall_sensor_depth", 0.2f);
             // how far below feet to sense (in physics units)
-            Vector2 center = new Vector2(0, -height/2 - fallDepth/2);
+            Vector2 center = new Vector2(0, -height/2.3f - fallDepth/2);
 
             FixtureDef def = new FixtureDef();
             def.isSensor = true;
             def.density  = 0;
             PolygonShape shape = new PolygonShape();
-            shape.setAsBox(width/2, fallDepth/2, center, 0);
+            shape.setAsBox(width/2 * 0.2f, fallDepth/2, center, 0);
             def.shape = shape;
 
             Body body = obstacle.getBody();
@@ -827,44 +830,34 @@
          * This method should be called after the force attribute is set.
          */
         public void applyForce(World world) {
-            // ANY animation lock we don't handle movement(maybe messes stuff up so disable input instead?)
-
-
-
-
             if (!obstacle.isActive()) {
                 return;
             }
 
-            if (isPlatformStep(world, stepRayLength)) {
-                System.out.println("seen a step");
-                seenAStep = true;
-            } else {
-                seenAStep = false;
-            }
-
-
             Vector2 pos = obstacle.getPosition();
             float vx = obstacle.getVX();
+            float vy = obstacle.getVY();
             Body body = obstacle.getBody();
 
+            body.setLinearDamping(damping);
+            obstacle.setFriction(0);
 
-
-            // Don't want to be moving. Damp out player motion
-            if (getMovement() == 0f) {
-                forceCache.set(-getDamping()*vx,0);
-                body.applyForce(forceCache,pos,true);
+            // first thing first - if body is sliding opposite of move input stop it
+            if (movement * vx < 0) {
+                obstacle.setVX(0);
             }
 
             // Velocity too high, clamp it
-            if (Math.abs(vx) >= getMaxSpeed()) {
+            if (movement == 0) {
+                obstacle.setVX(0);
+            } else if (Math.abs(vx) >= getMaxSpeed()) {
                 obstacle.setVX(Math.signum(vx)*getMaxSpeed());
             } else {
                 forceCache.set(getMovement(),0);
                 body.applyForce(forceCache,pos,true);
             }
 
-            if (startedHarvest){
+            if (startedHarvest && movement != 0){
                 float direction = -1;
                 if (isFacingRight()){
                     direction = 1;
@@ -877,20 +870,24 @@
                 jumpSprite.reset();
                 forceCache.set(0, jump_force);
                 body.applyLinearImpulse(forceCache,pos,true);
+                isClimbing = false;
+            } else if (isClimbing && isGrounded()) {
+                forceCache.set(new Vector2(14.7f, 0));
+                body.applyForce(forceCache, pos, true);
+                if (movement == 0) {
+                    body.setLinearDamping(100000f);
+                }
             }
 
-            //smoothStairClimb();
         }
 
         public boolean isPlatformStep(World world, float raylength) {
             playerVisionRaycast.reset();
-            if (stairCooldown > 0 || isClimbing) {
-                stairCooldown--;
-                return false;
-            }
+            Body body = obstacle.getBody();
+
             Vector2 start = (isFacingRight()) ?
-                obstacle.getBody().getPosition().cpy().add(width/2 + 0.1f, 0) :
-                obstacle.getBody().getPosition().cpy().add(-width/2 - 0.1f, 0);
+                obstacle.getBody().getPosition().cpy().add(0, 0) :
+                obstacle.getBody().getPosition().cpy().add(0, 0);
             Vector2 end = start.cpy().add(0, -raylength);
 
 
@@ -900,24 +897,20 @@
             world.rayCast(playerVisionRaycast, start, end);
 
             if (playerVisionRaycast.getHitFixture() == null) {
+                isClimbing = false;
                 return false;
             } else if (playerVisionRaycast.fixtureIsStair) {
                 Vector2 stairHit = new Vector2(playerVisionRaycast.getHitPoint());
-
-
                 if (isGrounded && Math.abs(movement) > 0) {
-                    climbStart.set(obstacle.getBody().getPosition());
                     float targetCenterY = stairHit.y + height/2;
-                    climbTarget.set(stairHit.x, targetCenterY);
-                    Body body = obstacle.getBody();
+
                     isClimbing = true;
-                    climbCounter = 0;
-                    stairSprite.reset();
                     debugRayEnd = stairHit;
                     return true;
-
-                    //body.setTransform(stairHit.x, targetCenterY, body.getAngle());
-
+                }
+                if (movement == 0 && !isJumping()) {
+                    float targetCenterY = stairHit.y + height/2;  // tiny offset to avoid re-trigger
+                    body.setTransform(body.getPosition().x, targetCenterY, body.getAngle());
                 }
             }
 
@@ -937,6 +930,14 @@
          */
         @Override
         public void update(float dt) {
+
+            World world = obstacle.getBody().getWorld();
+            if (isPlatformStep(world, stepRayLength)) {
+                System.out.println("seen a step");
+                seenAStep = true;
+            } else {
+                seenAStep = false;
+            }
 
             // animation locks
             if (absorbing) {
@@ -959,11 +960,11 @@
                 } else {
                     animationState = AnimationState.INTERACT;
                 }
-                super.update(dt);
                 if (interactFrameCounter >= INTERACT_FRAME_DURATION) {
                     interactFrameCounter = 0;
                     inInteractAnimation = false;
                 }
+                super.update(dt);
                 return;
             }
 
@@ -975,24 +976,12 @@
                     landCounter = 0;
                     isLanding = false;
                 }
-                return;
-            }
-
-
-
-            if (isClimbing) {
-                float t = (float)climbCounter / CLIMB_DURATION;
-                Vector2 interp = climbStart.cpy().lerp(climbTarget, t);
-                obstacle.getBody().setTransform(interp, obstacle.getBody().getAngle());
-
-                climbCounter++;
-                animationState = AnimationState.STAIR;
-                if (climbCounter >= CLIMB_DURATION) {
-                    isClimbing = false;
-                }
                 super.update(dt);
                 return;
             }
+
+
+
 
             if (inStunAnimation) {
                 attackFrameCounter++;
@@ -1001,6 +990,7 @@
                     attackFrameCounter = 0;
                     inStunAnimation = false;
                 }
+                super.update(dt);
                 return;
             }
 
@@ -1021,6 +1011,8 @@
             } else if (isGrounded) {
                 if (movement == 0) {
                     animationState = AnimationState.IDLE;
+                } else if (isClimbing) {
+                    animationState = AnimationState.STAIR;
                 } else {
                     animationState = AnimationState.WALK;
                 }
@@ -1106,7 +1098,7 @@
                     frame = jumpSprite.getCurrentFrame(Gdx.graphics.getDeltaTime());
                     break;
                 case STAIR:
-                    frame = stairSprite.getCurrentFrame(Gdx.graphics.getDeltaTime());
+                    frame = walkingSprite.getCurrentFrame(Gdx.graphics.getDeltaTime());
                     break;
                 case FALL:
                     frame = fallSprite.getCurrentFrame(Gdx.graphics.getDeltaTime());
@@ -1134,10 +1126,10 @@
             float posX = obstacle.getX() * u;
             float posY = obstacle.getY() * u;
             float drawWidth = width * u * 3f * scale;
-            float drawHeight = height * u * scale;
+            float drawHeight = height * u * scale * 1.25f;
 
             float originX = (faceRight) ? drawWidth / 2.0f : drawWidth / 1.75f;
-            float originY = drawHeight / 1.6f;
+            float originY = drawHeight / 1.8f;
 
             if (faceRight) {
 

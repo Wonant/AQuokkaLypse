@@ -551,13 +551,13 @@ public class CuriosityCritter extends Enemy {
         }
 
         // message dispatch
-        if (isAware && !wasAware) {
-            dispatcher.dispatchMessage(null, scene, MessageType.ENEMY_SEES_PLAYER);
-        } else if (!isAware && wasAware) {
-            dispatcher.dispatchMessage(null, scene, MessageType.ENEMY_LOST_PLAYER);
-        }
-
-        wasAware = isAware;
+//        if (isAware && !wasAware) {
+//            dispatcher.dispatchMessage(null, scene, MessageType.CRITTER_SEES_PLAYER);
+//        } else if (!isAware && wasAware && !isFollowing) {
+//            dispatcher.dispatchMessage(null, scene, MessageType.CRITTER_LOST_PLAYER);
+//        }
+//
+//        wasAware = isAware;
 
         playerRaycast.reset();
     }
@@ -641,6 +641,8 @@ public class CuriosityCritter extends Enemy {
         } else {
             safeToWalk = true;
         }
+
+
         if (isAwareOfPlayer()) {
             scene.getAvatar().setTakingDamage(true);
             //dispatcher.dispatchMessage(null, scene, MessageType.ENEMY_SEES_PLAYER);
@@ -654,9 +656,17 @@ public class CuriosityCritter extends Enemy {
                 setAwareOfPlayer(false);
                 playerInFollowRange = false;
             }
-        } else {
-            //dispatcher.dispatchMessage(null, scene, MessageType.ENEMY_LOST_PLAYER);
         }
+
+        if (!isAwareOfPlayer() && wasAware) {
+            dispatcher.dispatchMessage(null, scene, MessageType.CRITTER_LOST_PLAYER);
+        } else if (isAwareOfPlayer() && !wasAware) {
+            dispatcher.dispatchMessage(null, scene, MessageType.CRITTER_SEES_PLAYER);
+        }
+
+        wasAware = isAwareOfPlayer();
+
+
         if (isJumping()) {
             jumpCooldown = jumpLimit;
         } else {

@@ -23,7 +23,7 @@
     "pos"       : [2.5, 7.0],
     "inner"     : [0.5, 1.45],
     "size"      : 1.5,
-    "force"     : 15.0,
+    "force"     : 20.0,
     "damping"   : 10.0,
     "density"   : 1.0,
     "friction"  : 0.5,

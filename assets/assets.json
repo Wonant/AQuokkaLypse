@@ -184,10 +184,11 @@
         }
     },
     "jsons"  : {
-        "level_select_constants": "platform/level_select_constants.json",
-        "platform-constants": "platform/constants.json",
-        "platform-constants1": "platform/constant1.json",
-        "platform-constants2": "platform/constant2.json",
+        "tutorial1" : "levels/tutorial_1.json",
+        "tutorial2" : "levels/tutorial_2.json",
+        "easy1" : "levels/easy1.json",
+        "medium1" : "levels/medium1.json",
+        "hard1" : "levels/hard1.json",
         "arena" : "arena/arena.json",
         "arena1" : "arena/arena1.json"
     },
