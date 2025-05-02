@@ -96,7 +96,6 @@ public class EnemyVisionRaycast implements RayCastCallback {
                 String name = surface.getObstacle().getName();
                 if (name.startsWith("stair")) {
                     posAboveStair.set(point).add(normal.cpy().nor());
-                    System.out.println("Position above stair" + posAboveStair);
                     hitFixture = fixture;
                     closestFraction = fraction;
                     fixtureIsStair = true;

@@ -839,13 +839,16 @@
             float vy = obstacle.getVY();
             Body body = obstacle.getBody();
 
-            body.setLinearDamping(damping);
+            //body.setLinearDamping(damping);
             obstacle.setFriction(0);
 
             // first thing first - if body is sliding opposite of move input stop it
+            /*
             if (movement * vx < 0) {
                 obstacle.setVX(0);
             }
+
+             */
 
             // Velocity too high, clamp it
             if (movement == 0) {
@@ -856,6 +859,7 @@
                 forceCache.set(getMovement(),0);
                 body.applyForce(forceCache,pos,true);
             }
+
 
             if (startedHarvest && movement != 0){
                 float direction = -1;
@@ -879,6 +883,14 @@
                 }
             }
 
+            if (isFacingRight() && obstacle.getVX() < 0)
+            {
+                System.out.println("VELOCITY RIGHT: " + getMovement() + " " + obstacle.getVX());
+                obstacle.setVX(0);
+            } else if (!isFacingRight() && obstacle.getVX() > 0){
+                System.out.println("VELOCITY LEFT: " + getMovement() + " " + obstacle.getVX());
+                obstacle.setVX(0);
+            }
         }
 
         public boolean isPlatformStep(World world, float raylength) {

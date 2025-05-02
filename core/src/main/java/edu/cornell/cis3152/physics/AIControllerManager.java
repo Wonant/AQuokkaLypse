@@ -44,12 +44,10 @@ public class AIControllerManager {
     private enum MaintenanceFSM {
         /**mind maintenance just spawned - will often immediately go to next state*/
         START,
-        /**mind maintenance is idly looking around, but not moving*/
-        IDLE_LOOK,
         /**mind maintenance is moving to a short location nearby idly, distance randomly from set interval*/
         IDLE_WALK,
         /**mind maintenance is now alerted to player's presence, will follow and stare at them*/
-        ALERTED,
+        ATTACK,
         /** mind maintenance is stunned, cannot move or see (do damage to player) */
         STUNNED,
         CHASING,
@@ -185,28 +183,15 @@ public class AIControllerManager {
                 transitionMaintenanceState(data, MaintenanceFSM.IDLE_WALK);
             }
         }
-        else{
-            if (player != null) {
-                if (seesPlayer) {
-                    data.maintenance.setShooting(true);
-                } else {
-                    data.maintenance.setShooting(false);
-                }
-            }
-
-        }
-
-        if (data.state == MaintenanceFSM.CHASING) {
-            if (data.stateTimer > data.stateDuration) {
-                transitionMaintenanceState(data, MaintenanceFSM.IDLE_WALK);
-            }
+        else if (seesPlayer && data.state != MaintenanceFSM.ATTACK){
+            transitionMaintenanceState(data, MaintenanceFSM.ATTACK);
         }
 
         if (data.state == MaintenanceFSM.START) {
             transitionMaintenanceState(data, MaintenanceFSM.IDLE_WALK);
         }
 
-        if (data.state == MaintenanceFSM.IDLE_WALK) {
+        else if (data.state == MaintenanceFSM.IDLE_WALK) {
             if (data.stateTimer > data.stateDuration) {
                 transitionMaintenanceState(data, MaintenanceFSM.IDLE_WALK);
             } else if (data.maintenance.isSeesWall() || !data.maintenance.isSafeToWalk()) {
@@ -219,7 +204,7 @@ public class AIControllerManager {
             }
         }
 
-        if (data.state == MaintenanceFSM.TURN) {
+        else if (data.state == MaintenanceFSM.TURN) {
             data.maintenance.setMovement(0);
             data.maintenance.applyForce();
 
@@ -233,6 +218,45 @@ public class AIControllerManager {
                 transitionMaintenanceState(data, MaintenanceFSM.IDLE_WALK);
             }
         }
+
+        else if (data.state == MaintenanceFSM.ATTACK) {
+            data.maintenance.setMovement(0);
+            data.maintenance.getObstacle().setVX(0);
+            if (data.stateTimer > data.stateDuration) {
+                if (seesPlayer){
+                    System.out.println("Reached 1");
+                    data.maintenance.resetAttackSprite();
+                    transitionMaintenanceState(data, MaintenanceFSM.ATTACK);
+                }
+                else{
+                    System.out.println("Reached 2");
+                    data.maintenance.resetAttackSprite();
+                    data.maintenance.setAttacking(false);
+                    data.maintenance.setMovement(data.movingRight? 2 : -2);
+                    transitionMaintenanceState(data, MaintenanceFSM.CHASING);
+                }
+            }
+        }
+
+        if (data.state == MaintenanceFSM.CHASING) {
+            data.maintenance.setMovement(data.movingRight? 2 : -2);
+            data.maintenance.applyForce();
+            if (data.stateTimer > data.stateDuration) {
+                data.maintenance.setChasing(false);
+                transitionMaintenanceState(data, MaintenanceFSM.IDLE_WALK);
+            }
+            else if (data.maintenance.isSeesWall() || !data.maintenance.isSafeToWalk()) {
+                data.maintenance.setMovement(0);
+                data.maintenance.getObstacle().setVX(0);
+                data.maintenance.setChasing(false);
+                transitionMaintenanceState(data, MaintenanceFSM.TURN);
+            } else {
+                // Walk in a direction, will have already known if wall is in front
+                data.maintenance.setMovement(data.movingRight? 12 : -12);
+                data.maintenance.applyForce();
+            }
+        }
+
     }
 
     private void transitionMaintenanceState(MaintenanceAI data, MaintenanceFSM newState) {
@@ -250,14 +274,14 @@ public class AIControllerManager {
                 data.horizontal = data.movingRight ? 2.0f : -2.0f;
                 break;
 
-            case ALERTED:
-                data.stateDuration = 1.0f;
-                data.horizontal = 10f;
+            case ATTACK:
+                data.stateDuration = 1.68f;
+                data.maintenance.setAttacking(true);
                 break;
 
             case CHASING:
-                data.stateDuration = 2.0f;
-                data.horizontal = 10f;
+                data.stateDuration = 6.0f;
+                data.maintenance.setChasing(true);
                 break;
 
             case STUNNED:

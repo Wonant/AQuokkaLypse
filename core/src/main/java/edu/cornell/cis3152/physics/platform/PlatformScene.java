@@ -758,9 +758,7 @@ public class PlatformScene implements Screen, Telegraph {
 
                 MapObject reposition = o.getProperties().get("path", MapObject.class);
 
-                System.out.println(worldX);
                 if (reposition != null) {
-                    System.out.println(reposition.getProperties().get("x", Float.class) / 32f);
                     possibleShardPos.put(shardID, new Vector2(reposition.getProperties().get("x", Float.class) / 32f, reposition.getProperties().get("y", Float.class) / 32f));
                 }
                 if (o.getName() == null) {
@@ -1050,17 +1048,15 @@ public class PlatformScene implements Screen, Telegraph {
         for (Enemy e: enemies){
             if (e instanceof MindMaintenance && ((MindMaintenance) e).isShooting()){
                 System.out.println("MAINTENANCE IS SHOOTING");
-                ((MindMaintenance) e).resetShootCooldown();
                 units = TiledMapInfo.PIXELS_PER_WORLD_METER;
                 Vector2 position = e.getObstacle().getPosition();
-                float direction = 1;
-                if (avatar.getObstacle().getPosition().x < position.x){
-                    direction = -1;
-                }
+                float direction = maintenance.isFacingRight() ? 1 : -1;
+                position.set(position.x + direction, position.y);
                 JsonValue bulletjv = constants.get("bullet");
                 Texture texture = directory.getEntry("platform-bullet", Texture.class);
 
                 ShieldWall wall = new ShieldWall(units, bulletjv, position, direction);
+                System.out.println("ShieldWall shot at " + position);
                 shieldWalls.add(wall);
                 wall.setTexture(texture);
                 addQueuedObject(wall);
