@@ -15,7 +15,7 @@ public class Spear extends ObstacleSprite {
 
     private boolean filterActivated;
     private float timeAlive;
-    private float maxAge = 5f; // 存活5秒
+    private float maxAge = 1.5f; // 存活5秒
     private boolean dead = false;
     private float direction; // -1 for left, 1 for right
     private float speed = 22.5f;
@@ -40,7 +40,6 @@ public class Spear extends ObstacleSprite {
         obstacle.setName("spear");
         obstacle.setFixedRotation(true);
 
-        // 设置给定的速度（注意：不是默认22.5f * direction了）
         obstacle.setVX(velocity.x);
         obstacle.setVY(velocity.y);
 
@@ -88,9 +87,3 @@ public class Spear extends ObstacleSprite {
         return dead;
     }
 }
-
-
-
-
-
-

@@ -36,7 +36,7 @@ public class DreamDweller extends Enemy {
     private int jumpCooldown;
     private boolean isJumping;
     private int shootCooldown;
-    private int shootLimit = 80;
+    private int shootLimit = 120;
     private boolean isGrounded;
     private boolean isShooting;
 
@@ -58,7 +58,7 @@ public class DreamDweller extends Enemy {
     private Vector2 debugLookEnd = new Vector2();
 
     // time before enemy resumes normal behavior after detecting player
-    private float susCooldown = 100;
+    private float susCooldown = 40;
     private float susCountdown = susCooldown;
     /** game logic stuff */
 

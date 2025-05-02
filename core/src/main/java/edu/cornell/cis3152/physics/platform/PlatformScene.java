@@ -261,6 +261,11 @@ public class PlatformScene implements Screen, Telegraph {
     private float teleportAngle;
     private boolean teleportDirectionRight;
 
+    private Array<Spear> pendingSpears = new Array<>();
+    private float spearTimer = 0f;
+    private int spearIndex = 0;
+    private static final float SPEAR_FIRE_INTERVAL = 0.1f;
+
 
     /*==============================ContactListener Getters/Setters===============================*/
 
@@ -1058,25 +1063,57 @@ public class PlatformScene implements Screen, Telegraph {
                 wall.setTexture(texture);
                 addQueuedObject(wall);
             }
-            else  if (e instanceof DreamDweller && ((DreamDweller) e).isShooting()){
-
+            else if (e instanceof DreamDweller && ((DreamDweller) e).isShooting()) {
                 units = TiledMapInfo.PIXELS_PER_WORLD_METER;
                 Vector2 position = e.getObstacle().getPosition();
-                float direction = 1;
-                if (avatar.getObstacle().getPosition().x < position.x){
-                    direction = -1;
-                }
+                Vector2 playerPos = avatar.getObstacle().getPosition();
+
+                float speed = 22.5f;
                 JsonValue spearjv = constants.get("spear");
                 Texture texture = directory.getEntry("platform-spear", Texture.class);
                 Texture textureflip = directory.getEntry("platform-spear-right", Texture.class);
-                Spear spear = new Spear(units, spearjv, position, direction);
-                spears.add(spear);
-                if(direction < 0) {
-                    spear.setTexture(texture);
-                } else if (direction > 0) {
-                    spear.setTexture(textureflip);
+
+                float direction = (playerPos.x < position.x) ? -1f : 1f;
+
+                float[] angleOffsets = new float[] { -20f, -7f, 7f, 20f };
+                float[] yOffsets = new float[] { -0.6f, -0.2f, 0.2f, 0.6f };
+
+                pendingSpears.clear();
+                spearTimer = 0f;
+                spearIndex = 0;
+
+                for (int i = 0; i < angleOffsets.length; i++) {
+                    Vector2 spawnPos = new Vector2(position.x, position.y + yOffsets[i]);
+
+                    float baseAngleDeg = (direction > 0) ? 0f : 180f;
+                    float angleDeg = baseAngleDeg + angleOffsets[i];
+                    float angleRad = (float) Math.toRadians(angleDeg);
+
+                    Vector2 velocity = new Vector2(
+                        speed * (float) Math.cos(angleRad),
+                        speed * (float) Math.sin(angleRad)
+                    );
+
+                    Spear spear = new Spear(units, spearjv, spawnPos, velocity);
+
+                    if (velocity.x < 0) {
+                        spear.setTexture(texture);
+                    } else {
+                        spear.setTexture(textureflip);
+                    }
+
+                    pendingSpears.add(spear);
                 }
+            }
+        }
+        if (pendingSpears.size > 0 && spearIndex < pendingSpears.size) {
+            spearTimer += dt;
+            if (spearTimer >= SPEAR_FIRE_INTERVAL) {
+                Spear spear = pendingSpears.get(pendingSpears.size - 1 - spearIndex);
+                spears.add(spear);
                 addQueuedObject(spear);
+                spearIndex++;
+                spearTimer = 0f;
             }
         }
 
