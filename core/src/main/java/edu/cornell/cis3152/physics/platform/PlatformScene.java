@@ -66,7 +66,7 @@ import com.badlogic.gdx.graphics.g2d.TextureRegion;
 public class PlatformScene implements Screen, Telegraph {
     // SOME EXIT CODES FOR GDXROOT
     /** Exit code for quitting the game */
-    public static final int EXIT_QUIT = 0;
+    public static final int EXIT_PAUSE = 0;
     /** Exit code for advancing to next level */
     public static final int EXIT_NEXT = 1;
     /** Exit code for jumping back to previous level */
@@ -263,6 +263,9 @@ public class PlatformScene implements Screen, Telegraph {
     private Vector2 teleportPosition;
     private float teleportAngle;
     private boolean teleportDirectionRight;
+
+    /** Used to ensure scene doesn't reset when from pause scene*/
+    private boolean resumingFromPause = false;
 
 
     /*==============================ContactListener Getters/Setters===============================*/
@@ -994,7 +997,7 @@ public class PlatformScene implements Screen, Telegraph {
         // Now it is time to maybe switch screens.
         if (input.didExit()) {
             pause();
-            listener.exitScreen(this, EXIT_QUIT);
+            listener.exitScreen(this, EXIT_PAUSE);
             return false;
         } else if (input.didAdvance()) {
             pause();
@@ -1770,13 +1773,21 @@ public class PlatformScene implements Screen, Telegraph {
     public void resize(int width, int height) {
         this.width  = width;
         this.height = height;
-        if (camera == null) {
-            camera = new OrthographicCamera();
+        if (!resumingFromPause) {
+            if (camera == null) {
+                camera = new OrthographicCamera();
+            }
+            camera.setToOrtho(false, width, height);
+            scale.x = 1;
+            scale.y = 1;
+            reset();
+        } else {
+            resumingFromPause = false; // Reset the flag
         }
-        camera.setToOrtho( false, width, height );
-        scale.x = 1;
-        scale.y = 1;
-        reset();
+    }
+
+    public void setResumingFromPause(boolean value) {
+        resumingFromPause = value;
     }
 
     /**

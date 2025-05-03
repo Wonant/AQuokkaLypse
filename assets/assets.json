@@ -181,6 +181,39 @@
         },
         "white": {
             "file": "menu/start_button.png"
+        },
+        "pause0": {
+            "file": "pause/return.png"
+        },
+        "pausehover0": {
+            "file": "pause/return_hover.png"
+        },
+        "pause1": {
+          "file": "pause/restart.png"
+        },
+        "pausehover1": {
+          "file": "pause/restart_hover.png"
+        },
+        "pause2": {
+          "file": "pause/level_Select.png"
+        },
+        "pausehover2": {
+          "file": "pause/level_select_hover.png"
+        },
+        "pause3": {
+          "file": "pause/settings.png"
+        },
+        "pausehover3": {
+          "file": "pause/settings_hover.png"
+        },
+        "pause4": {
+          "file": "pause/exit.png"
+        },
+        "pausehover4": {
+          "file": "pause/exit_hover.png"
+        },
+        "overlay" : {
+          "file": "pause/temp_overlay.png"
         }
     },
     "jsons"  : {
