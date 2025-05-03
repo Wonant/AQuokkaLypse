@@ -15,7 +15,7 @@ public class Spear extends ObstacleSprite {
 
     private boolean filterActivated;
     private float timeAlive;
-    private float maxAge = 1.5f; // 存活5秒
+    private float maxAge = 1.0f; //
     private boolean dead = false;
     private float direction; // -1 for left, 1 for right
     private float speed = 22.5f;

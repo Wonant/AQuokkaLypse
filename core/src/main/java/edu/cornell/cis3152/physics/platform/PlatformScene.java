@@ -1075,8 +1075,8 @@ public class PlatformScene implements Screen, Telegraph {
 
                 float direction = (playerPos.x < position.x) ? -1f : 1f;
 
-                float[] angleOffsets = new float[] { -20f, -7f, 7f, 20f };
-                float[] yOffsets = new float[] { -0.6f, -0.2f, 0.2f, 0.6f };
+                float[] angleOffsets = new float[] { -20f, -14f, -3f, 8f };
+                float[] yOffsets = new float[] { -0.4f, 0.0f, 0.4f, 0.8f };
 
                 pendingSpears.clear();
                 spearTimer = 0f;
@@ -1766,7 +1766,7 @@ public class PlatformScene implements Screen, Telegraph {
         }
 
         if (avatar.isBlinded()) {
-            float alpha = MathUtils.clamp(1.2f - avatar.getBlindProgress(), 0f, 1.0f);
+            float alpha = MathUtils.clamp(1.8f * (float)Math.pow(0.5, avatar.getBlindProgress()*20), 0f, 1.0f);
             batch.setColor(1, 1, 1, alpha);
             batch.draw(Texture2D.getBlank(), 0, 0, width, height);
             batch.setColor(Color.WHITE);

@@ -513,12 +513,13 @@ public class LevelContactListener implements ContactListener {
 
             spear.getObstacle().markRemoved(true);
 
-            player.setFearMeter(Math.max(0, player.getFearMeter() - 1));
+          //  player.setFearMeter(Math.max(0, player.getFearMeter() - 1));
 
 
             spear.getObstacle().setVX(0);
             spear.getObstacle().setVY(0);
             player.setBlinded(true);
+            player.setBlindTimer(0);
 
             System.out.println("Spear hit Player: -1 fear, no push.");
 

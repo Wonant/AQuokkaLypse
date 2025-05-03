@@ -226,6 +226,9 @@
             return width;
         }
 
+        public float setBlindTimer(float blindTimer){
+            return blindTimer;
+        }
         public void setBlinded(boolean blinded) {
             if (blinded) {
                 this.isBlinded = true;

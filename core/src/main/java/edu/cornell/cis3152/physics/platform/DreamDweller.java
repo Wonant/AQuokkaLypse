@@ -36,7 +36,7 @@ public class DreamDweller extends Enemy {
     private int jumpCooldown;
     private boolean isJumping;
     private int shootCooldown;
-    private int shootLimit = 120;
+    private int shootLimit = 200;
     private boolean isGrounded;
     private boolean isShooting;
 
