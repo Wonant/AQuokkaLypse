@@ -1068,10 +1068,10 @@ public class PlatformScene implements Screen, Telegraph {
                 Vector2 position = e.getObstacle().getPosition();
                 Vector2 playerPos = avatar.getObstacle().getPosition();
 
-                float speed = 22.5f;
+                float speed = 11.5f;
                 JsonValue spearjv = constants.get("spear");
-                Texture texture = directory.getEntry("platform-spear", Texture.class);
-                Texture textureflip = directory.getEntry("platform-spear-right", Texture.class);
+                Texture spearTravelTex = directory.getEntry("platform-spear-travel-sprite", Texture.class);
+                Texture spearEndTex    = directory.getEntry("platform-spear-end-sprite", Texture.class);
 
                 float direction = (playerPos.x < position.x) ? -1f : 1f;
 
@@ -1094,13 +1094,15 @@ public class PlatformScene implements Screen, Telegraph {
                         speed * (float) Math.sin(angleRad)
                     );
 
-                    Spear spear = new Spear(units, spearjv, spawnPos, velocity);
+                    Spear spear = new Spear(units, spearjv, spawnPos, velocity,spearTravelTex, spearEndTex);
 
-                    if (velocity.x < 0) {
+                    /*if (velocity.x < 0) {
                         spear.setTexture(texture);
                     } else {
                         spear.setTexture(textureflip);
                     }
+
+                     */
 
                     pendingSpears.add(spear);
                 }
@@ -1283,6 +1285,12 @@ public class PlatformScene implements Screen, Telegraph {
             SoundEffectManager sounds = SoundEffectManager.getInstance();
             sounds.play("jump", jumpSound, volume);
              */
+        }
+        for (ObstacleSprite obj : sprites) {
+            obj.update(dt);
+        }
+        for (ObstacleSprite obj : spears) {
+            obj.update(dt);
         }
     }
 
@@ -1542,8 +1550,13 @@ public class PlatformScene implements Screen, Telegraph {
         }
         // Draw the meshes (images)
         for(ObstacleSprite obj : sprites) {
-            obj.draw(batch);
+            if (obj instanceof Spear) {
+                ((Spear) obj).drawOwnAnimation(batch);
+            } else {
+                obj.draw(batch);
+            }
         }
+
 
         if (debug) {
             // Draw the outlines

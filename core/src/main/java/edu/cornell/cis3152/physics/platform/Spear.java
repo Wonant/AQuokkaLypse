@@ -1,5 +1,7 @@
 package edu.cornell.cis3152.physics.platform;
 
+import com.badlogic.gdx.graphics.g2d.SpriteBatch;
+import com.badlogic.gdx.graphics.g2d.TextureRegion;
 import com.badlogic.gdx.math.Vector2;
 import com.badlogic.gdx.physics.box2d.Filter;
 import com.badlogic.gdx.physics.box2d.Fixture;
@@ -10,18 +12,25 @@ import edu.cornell.gdiac.math.Poly2;
 
 import static edu.cornell.cis3152.physics.platform.CollisionFiltering.CATEGORY_PLAYER;
 import static edu.cornell.cis3152.physics.platform.CollisionFiltering.CATEGORY_SCENERY;
+import com.badlogic.gdx.graphics.Texture;
+
+
 
 public class Spear extends ObstacleSprite {
 
     private boolean filterActivated;
     private float timeAlive;
-    private float maxAge = 1.0f; //
+    private float maxAge = 2.0f; //
     private boolean dead = false;
     private float direction; // -1 for left, 1 for right
     private float speed = 22.5f;
+    private TextureRegion currentFrame;
+    private Animator travelAnimator;
+    private Animator endAnimator;
 
 
-    public Spear(float units, JsonValue settings, Vector2 pos, Vector2 velocity) {
+
+    public Spear(float units, JsonValue settings, Vector2 pos, Vector2 velocity,Texture travelTex, Texture endTex) {
         timeAlive = 0f;
         this.direction = velocity.x >= 0 ? 1 : -1;
 
@@ -44,6 +53,8 @@ public class Spear extends ObstacleSprite {
         obstacle.setVY(velocity.y);
 
         mesh.set(-halfW*32, -halfH*28, 2 * halfW*16, 2 * halfH*16);
+        travelAnimator = new Animator(travelTex, 1, 5, 0.2f, 5, 0, 4, true);
+        endAnimator    = new Animator(endTex,    1, 5, 0.2f, 5, 0, 4, false);
     }
 
     public void update(float dt) {
@@ -54,6 +65,15 @@ public class Spear extends ObstacleSprite {
         if (filterActivated) {
             timeAlive += dt;
             obstacle.setVX(obstacle.getVX() * 0.99f);
+            if (timeAlive < maxAge / 2f) {
+                currentFrame = travelAnimator.getCurrentFrame(dt);
+            } else {
+                if (endAnimator.isAnimationFinished()) {
+                    currentFrame = endAnimator.getLastFrame();
+                } else {
+                    currentFrame = endAnimator.getCurrentFrame(dt);
+                }
+            }
         }
         else if (obstacle.getBody() != null) {
             setFilter();
@@ -85,5 +105,21 @@ public class Spear extends ObstacleSprite {
 
     public boolean isDead() {
         return dead;
+    }
+
+    public void drawOwnAnimation(edu.cornell.gdiac.graphics.SpriteBatch batch) {
+        if (currentFrame == null) return;
+
+        float u = obstacle.getPhysicsUnits();
+        float drawX = obstacle.getX() * u;
+        float drawY = obstacle.getY() * u;
+        float scale = 0.25f;
+
+        batch.draw(currentFrame,
+            drawX - currentFrame.getRegionWidth() * scale / 2,
+            drawY - currentFrame.getRegionHeight() * scale / 2,
+            currentFrame.getRegionWidth() * scale,
+            currentFrame.getRegionHeight() * scale
+        );
     }
 }

@@ -19,6 +19,8 @@ public class Animator {
     private int rows;
     private int cols;
 
+
+
     public Animator(Texture spriteSheet, int rows, int cols, float frameDuration, int frameCount, int startFrame, int endFrame) {
         this(spriteSheet,rows,cols,frameDuration,frameCount,startFrame, endFrame, true);
     }
@@ -73,6 +75,10 @@ public class Animator {
         int actualIndex = startFrame + i;
         if (actualIndex > endFrame) actualIndex = endFrame;
         spriteSheet.setFrame(actualIndex);
+        return spriteSheet;
+    }
+    public TextureRegion getLastFrame() {
+        spriteSheet.setFrame(endFrame);
         return spriteSheet;
     }
 }
