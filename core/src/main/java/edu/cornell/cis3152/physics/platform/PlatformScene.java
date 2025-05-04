@@ -1304,34 +1304,8 @@ public class PlatformScene implements Screen, Telegraph {
             return;
         }
 
-        PlatformRayCast callback = new PlatformRayCast();
+        queuedTeleportPosition = new Vector2(crosshairWorld.x, crosshairWorld.y + 0.75f);
 
-        if (callback.getHitPointCount()%2 == 1){
-            System.out.println("Cannot teleport inside of surface");
-            return;
-        }
-        Vector2 initialPosition = new Vector2(crosshairWorld.x, crosshairWorld.y + 0.75f);
-        Vector2 teleporterPosition = new Vector2(crosshairWorld.x, crosshairWorld.y + 0.75f);
-
-        // Calculate distance in world coordinates
-        float worldDistance = playerPosition.dst(teleporterPosition);
-        float maxTeleportRange = avatar.getTeleportRangeRadius() / units;
-
-        // Check if destination is outside range
-        if (worldDistance > maxTeleportRange) {
-            Vector2 direction = new Vector2(
-                initialPosition.x - playerPosition.x,
-                initialPosition.y - playerPosition.y
-            ).nor();
-
-            // Clamp position to max distance
-            teleporterPosition = new Vector2(
-                playerPosition.x + direction.x * maxTeleportRange,
-                playerPosition.y + direction.y * maxTeleportRange
-            );
-        }
-
-        queuedTeleportPosition = teleporterPosition;
     }
 
     /**
