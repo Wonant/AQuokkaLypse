@@ -91,18 +91,22 @@ public class EnemyVisionRaycast implements RayCastCallback {
     public float reportRayFixture(Fixture fixture, Vector2 point, Vector2 normal, float fraction) {
         if (mode == VisionMode.STAIR_CHECK) {
             Object userData = fixture.getBody().getUserData();
-            if (userData instanceof Surface) {
+            if (!(userData instanceof Surface)) {
+                return -1f;
+            } else {
                 Surface surface = (Surface) userData;
                 String name = surface.getObstacle().getName();
                 System.out.println("Distance from start ray to first surface: " + (point.y - surface.getObstacle().getY()));
                 if (name.startsWith("stair")) {
-
                     posAboveStair.set(point).add(normal.cpy().nor());
                     System.out.println("Position above stair" + posAboveStair);
                     hitFixture = fixture;
                     closestFraction = fraction;
                     fixtureIsStair = true;
                     hitPoint.set(point);
+                    return 0;
+                } else {
+                    fixtureIsStair = false;
                     return 0;
                 }
             }
@@ -145,7 +149,6 @@ public class EnemyVisionRaycast implements RayCastCallback {
                 hitPoint = point;
                 return 0;
             }
-            return 1;
         }
 
         else {

@@ -49,6 +49,7 @@ public class LevelContactListener implements ContactListener {
 
         try {
 
+
             ObstacleSprite bd1 = (ObstacleSprite)body1.getUserData();
             ObstacleSprite bd2 = (ObstacleSprite)body2.getUserData();
             //System.out.println(fd1 + " " + fd2 + " " + bd1 + " " + bd2);
@@ -96,7 +97,6 @@ public class LevelContactListener implements ContactListener {
         //System.out.println(fd1 + " " + fd2 + " " + bd1 + " " + bd2);
 
         handleWalkSensorEndContact(bd1, bd2, fd1, fd2);
-        handleFollowSensorEndContact(fix1, fix2, fd1, fd2);
         handleHarvestingEndContact(bd1, bd2, fd1, fd2);
         handleVisionSensorEndContact(fd1, fd2, fix1, fix2);
         handleGroundEndContact(bd1, bd2, fd1, fd2, fix1, fix2);
@@ -200,26 +200,6 @@ public class LevelContactListener implements ContactListener {
         }
     }
 
-    private void handleFollowSensorContact(ObstacleSprite bd1, ObstacleSprite bd2, Object fd1, Object fd2) {
-        if (("follow_sensor".equals(fd1) && (bd2 instanceof Player)) ||
-            ("follow_sensor".equals(fd2) && (bd1 instanceof Player))) {
-            if (bd1 instanceof CuriosityCritter) {
-                ((CuriosityCritter) bd1).playerInFollowRange = true;
-            } else if (bd2 instanceof CuriosityCritter){
-                ((CuriosityCritter) bd2).playerInFollowRange = true;
-            }
-            // This should be handled in update???
-            if (!playerSlowed) {
-                Player player = dreamWalkerScene.getAvatar();
-                originalPlayerMovement = player.getMovement(); // store whatever it is now
-                float newMovement = originalPlayerMovement * 0.5f;
-                player.setMovement(newMovement);
-                playerSlowed = true;
-                System.out.println("Player movement slowed by critter follow sensor");
-            }
-        }
-    }
-
     private void handleWalkSensorContact(ObstacleSprite bd1, ObstacleSprite bd2, Object fd1, Object fd2) {
         if (("walk_sensor".equals(fd1) && (bd2 instanceof Surface || bd2 instanceof Enemy)) ||
             ("walk_sensor".equals(fd2) && (bd2 instanceof Surface || bd2 instanceof Enemy))) {
@@ -314,6 +294,7 @@ public class LevelContactListener implements ContactListener {
             dreamWalkerScene.getAvatar().setGrounded(true);
             dreamWalkerScene.sensorFixtures.add(dreamWalkerScene.getAvatar() == bd1 ? fix2 : fix1);
 
+
             Surface currentSurface;
             if (bd1 instanceof Surface) {
                 currentSurface = (Surface) bd1;
@@ -324,6 +305,18 @@ public class LevelContactListener implements ContactListener {
             if (currentSurface.isShadowed()) {
                 dreamWalkerScene.getAvatar().setIsShadow(true);
                 dreamWalkerScene.shadowSensorFixtures.add(dreamWalkerScene.getAvatar() == bd1 ? fix2 : fix1);
+            }
+        }
+        if (bd1 instanceof Enemy && bd2 instanceof Surface || bd2 instanceof Enemy && bd1 instanceof Surface) {
+            if ("ground_sensor".equals(fd2) || "ground_sensor".equals(fd1)) {
+                Enemy enemy;
+                if (bd1 instanceof Enemy) {
+                    enemy = (Enemy) bd1;
+                } else {
+                    enemy = (Enemy) bd2;
+                }
+                System.out.println("Enemy hit ground sensor");
+                enemy.setGrounded(true);
             }
         }
 
@@ -386,31 +379,6 @@ public class LevelContactListener implements ContactListener {
         }
     }
 
-    private void handleFollowSensorEndContact(Fixture fix1, Fixture fix2, Object fd1, Object fd2) {
-        Object bodyDataA = fix1.getBody().getUserData();
-        Object bodyDataB = fix2.getBody().getUserData();
-
-        if (("follow_sensor".equals(fd1) || "follow_sensor".equals(fd2)) &&
-            (bodyDataA instanceof Player || bodyDataB instanceof Player)) {
-
-            if (bodyDataA instanceof Enemy) {
-                ((Enemy) bodyDataA).setAwareOfPlayer(false);
-            } else {
-                ((Enemy) bodyDataB).setAwareOfPlayer(false);
-            }
-
-            if (playerSlowed) {
-                Player player = dreamWalkerScene.getAvatar();
-                player.setMovement(originalPlayerMovement); // revert
-                playerSlowed = false;
-                System.out.println("Player movement restored after follow sensor separation");
-            }
-
-            dreamWalkerScene.getAvatar().setTakingDamage(false);
-            System.out.println("Enemy stopped seeing player");
-        }
-    }
-
     private void handleHarvestingEndContact(Object bd1, Object bd2, Object fd1, Object fd2) {
         if ((dreamWalkerScene.getAvatar().getScareSensorName().equals(fd1) && bd2 instanceof Enemy) ||
             (dreamWalkerScene.getAvatar().getScareSensorName().equals(fd2) && bd1 instanceof Enemy)) {
@@ -470,6 +438,17 @@ public class LevelContactListener implements ContactListener {
             dreamWalkerScene.shadowSensorFixtures.remove(dreamWalkerScene.getAvatar() == bd1 ? fix2 : fix1);
             if (dreamWalkerScene.shadowSensorFixtures.size == 0) {
                 dreamWalkerScene.getAvatar().setIsShadow(false);
+            }
+        }
+        if (bd1 instanceof Enemy && bd2 instanceof Surface || bd2 instanceof Enemy && bd1 instanceof Surface) {
+            if ("ground_sensor".equals(fd2) || "ground_sensor".equals(fd1)) {
+                Enemy enemy;
+                if (bd1 instanceof Enemy) {
+                    enemy = (Enemy) bd1;
+                } else {
+                    enemy = (Enemy) bd2;
+                }
+                enemy.setGrounded(false);
             }
         }
     }

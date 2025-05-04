@@ -63,7 +63,9 @@ public class DesktopLauncher {
         config.rawHDPI = false;
 
         // Use OpenGLES 2.0
-        config.useGL30 = false;
+
+        // FOR SHADERS MUST BE TRUE? but setting to false just breaks game lol
+        config.useGL30 = true;
 
         // Window icons used by Windows (in Resources folder)
         config.iconList = "icons.txt";

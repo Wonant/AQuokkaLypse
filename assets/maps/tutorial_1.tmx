@@ -1,5 +1,8 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<map version="1.10" tiledversion="1.11.2" orientation="orthogonal" renderorder="right-down" width="70" height="10" tilewidth="32" tileheight="32" infinite="0" nextlayerid="19" nextobjectid="38">
+<map version="1.10" tiledversion="1.11.2" orientation="orthogonal" renderorder="right-down" width="70" height="10" tilewidth="32" tileheight="32" infinite="0" nextlayerid="19" nextobjectid="40">
+ <editorsettings>
+  <export target="tutorial_1.tmj" format="json"/>
+ </editorsettings>
  <tileset firstgid="1" source="../tilesets/Temple L1-2.tsx"/>
  <tileset firstgid="118" source="../tilesets/Temple L2-2.tsx"/>
  <tileset firstgid="235" source="../tilesets/Temple Background.tsx"/>
@@ -113,9 +116,7 @@
   <object id="2" name="Player Spawn" x="192" y="191">
    <point/>
   </object>
-  <object id="10" name="door" x="2117.25" y="189.125">
-   <polygon points="0,0 0,65.375 52.5,65.625 52.875,0.5 26.75,-9.625"/>
-  </object>
+  <object id="39" name="door" x="2116.51" y="189.583" width="53.8139" height="66.6502"/>
  </objectgroup>
  <objectgroup id="5" name="Shards">
   <properties>

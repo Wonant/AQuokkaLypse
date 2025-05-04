@@ -33,6 +33,7 @@ public class Enemy extends ObstacleSprite {
     protected RevoluteJoint headJoint;
     protected float movement;
     protected boolean facingRight;
+    protected boolean isGrounded;
 
     protected float stepRayLength;
     protected EnemyVisionRaycast enemyVisionRaycast;
@@ -87,6 +88,15 @@ public class Enemy extends ObstacleSprite {
             facingRight = true;
         }
     }
+
+    public boolean isGrounded() {
+        return isGrounded;
+    }
+
+    public void setGrounded(boolean value) {
+        isGrounded = value;
+    }
+
 
     public void setFilter() {
         for (Fixture fixture : obstacle.getBody().getFixtureList()) {

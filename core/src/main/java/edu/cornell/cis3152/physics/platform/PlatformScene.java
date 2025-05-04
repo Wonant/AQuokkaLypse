@@ -16,9 +16,7 @@ import com.badlogic.gdx.ai.GdxAI;
 import com.badlogic.gdx.ai.msg.MessageDispatcher;
 import com.badlogic.gdx.ai.msg.Telegram;
 import com.badlogic.gdx.ai.msg.Telegraph;
-import com.badlogic.gdx.graphics.g2d.ParticleEffect;
 import com.badlogic.gdx.graphics.g2d.Sprite;
-import com.badlogic.gdx.graphics.glutils.FrameBuffer;
 import com.badlogic.gdx.graphics.glutils.ShaderProgram;
 import com.badlogic.gdx.graphics.glutils.ShapeRenderer;
 import com.badlogic.gdx.maps.MapLayer;
@@ -39,6 +37,7 @@ import com.badlogic.gdx.physics.box2d.*;
 import com.badlogic.gdx.utils.JsonValue;
 import com.badlogic.gdx.utils.ScreenUtils;
 import edu.cornell.cis3152.physics.platform.aibehavior.AIManager;
+import edu.cornell.cis3152.physics.platform.aibehavior.BehaviorLoop;
 import edu.cornell.gdiac.assets.AssetDirectory;
 import edu.cornell.gdiac.util.*;
 import edu.cornell.gdiac.graphics.*;
@@ -52,8 +51,6 @@ import edu.cornell.cis3152.physics.InputController;
 //import edu.cornell.cis3152.physics.PhysicsScene;
 import edu.cornell.gdiac.audio.SoundEffect;
 import edu.cornell.gdiac.audio.SoundEffectManager;
-
-import com.badlogic.gdx.graphics.g2d.TextureRegion;
 
 /**
  * The game scene for the platformer game.
@@ -215,8 +212,9 @@ public class PlatformScene implements Screen, Telegraph {
     private TextLayout dreamShardCountText;
     private Map<Shard,Float> shardPickupTimers = new HashMap<>();
     public Shard currentInteractingShard = null;
-    private ShapeRenderer vortexRenderer;
     private float     vortexTimer        = 0f;
+
+    private Animator swirlSprite;
 
     /** if stun mode is on, which changes player m1 to an attack rather than a teleport */
     private boolean stunModeOn;
@@ -229,6 +227,7 @@ public class PlatformScene implements Screen, Telegraph {
 
     /** tiled map + map info */
     private TiledMapInfo tiledMap;
+    private TiledMapRenderer tiledRenderer;
     private String tiledLevelName;
 
 
@@ -264,6 +263,14 @@ public class PlatformScene implements Screen, Telegraph {
     private float teleportAngle;
     private boolean teleportDirectionRight;
 
+    // Shaders
+    private Shader vortexShader, tendrilShader, rippleShader;
+    private Shader rayShader;
+    private Texture blankTexture;
+    private Sprite blankSprite;
+    private Texture abstractGlassyTexture;
+
+    private float globalTime;
 
     /*==============================ContactListener Getters/Setters===============================*/
 
@@ -439,7 +446,7 @@ public class PlatformScene implements Screen, Telegraph {
         fearMeterTexture.dispose();
         tiledMap.disposeMap();
         visibilityIndicatorTexture.dispose();
-        vortexRenderer.dispose();
+        abstractGlassyTexture.dispose();
     }
 
 
@@ -608,12 +615,32 @@ public class PlatformScene implements Screen, Telegraph {
         units = height / bounds.height;
 
         Texture fear = directory.getEntry("fear-meter-sprite-sheet", Texture.class);
-        createAnimators(fear);
+        Texture swirl = directory.getEntry("swirl-active", Texture.class);
+        createAnimators(fear,swirl);
 
         dispatcher.addListener(this, MessageType.CRITTER_SEES_PLAYER);
         dispatcher.addListener(this, MessageType.CRITTER_LOST_PLAYER);
 
-        vortexRenderer = new ShapeRenderer();
+
+
+        vortexShader = new Shader(Gdx.files.internal("shaders/vortex.vert"),Gdx.files.internal("shaders/vortex.frag"));
+        if (!vortexShader.isCompiled()) {
+            Gdx.app.error("PlatformScene", "Swirl shader compile error: " + vortexShader.getLog());
+        }
+
+        tendrilShader = new Shader(Gdx.files.internal("shaders/tendrils.vert"),Gdx.files.internal("shaders/tendrils.frag"));
+        rippleShader = new Shader(Gdx.files.internal("shaders/ripple.vert"),Gdx.files.internal("shaders/ripple.frag"));
+        rayShader = new Shader(Gdx.files.internal("shaders/screen.vert"), Gdx.files.internal("shaders/fallingrays.frag"));
+
+        Pixmap pix = new Pixmap(1,1,Pixmap.Format.RGBA8888);
+        pix.setColor(Color.WHITE);
+        pix.fill();
+        blankTexture = new Texture(pix);
+        pix.dispose();
+        blankSprite   = new Sprite(blankTexture);
+
+
+        abstractGlassyTexture = directory.getEntry("abstract-glassy", Texture.class);
     }
 
     /**
@@ -646,15 +673,18 @@ public class PlatformScene implements Screen, Telegraph {
     /**
      * creates animator objects of sprite sheets
      */
-    private void createAnimators(Texture fearMeter) {
+    private void createAnimators(Texture fearMeter, Texture swirl) {
         fearMeterSprite = new Animator(fearMeter, 2, 6, 0.033f, 11, 0, 10);
+        swirlSprite = new Animator(swirl, 1, 6, 0.066f, 6, 0, 5);
     }
 
     /**
      * Lays out the game geography.
      */
     private void populateLevel() {
+        globalTime = 0;
         tiledMap = new TiledMapInfo(tiledLevelName);
+        tiledRenderer = new TiledMapRenderer(tiledMap.map, batch, 32);
         aiCManager = new AIControllerManager(avatar,directory,world);
         aiManager = new AIManager("behaviors/critter.tree", "behaviors/dweller.tree","behaviors/maintenance.tree", directory);
         aiManager.setPlayer(avatar);
@@ -707,7 +737,6 @@ public class PlatformScene implements Screen, Telegraph {
                     // Have to do after body is created
                     critter.setFilter();
                     critter.createSensor();
-                    critter.createVisionSensor();
                     enemies.add(critter);
                     aiManager.register(critter);
                 }
@@ -874,68 +903,11 @@ public class PlatformScene implements Screen, Telegraph {
         avatar.setFilter();
 
         avatar.createSensor();
-
         avatar.createScareSensor();
         avatar.createFallSensor();
         aiManager.setPlayer(avatar);
 
 
-
-
-
-        JsonValue maintainers = constants.get("mind-maintenance");
-        JsonValue maintenancePos = maintainers.get("pos");
-
-        for (int i = 0; i < maintenancePos.size; i++) {
-
-            texture = directory.getEntry( "maintenance-walk", Texture.class );
-            Texture turning = directory.getEntry("maintenance-turn", Texture.class);
-
-            //texture = directory.getEntry("mind-maintenance-active", Texture.class);
-
-            maintenance = new MindMaintenance(units, constants.get("mind-maintenance"), maintenancePos.get(i).asFloatArray(), this);
-            //maintenance.setTexture(texture);
-            addSprite(maintenance);
-//            maintenance.createAnimators(texture, turning);
-            // Have to do after body is created
-            maintenance.setFilter();
-            maintenance.createSensor();
-            maintenance.createVisionSensor();
-            enemies.add(maintenance);
-            //aiManager.register(maintenance);
-            aiCManager.register(maintenance);
-            texture = directory.getEntry("vision_cone", Texture.class);
-            visionConeRegion = new TextureRegion(texture);
-            visionCone = new Sprite(visionConeRegion.getTexture());
-            visionCone.setRegion(visionConeRegion);
-            visionCone.setSize(240, 200);
-            visionCone.setOrigin(visionCone.getWidth() / 2, 0);
-        }
-
-        JsonValue dreamdwellers = constants.get("dream-dweller");
-        JsonValue dwellersPos = dreamdwellers.get("pos");
-        for (int i = 0; i < dwellersPos.size; i++) {
-            texture = directory.getEntry("dream-dweller-active", Texture.class);
-
-            dreamDweller = new DreamDweller(units, constants.get("dream-dweller"), dwellersPos.get(i).asFloatArray(), this);
-            dreamDweller.setTexture(texture);
-            addSprite(dreamDweller);
-            // Have to do after body is created
-            dreamDweller.setFilter();
-            dreamDweller.createSensor();
-            dreamDweller.createVisionSensor();
-            enemies.add(dreamDweller);
-            //aiManager.register(maintenance);
-            aiCManager.register(dreamDweller);
-            texture = directory.getEntry("vision_cone", Texture.class);
-            visionConeRegion = new TextureRegion(texture);
-            visionCone = new Sprite(visionConeRegion.getTexture());
-            visionCone.setRegion(visionConeRegion);
-            visionCone.setSize(240, 200);
-            visionCone.setOrigin(visionCone.getWidth() / 2, 0);
-            visionCone.setColor(new Color(0.8f, 0.2f, 0.8f, 0.5f));
-
-        }
 
         if (dreamShardCountText != null) {
             dreamShardCountText.setText("Dream Shards: " + (totalShards - collectedShards));
@@ -973,7 +945,7 @@ public class PlatformScene implements Screen, Telegraph {
      * @return whether to process the update loop
      */
     public boolean preUpdate(float dt) {
-
+        globalTime += dt;
         InputController input = InputController.getInstance();
         input.sync(bounds, scale);
         if (listener == null) {
@@ -1109,7 +1081,7 @@ public class PlatformScene implements Screen, Telegraph {
 
         if (lastCritterSawTime >= 0
             && !playerSlowed
-            && timeSinceStart - lastCritterSawTime > 0.5f) {
+            && timeSinceStart - lastCritterSawTime > .2f) {
             avatar.setMaxSpeed(avatar.getMaxSpeed() * slowSpeedFactor);
             playerSlowed = true;
         }
@@ -1491,16 +1463,33 @@ public class PlatformScene implements Screen, Telegraph {
         {
             if(drawScareCooldown <= drawScareLimit)
             {
+                batch.end();
                 drawScareEffect();
+                batch.begin();
                 drawScareCooldown++;
             } else {
                 drawScareCooldown = 0;
                 drawScareEffect = false;
             }
         }
+        batch.end();
         // Draw the meshes (images)
+        for (ObstacleSprite obj : sprites) {
+            if (obj instanceof Shard && shardPickupTimers.containsKey((Shard)obj) && avatar.isInteracting()) {
+                drawVortexOverlay((Shard) obj, dt, shardPickupTimers.get((Shard) obj));
+            }
+        }
+        batch.begin();
+
+
         for(ObstacleSprite obj : sprites) {
-            obj.draw(batch);
+            if (obj instanceof Player && playerSlowed) {
+                batch.setColor(Color.BLUE);
+                obj.draw(batch);
+                batch.setColor(Color.WHITE);
+            } else {
+                obj.draw(batch);
+            }
         }
 
         if (debug) {
@@ -1511,17 +1500,81 @@ public class PlatformScene implements Screen, Telegraph {
         }
 
         drawTeleport();
+        batch.end();
         // Draw a final message
         //batch.setColor(foregroundColor);
         //batch.draw(foregroundTexture, 0, 0, width, height);
-        batch.end();
-        if (currentInteractingShard != null && avatar.isInteracting()) {
-            vortexRenderer.setProjectionMatrix(camera.combined);
-            vortexRenderer.begin(ShapeRenderer.ShapeType.Line);
-            drawVortex(vortexRenderer, currentInteractingShard, vortexTimer);
-            vortexRenderer.end();
-        }
+
     }
+
+    private void drawVortexOverlay(Shard shard, float dt, float sTime) {
+        ShaderProgram prev = batch.getShader();
+        float units = TiledMapInfo.PIXELS_PER_WORLD_METER;
+        Vector2 pos  = shard.getObstacle().getPosition();
+
+        // on‐screen center
+        float cx = pos.x * units;
+        float cy = pos.y * units;
+        float radius = 165;  // half‐size of the effect in pixels
+
+        // configure blank sprite to cover the circle
+        blankSprite.setSize(radius*2, radius*2);
+        blankSprite.setOrigin(radius, radius);
+        blankSprite.setPosition(cx - radius, cy - radius);
+
+        // tell the batch to use your GDIAC Shader
+        batch.setShader(vortexShader);
+        vortexShader.bind();
+
+        // upload all the Shadertoy‐style uniforms
+        vortexShader.setUniformf("iResolution", radius*2, radius*2, 0f);
+        vortexShader.setUniformf("iTime", sTime);
+        vortexShader.setUniformf("iTimeDelta",   dt);
+        vortexShader.setUniformf("iFrameRate",   1f/dt);
+        vortexShader.setUniformi("iFrame", (int) Gdx.graphics.getFrameId());
+        vortexShader.setUniformi("iChannel0", 0);
+        vortexShader.setUniformi("iChannel1", 1);
+
+        Texture glassyCopy = new Texture(abstractGlassyTexture.getTextureData());
+        abstractGlassyTexture.bind(0);
+        glassyCopy.bind(1);
+
+
+
+        batch.setBlendMode(SpriteBatch.BlendMode.ADDITIVE);
+        batch.setColor(Color.WHITE);
+        // draw the quad with the ripple shader
+        batch.begin();
+        batch.draw(abstractGlassyTexture, cx - radius / 2, cy - radius / 2, radius, radius);
+        batch.setBlendMode(SpriteBatch.BlendMode.PREMULT);
+        radius = 50;
+        batch.draw(abstractGlassyTexture, cx - radius / 2, cy - radius / 2, radius, radius);
+        batch.end();
+
+
+        batch.setBlendMode(SpriteBatch.BlendMode.PREMULT);
+        batch.setShader(tendrilShader);
+        radius = 210;
+        tendrilShader.bind();
+        tendrilShader.setUniformf("iResolution", radius, radius, 0f);
+        tendrilShader.setUniformf("iTime", sTime);
+
+        batch.begin();
+        batch.draw(abstractGlassyTexture, cx - radius, cy - radius, radius * 2, radius * 2);
+        batch.end();
+
+
+
+        batch.setBlendMode(SpriteBatch.BlendMode.ALPHA_BLEND);
+        // restore default shader
+        batch.setShader(prev);
+
+        batch.begin();
+        TextureRegion frame = swirlSprite.getCurrentFrame(dt);
+        batch.draw(frame, cx - radius / 4, cy - radius / 4, radius/2, radius/2);
+        batch.end();
+    }
+
     private void drawTeleport()
     {
         float units = TiledMapInfo.PIXELS_PER_WORLD_METER;
@@ -1553,6 +1606,7 @@ public class PlatformScene implements Screen, Telegraph {
 
             batch.setColor(Color.WHITE);
 
+
             Sprite sprite = new Sprite(frameToDraw);
             sprite.setSize(scaledWidth, scaledHeight);
             sprite.setOriginCenter();
@@ -1572,41 +1626,7 @@ public class PlatformScene implements Screen, Telegraph {
             sprite.draw(batch);
         }
 
-    }
-    private void drawVortex(ShapeRenderer sr, Shard shard, float time) {
-        // world→screen
-        float units = TiledMapInfo.PIXELS_PER_WORLD_METER;
-        Vector2 center = shard.getObstacle().getPosition();
-        float cx = center.x * units;
-        float cy = center.y * units;
 
-        // how many little segments in our line
-        int   segments = 60;
-        // how many full turns from tail→head
-        float turns    = 2f;
-        // how far the spiral reaches
-        float maxRadius = 2 * units * 1.2f;
-
-        Vector2 prev = new Vector2();
-        for (int i = 0; i <= segments; i++) {
-            float t = i/(float)segments;
-            float angle  = t*turns*MathUtils.PI2 + time*1.5f;
-            float radius = t*maxRadius;
-
-            float x = cx + MathUtils.cos(angle)*radius;
-            float y = cy + MathUtils.sin(angle)*radius;
-
-            // fade the tail out
-            sr.setColor(1,0,0, 1f - t);
-
-            if (i>0) {
-                sr.line(prev.x, prev.y, x, y);
-            }
-            prev.set(x,y);
-        }
-
-        // reset color so it doesn’t bleed into anything else
-        sr.setColor(Color.WHITE);
     }
 
 
@@ -1748,11 +1768,38 @@ public class PlatformScene implements Screen, Telegraph {
         batch.end();
     }
 
-    private void drawScareEffect(){
-        float u = avatar.getObstacle().getPhysicsUnits();
-        float size = scareEffectTexture.getRegionWidth() * 0.5f;
-        float size2 = scareEffectTexture.getRegionHeight() * 0.5f;
-        batch.draw(scareEffectTexture, avatar.getObstacle().getX() * u - size * 0.42f, avatar.getObstacle().getY() * u - size2 *0.57f, size, size2);
+    private void drawScareEffect() {
+
+        float u = 32;
+        Vector2 worldPos = avatar.getObstacle().getPosition();
+        float cx = worldPos.x * u;
+        float cy = worldPos.y * u;
+        float radius = 300;
+        blankSprite.setSize(radius*2, radius*2);
+        blankSprite.setOrigin(radius, radius);
+        blankSprite.setPosition(cx - radius, cy - radius);
+        batch.flush();
+
+        batch.setBlendMode(SpriteBatch.BlendMode.ADDITIVE);
+
+        ShaderProgram prev = batch.getShader();
+        batch.setShader(rippleShader);
+        rippleShader.bind();
+        rippleShader.setUniformf("iResolution", radius*2, radius*2) ;
+        // use your existing “scare timer” or vortexTimer here
+        rippleShader.setUniformf("iTime", globalTime);
+        rippleShader.setUniformi("iMask", 1);
+        scareEffectTexture.getTexture().bind(1);
+
+        batch.begin();
+        batch.draw(scareEffectTexture, cx - radius/2.4f, cy - radius/2, radius, radius);
+        batch.end();
+
+        batch.setShader(prev);
+        batch.setBlendMode(SpriteBatch.BlendMode.ALPHA_BLEND);
+//        float size = scareEffectTexture.getRegionWidth() * 0.5f;
+//        float size2 = scareEffectTexture.getRegionHeight() * 0.5f;
+//        batch.draw(scareEffectTexture, avatar.getObstacle().getX() * u - size * 0.42f, avatar.getObstacle().getY() * u - size2 *0.57f, size, size2);
     }
 
     /**
@@ -1844,7 +1891,7 @@ public class PlatformScene implements Screen, Telegraph {
                 postUpdate(delta);
             }
             ScreenUtils.clear(0.9f, 0.9f, 0.93f, 1.0f);
-            tiledMap.renderDefault(camera);
+            tiledRenderer.renderAllLayers(camera);
             draw(delta);
             drawUI();
         }
@@ -1863,7 +1910,7 @@ public class PlatformScene implements Screen, Telegraph {
         float maxY = bounds.height * units - (halfViewportHeight * camera.zoom);
 
         camera.position.x = MathUtils.clamp(camera.position.x, minX, maxX);
-        camera.position.y = MathUtils.clamp(camera.position.y, minY, maxY + 50);
+        camera.position.y = MathUtils.clamp(camera.position.y, minY, maxY);
     }
 
     public void spawnShardAtLocation(Vector2 world, Shard s) {
@@ -1916,13 +1963,13 @@ public class PlatformScene implements Screen, Telegraph {
         System.out.println("Message Dispatcher received - enemy raycast lost player");
         enemiesAlerted--;
         crittersAlerted--;
+        if (playerSlowed) {
+            avatar.resetMaxSpeed();
+            playerSlowed = false;
+        }
         //last critter lost player
         if (crittersAlerted == 0) {
             lastCritterSawTime = -1f;
-            if (playerSlowed) {
-                avatar.resetMaxSpeed();
-                playerSlowed = false;
-            }
         }
     }
 
