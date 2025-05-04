@@ -583,14 +583,10 @@ public class AIControllerManager {
     private void updateDweller(DwellerAI data, float dt) {
         data.stateTimer += dt;
 
-
-
         Vector2 dwellerPos = getDwellerPosition(data.dweller);
-        Vector2 visionRef = new Vector2(dwellerPos.x, dwellerPos.y + 10.0f);
         boolean seesPlayer = data.dweller.isAwareOfPlayer();
         boolean isStunned = data.dweller.isStunned();
 
-        // if the enemy is stunned, transition to the stunned state
         if (isStunned) {
             if (data.state != DwellerFSM.STUNNED) {
                 transitionDwellerState(data, DwellerFSM.STUNNED);
@@ -598,39 +594,31 @@ public class AIControllerManager {
             data.dweller.getObstacle().setVX(0);
 
             if (data.stateTimer > data.stateDuration) {
-                System.out.println("Maintenance stun wears off");
+                System.out.println("Dweller stun wears off");
                 data.dweller.setActiveTexture(asset_directory);
                 data.dweller.setStunned(false);
                 transitionDwellerState(data, DwellerFSM.IDLE_LOOK);
             }
-        }
-        else{
+        } else {
             if (player != null) {
-                Vector2 playerPos = getPlayerPosition(player);
-                float distanceToPlayer = dwellerPos.dst(playerPos);
                 if (seesPlayer) {
                     data.dweller.setShooting(true);
-                }
-                else if (seesPlayer || data.dweller.isSus()){
-                    data.stateTimer = 0;
-                }
-                else{
+                } else {
                     data.dweller.setShooting(false);
                 }
             }
         }
 
-
-        if (data.state ==DwellerFSM.START) {
-           transitionDwellerState(data, DwellerFSM.IDLE_LOOK);
+        if (data.state == DwellerFSM.START) {
+            transitionDwellerState(data, DwellerFSM.IDLE_LOOK);
         }
 
         if (data.state == DwellerFSM.IDLE_LOOK) {
-                data.dweller.setVisionAngle(data.movingRight ? 270 : 90);
-                data.dweller.setMovement(0);
-                data.dweller.applyForce();
-            }
+            data.dweller.setMovement(0);
+            data.dweller.applyForce();
+        }
     }
+
     private void transitionDwellerState (DwellerAI data, DwellerFSM newState) {
         data.state = newState;
         data.stateTimer = 0;

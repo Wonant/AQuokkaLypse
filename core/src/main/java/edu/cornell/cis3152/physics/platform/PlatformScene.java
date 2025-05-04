@@ -721,7 +721,6 @@ public class PlatformScene implements Screen, Telegraph {
                     // Have to do after body is created
                     dreamDweller.setFilter();
                     dreamDweller.createSensor();
-                    dreamDweller.createVisionSensor();
                     enemies.add(dreamDweller);
                     //aiManager.register(maintenance);
                     aiCManager.register(dreamDweller);
@@ -928,7 +927,6 @@ public class PlatformScene implements Screen, Telegraph {
             // Have to do after body is created
             dreamDweller.setFilter();
             dreamDweller.createSensor();
-            dreamDweller.createVisionSensor();
             enemies.add(dreamDweller);
             //aiManager.register(maintenance);
             aiCManager.register(dreamDweller);
