@@ -80,6 +80,9 @@
         /** Whether we are actively jumping */
         private boolean isJumping;
         private boolean lastJumping;
+        private int coyoteTimeFrames = 5;
+        private int coyoteTimeCounter = 0;
+        private boolean wasGrounded = false;
 
         /** How long (in animation frames) the harvesting attack lasts  */
         private int harvestDuration;
@@ -470,7 +473,7 @@
          * @return true if Player is actively jumping.
          */
         public boolean isJumping() {
-            return isJumping && isGrounded && jumpCooldown <= 0;
+            return isJumping && (isGrounded || coyoteTimeCounter > 0) && jumpCooldown <= 0;
         }
 
         /**
@@ -834,26 +837,20 @@
                 return;
             }
 
+            float maxUpwardVelocity = 15.0f;
+            float maxFallingVelocity = -20.0f;
+
             Vector2 pos = obstacle.getPosition();
             float vx = obstacle.getVX();
             float vy = obstacle.getVY();
             Body body = obstacle.getBody();
 
-            //body.setLinearDamping(damping);
-            obstacle.setFriction(0);
-
-            // first thing first - if body is sliding opposite of move input stop it
-            /*
-            if (movement * vx < 0) {
-                obstacle.setVX(0);
-            }
-
-             */
 
             // Velocity too high, clamp it
-            if (movement == 0) {
+            if (getMovement() == 0f) {
                 obstacle.setVX(0);
-            } else if (Math.abs(vx) >= getMaxSpeed()) {
+            }
+            else if (Math.abs(vx) >= getMaxSpeed()) {
                 obstacle.setVX(Math.signum(vx)*getMaxSpeed());
             } else {
                 forceCache.set(getMovement(),0);
@@ -870,8 +867,15 @@
                 body.applyLinearImpulse(forceCache,pos,true);
             }
 
-            if (isJumping() && isGrounded()) {
+            if (isJumping()) {
                 jumpSprite.reset();
+
+                //Don't want gravity to be weakening the jump when coyote time
+                if (!isGrounded && coyoteTimeCounter > 0) {
+                    float currentHorizontalVelocity = obstacle.getVX();
+                    obstacle.getBody().setLinearVelocity(currentHorizontalVelocity, 0);
+                }
+
                 forceCache.set(0, jump_force);
                 body.applyLinearImpulse(forceCache,pos,true);
                 isClimbing = false;
@@ -891,6 +895,22 @@
                 System.out.println("VELOCITY LEFT: " + getMovement() + " " + obstacle.getVX());
                 obstacle.setVX(0);
             }
+
+            if (vy > maxUpwardVelocity)
+            {
+                obstacle.setVY(0);
+                System.out.println("Stopping extreme Upward velocity!");
+            }
+
+            if (vy < maxFallingVelocity)
+            {
+                System.out.println("MAX FALLING REACHED!");
+                // Preserve the current X velocity while capping the Y velocity
+                Vector2 currentVelocity = obstacle.getBody().getLinearVelocity();
+                obstacle.getBody().setLinearVelocity(currentVelocity.x, maxFallingVelocity);
+            }
+
+
         }
 
         public boolean isPlatformStep(World world, float raylength) {
@@ -1048,6 +1068,15 @@
 
             }
 
+            if(isGrounded)
+            {
+                coyoteTimeCounter = coyoteTimeFrames;
+                System.out.println("Grounded! coyoteTimeCounter=" + coyoteTimeCounter);
+            } else {
+                System.out.println("FALLING! coyoteTimeCounter=" + coyoteTimeCounter);
+                coyoteTimeCounter = Math.max(0, coyoteTimeCounter - 1);
+            }
+
             // Apply cooldowns
             if (isJumping()) {
                 jumpCooldown = jumpLimit;
@@ -1104,7 +1133,7 @@
                     frame = idleSprite.getCurrentFrame(Gdx.graphics.getDeltaTime());
                     break;
                 case JUMP:
-                    if (!lastJumping && isJumping && isGrounded) {
+                    if (!lastJumping && isJumping()) {
                         jumpSprite.reset();
                     }
                     frame = jumpSprite.getCurrentFrame(Gdx.graphics.getDeltaTime());
