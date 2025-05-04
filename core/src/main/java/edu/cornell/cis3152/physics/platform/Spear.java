@@ -29,8 +29,7 @@ public class Spear extends ObstacleSprite {
     private Animator endAnimator;
 
 
-
-    public Spear(float units, JsonValue settings, Vector2 pos, Vector2 velocity,Texture travelTex, Texture endTex) {
+    public Spear(float units, JsonValue settings, Vector2 pos, Vector2 velocity, Texture travelTex, Texture endTex) {
         timeAlive = 0f;
         this.direction = velocity.x >= 0 ? 1 : -1;
 
@@ -52,9 +51,9 @@ public class Spear extends ObstacleSprite {
         obstacle.setVX(velocity.x);
         obstacle.setVY(velocity.y);
 
-        mesh.set(-halfW*32, -halfH*28, 2 * halfW*16, 2 * halfH*16);
+        mesh.set(-halfW * 32, -halfH * 28, 2 * halfW * 16, 2 * halfH * 16);
         travelAnimator = new Animator(travelTex, 1, 5, 0.2f, 5, 0, 4, true);
-        endAnimator    = new Animator(endTex,    1, 5, 0.2f, 5, 0, 4, false);
+        endAnimator = new Animator(endTex, 1, 5, 0.2f, 5, 0, 4, false);
     }
 
     public void update(float dt) {
@@ -74,14 +73,13 @@ public class Spear extends ObstacleSprite {
                     currentFrame = endAnimator.getCurrentFrame(dt);
                 }
             }
-        }
-        else if (obstacle.getBody() != null) {
+        } else if (obstacle.getBody() != null) {
             setFilter();
         }
         Vector2 vel = new Vector2(obstacle.getVX(), obstacle.getVY());
         if (vel.len2() > 0.01f) {
             float angle = (vel.angleDeg() + 180f) % 360f; // 取得当前速度向量的角度
-            obstacle.setAngle((float)Math.toRadians(angle));
+            obstacle.setAngle((float) Math.toRadians(angle));
         }
     }
 
@@ -115,11 +113,26 @@ public class Spear extends ObstacleSprite {
         float drawY = obstacle.getY() * u;
         float scale = 0.25f;
 
-        batch.draw(currentFrame,
-            drawX - currentFrame.getRegionWidth() * scale / 2,
-            drawY - currentFrame.getRegionHeight() * scale / 2,
-            currentFrame.getRegionWidth() * scale,
-            currentFrame.getRegionHeight() * scale
-        );
+        float width = currentFrame.getRegionWidth() * scale;
+        float height = currentFrame.getRegionHeight() * scale;
+
+        // ✅ 用负宽度绘制来翻转图像
+        if (direction > 0) {
+            // 向右飞，镜像画
+            batch.draw(currentFrame,
+                drawX + width / 2, // 起始点改为右侧
+                drawY - height / 2,
+                -width,  // 负宽度 = 水平翻转
+                height
+            );
+        } else {
+            // 向左飞，正常画
+            batch.draw(currentFrame,
+                drawX - width / 2,
+                drawY - height / 2,
+                width,
+                height
+            );
+        }
     }
 }

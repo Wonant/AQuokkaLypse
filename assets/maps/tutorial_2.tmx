@@ -144,7 +144,7 @@
    <point/>
   </object>
   <object id="3" name="Door" x="2468.48" y="637.547" width="52.4564" height="64.5617"/>
-  <object id="24" name="dream dweller" x="1171.99" y="727.432">
+  <object id="24" name="dream dweller" x="1000.99" y="727.432">
    <point/>
   </object>
   <object id="25" name="curiosity critter" x="561.547" y="733.824">

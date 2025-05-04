@@ -1068,12 +1068,10 @@ public class PlatformScene implements Screen, Telegraph {
                 Vector2 position = e.getObstacle().getPosition();
                 Vector2 playerPos = avatar.getObstacle().getPosition();
 
-                float speed = 11.5f;
+                float speed = 22.5f;
                 JsonValue spearjv = constants.get("spear");
                 Texture spearTravelTex = directory.getEntry("platform-spear-travel-sprite", Texture.class);
                 Texture spearEndTex    = directory.getEntry("platform-spear-end-sprite", Texture.class);
-
-                float direction = (playerPos.x < position.x) ? -1f : 1f;
 
                 float[] angleOffsets = new float[] { -20f, -14f, -3f, 8f };
                 float[] yOffsets = new float[] { -0.4f, 0.0f, 0.4f, 0.8f };
@@ -1081,6 +1079,8 @@ public class PlatformScene implements Screen, Telegraph {
                 pendingSpears.clear();
                 spearTimer = 0f;
                 spearIndex = 0;
+
+                float direction = (playerPos.x < position.x) ? -1f : 1f;
 
                 for (int i = 0; i < angleOffsets.length; i++) {
                     Vector2 spawnPos = new Vector2(position.x, position.y + yOffsets[i]);
@@ -1094,16 +1094,7 @@ public class PlatformScene implements Screen, Telegraph {
                         speed * (float) Math.sin(angleRad)
                     );
 
-                    Spear spear = new Spear(units, spearjv, spawnPos, velocity,spearTravelTex, spearEndTex);
-
-                    /*if (velocity.x < 0) {
-                        spear.setTexture(texture);
-                    } else {
-                        spear.setTexture(textureflip);
-                    }
-
-                     */
-
+                    Spear spear = new Spear(units, spearjv, spawnPos, velocity, spearTravelTex, spearEndTex);
                     pendingSpears.add(spear);
                 }
             }
