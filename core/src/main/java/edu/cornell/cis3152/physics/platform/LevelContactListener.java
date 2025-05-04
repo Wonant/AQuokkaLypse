@@ -51,14 +51,11 @@ public class LevelContactListener implements ContactListener {
 
             ObstacleSprite bd1 = (ObstacleSprite)body1.getUserData();
             ObstacleSprite bd2 = (ObstacleSprite)body2.getUserData();
-            //System.out.println(fd1 + " " + fd2 + " " + bd1 + " " + bd2);
 
             handleShieldWallContact(bd1, bd2);
             handleDoorContact(bd1, bd2);
             handleDreamShardContact(bd1, bd2, fd1, fd2);
-            //handleFollowSensorContact(bd1, bd2, fd1, fd2);
             handleWalkSensorContact(bd1, bd2, fd1, fd2);
-            //handleVisionSensorContact(bd1, bd2, fd1, fd2);
             handleBulletCollision(bd1, bd2, fd1, fd2);
             handleSpearHitPlayer(bd1, bd2);
             handleGroundContact(bd1, bd2, fd1, fd2, fix1, fix2);
@@ -93,12 +90,8 @@ public class LevelContactListener implements ContactListener {
 
         Object bd1 = body1.getUserData();
         Object bd2 = body2.getUserData();
-        //System.out.println(fd1 + " " + fd2 + " " + bd1 + " " + bd2);
 
-        handleWalkSensorEndContact(bd1, bd2, fd1, fd2);
-        //handleFollowSensorEndContact(fix1, fix2, fd1, fd2);
         handleHarvestingEndContact(bd1, bd2, fd1, fd2);
-        handleVisionSensorEndContact(fd1, fd2, fix1, fix2);
         handleGroundEndContact(bd1, bd2, fd1, fd2, fix1, fix2);
         handleShieldWallEndContact((ObstacleSprite) bd1, (ObstacleSprite) bd2);
         handleFallSensorEndContact((ObstacleSprite) bd1, (ObstacleSprite) bd2, fd1, fd2);
@@ -188,8 +181,6 @@ public class LevelContactListener implements ContactListener {
             (!("fall_sensor".equals(fd1) || "fall_sensor".equals(fd2)) ) &&
             !("player_sensor".equals(fd1) || "player_sensor".equals(fd2))) {
 
-            //System.out.println("drema shard contact handler sees: bd1:" + bd1 + " \nbd2: " + bd2 + " \nfd1: " + fd1 + " \nfd2: " + fd2);
-
             Shard collectedShard = (bd1 instanceof Shard) ? (Shard) bd1 : (Shard) bd2;
 
             if (!collectedShard.getObstacle().isRemoved()) {
@@ -223,8 +214,6 @@ public class LevelContactListener implements ContactListener {
     private void handleWalkSensorContact(ObstacleSprite bd1, ObstacleSprite bd2, Object fd1, Object fd2) {
         if (("walk_sensor".equals(fd1) && (bd2 instanceof Surface || bd2 instanceof Enemy)) ||
             ("walk_sensor".equals(fd2) && (bd2 instanceof Surface || bd2 instanceof Enemy))) {
-            // System.out.println("walk_sensor collision detected with: " + bd1 + " and " + bd2);
-
 
             // Ensure the Enemy reference is correctly retrieved
             Enemy e = (bd1 instanceof Enemy) ? (Enemy) bd1
@@ -233,9 +222,6 @@ public class LevelContactListener implements ContactListener {
 
             if (e != null) {
                 e.setSeesWall(true);
-                // System.out.println("Enemy sees wall");
-            } else {
-                // System.out.println("WARNING: Walk sensor collision detected but Enemy reference is null.");
             }
         }
     }
@@ -295,7 +281,6 @@ public class LevelContactListener implements ContactListener {
         } else if (enemy instanceof MindMaintenance) {
             MindMaintenance maintenance = (MindMaintenance) enemy;
             maintenance.setStunned(true);
-            maintenance.setStunTexture(dreamWalkerScene.directory);
             System.out.println("Maintenance is stunned");
         } else if (enemy instanceof DreamDweller) {
             DreamDweller dweller = (DreamDweller) enemy;
@@ -333,6 +318,7 @@ public class LevelContactListener implements ContactListener {
         // if there is a collision between an enemy and the player's scare sensor
         if(( (dreamWalkerScene.getAvatar().getScareSensorName().equals(fd1) && bd2 instanceof Enemy)
             || (dreamWalkerScene.getAvatar().getScareSensorName().equals(fd2) && bd1 instanceof Enemy) )){
+            System.out.println("FD1: " + fd1 + " FD2: " + fd2);
             Enemy harvestedEnemy;
                 if (dreamWalkerScene.getAvatar().getScareSensorName().equals(fd1) && fd2 != "walk_sensor" && fd2 != "follow_sensor" && fd2 != "vision_sensor" )
                 {
@@ -345,8 +331,12 @@ public class LevelContactListener implements ContactListener {
                                 critter.dropShard()
                             );
                         }
+                        dreamWalkerScene.performHarvest(harvestedEnemy);
+
                     }
-                    dreamWalkerScene.performHarvest(harvestedEnemy);
+                    else if (harvestedEnemy instanceof MindMaintenance && fd2 == "maintenance_sensor") {
+                        dreamWalkerScene.performHarvest(harvestedEnemy);
+                    }
 
                 } else if (dreamWalkerScene.getAvatar().getScareSensorName().equals(fd2) && fd1 != "walk_sensor" && fd1 != "follow_sensor" && fd1 != "vision_sensor")
                 {
@@ -359,55 +349,17 @@ public class LevelContactListener implements ContactListener {
                                 critter.dropShard()
                             );
                         }
+                        dreamWalkerScene.performHarvest(harvestedEnemy);
+
                     }
-                    dreamWalkerScene.performHarvest(harvestedEnemy);
+                    else if (harvestedEnemy instanceof MindMaintenance && fd1 == "maintenance_sensor") {
+                        dreamWalkerScene.performHarvest(harvestedEnemy);
+                    }
 
                 }
 
             //dreamWalkerScene.getAvatar().setHarvesting(true);
 
-        }
-    }
-
-    private void handleWalkSensorEndContact(Object bd1, Object bd2, Object fd1, Object fd2) {
-        if (("walk_sensor".equals(fd1) && bd2 instanceof Surface) ||
-            ("walk_sensor".equals(fd2) && bd1 instanceof Surface)) {
-
-            CuriosityCritter critter = (bd1 instanceof CuriosityCritter) ? (CuriosityCritter) bd1
-                : (bd2 instanceof CuriosityCritter) ? (CuriosityCritter) bd2
-                    : null;
-
-            if (critter != null) {
-                critter.setSeesWall(false);
-                System.out.println("Critter stopped seeing wall");
-            } else {
-                System.out.println("WARNING: Walk sensor end contact detected but Critter reference is null.");
-            }
-        }
-    }
-
-    private void handleFollowSensorEndContact(Fixture fix1, Fixture fix2, Object fd1, Object fd2) {
-        Object bodyDataA = fix1.getBody().getUserData();
-        Object bodyDataB = fix2.getBody().getUserData();
-
-        if (("follow_sensor".equals(fd1) || "follow_sensor".equals(fd2)) &&
-            (bodyDataA instanceof Player || bodyDataB instanceof Player)) {
-
-            if (bodyDataA instanceof Enemy) {
-                ((Enemy) bodyDataA).setAwareOfPlayer(false);
-            } else {
-                ((Enemy) bodyDataB).setAwareOfPlayer(false);
-            }
-
-            if (playerSlowed) {
-                Player player = dreamWalkerScene.getAvatar();
-                player.setMovement(originalPlayerMovement); // revert
-                playerSlowed = false;
-                System.out.println("Player movement restored after follow sensor separation");
-            }
-
-            dreamWalkerScene.getAvatar().setTakingDamage(false);
-            System.out.println("Enemy stopped seeing player");
         }
     }
 
@@ -429,30 +381,6 @@ public class LevelContactListener implements ContactListener {
                     harvestedEnemy = (Enemy) bd1;
                     dreamWalkerScene.removeHarvestedEnemy(harvestedEnemy);
                 }
-            }
-        }
-    }
-
-    private void handleVisionSensorEndContact(Object fd1, Object fd2, Fixture fix1, Fixture fix2) {
-        if ("dweller_vision_sensor".equals(fd1) || "dweller_vision_sensor".equals(fd2)) {
-            Object bodyDataA = fix1.getBody().getUserData();
-            Object bodyDataB = fix2.getBody().getUserData();
-
-            DreamDweller dweller = null;
-            Player playerObj = null;
-
-            if (bodyDataA instanceof DreamDweller && bodyDataB instanceof Player) {
-                dweller = (DreamDweller) bodyDataA;
-                playerObj = (Player) bodyDataB;
-            } else if (bodyDataA instanceof Player && bodyDataB instanceof DreamDweller) {
-                dweller = (DreamDweller) bodyDataB;
-                playerObj = (Player) bodyDataA;
-            }
-
-            if (dweller != null) {
-                dweller.setAwareOfPlayer(true);
-                dreamWalkerScene.getAvatar().setTakingDamage(false);
-                System.out.println("Dream Dweller lost sight of player");
             }
         }
     }

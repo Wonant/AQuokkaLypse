@@ -837,20 +837,13 @@
                 return;
             }
 
+            float maxUpwardVelocity = 15.0f;
+            float maxFallingVelocity = -20.0f;
+
             Vector2 pos = obstacle.getPosition();
             float vx = obstacle.getVX();
             float vy = obstacle.getVY();
             Body body = obstacle.getBody();
-
-            //Cap for launch bug
-            float maxUpwardVelocity = 15.0f;
-            float maxFallingVelocity = -20.0f;
-
-            body.setLinearDamping(damping);
-
-            //REMOVE THIS AND JUST MOVE IT TO PLAYER INITIALIZATION
-            obstacle.setFriction(0.0f);
-
 
 
             // Velocity too high, clamp it
@@ -863,6 +856,7 @@
                 forceCache.set(getMovement(),0);
                 body.applyForce(forceCache,pos,true);
             }
+
 
             if (startedHarvest && movement != 0){
                 float direction = -1;
@@ -969,8 +963,6 @@
         @Override
         public void update(float dt) {
 
-            System.out.println(animationState);
-
             World world = obstacle.getBody().getWorld();
             if (isPlatformStep(world, stepRayLength)) {
                 System.out.println("seen a step");
@@ -978,7 +970,6 @@
             } else {
                 seenAStep = false;
             }
-
 
             // animation locks
             if (absorbing) {

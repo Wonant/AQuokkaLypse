@@ -39,7 +39,6 @@ public class BehaviorLoop<E> {
             tree.step();
             step++;
             runtime = 0;
-            System.out.println("Enemy in state " + getInfo());
         }
     }
 

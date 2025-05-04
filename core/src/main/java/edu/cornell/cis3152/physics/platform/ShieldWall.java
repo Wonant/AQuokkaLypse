@@ -21,7 +21,6 @@ public class ShieldWall extends ObstacleSprite {
     private boolean dead = false;
 
     public ShieldWall(float units, JsonValue settings, Vector2 pos, float direction) {
-        float offset = settings.getFloat( "offset", 0 );
         float s = settings.getFloat( "size" );
         float radius = s * units / 2.0f;
         timeAlive = 0;
@@ -51,8 +50,6 @@ public class ShieldWall extends ObstacleSprite {
         mesh.set( -radius, 20*-radius, 5 * radius, 40 * radius );
     }
     public void update(float dt){
-        System.out.println(timeAlive);
-
         if (timeAlive > maxAge){
             dead = true;
         }

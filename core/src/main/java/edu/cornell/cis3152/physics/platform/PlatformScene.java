@@ -130,15 +130,9 @@ public class PlatformScene implements Screen, Telegraph {
     /** Countdown active for winning or losing */
     protected int countdown;
 
+    /** Used to slightly modify the PlatformScene for Level Select usage */
+    private boolean isLevelSelect;
 
-    /** Texture asset for character avatar */
-    private TextureRegion avatarTexture;
-    /** Texture asset for the spinning barrier */
-    private TextureRegion barrierTexture;
-    /** Texture asset for the bullet */
-    private TextureRegion bulletTexture;
-    /** Texture asset for the bridge plank */
-    private TextureRegion bridgeTexture;
 
     /** The jump sound. We only want to play once. */
     private SoundEffect jumpSound;
@@ -155,9 +149,6 @@ public class PlatformScene implements Screen, Telegraph {
     private MindMaintenance maintenance;
     private DreamDweller dreamDweller;
     private TextureRegion visionConeRegion;
-    private Texture vision;
-    private Texture light;
-    private int prev_debug;
     private Sprite visionCone;
 
     /** manages ai control for all entities */
@@ -252,10 +243,9 @@ public class PlatformScene implements Screen, Telegraph {
 
     // global game units
     float units;
-    private String mapkey  = "platform-constants";
+    private String mapkey;
 
     private Animator teleportAnimator;
-    private TextureRegion teleportSpritesheet;
     private boolean isTeleporting = false;
     private final float TELEPORT_SURFACE_BUFFER = 0.1f;
 
@@ -545,7 +535,8 @@ public class PlatformScene implements Screen, Telegraph {
      *
      * The game has default gravity and other settings
      */
-    public PlatformScene(AssetDirectory directory, String mapkey, String tiled) {
+    public PlatformScene(AssetDirectory directory, String mapkey, String tiled, Boolean isLevelSelect) {
+        this.isLevelSelect = isLevelSelect;
         this.directory = directory;
         this.mapkey = mapkey;
         tiledLevelName = tiled;
@@ -694,10 +685,13 @@ public class PlatformScene implements Screen, Telegraph {
                 float worldY = y / units;
                 float worldHeight = height / units;
                 if (o.getName().startsWith("door")) {
-                    Door door = new Door(units, worldX, worldY, worldWidth, worldHeight, level + 1);
-                    doors.add(door);
-                    addSprite(door);
-                    door.setFilter();
+                    if(!isLevelSelect) {
+                        Door door = new Door(units, worldX, worldY, worldWidth, worldHeight,
+                            level + 1);
+                        doors.add(door);
+                        addSprite(door);
+                        door.setFilter();
+                    }
                 }
                 if (o.getName().startsWith("Player")) {
                     playerSpawnPos.set(worldX, worldY);
@@ -754,6 +748,7 @@ public class PlatformScene implements Screen, Telegraph {
         Texture texture = directory.getEntry( "shared-goal", Texture.class );
         MapLayer shardLayer = tiledMap.get().getLayers().get("Shards");
         JsonValue goal = constants.get("goal");
+
         totalShards = shardLayer.getProperties().get("totalShards", Integer.class);
         collectedShards = 0;
 
@@ -767,9 +762,7 @@ public class PlatformScene implements Screen, Telegraph {
 
                 MapObject reposition = o.getProperties().get("path", MapObject.class);
 
-                System.out.println(worldX);
                 if (reposition != null) {
-                    System.out.println(reposition.getProperties().get("x", Float.class) / 32f);
                     possibleShardPos.put(shardID, new Vector2(reposition.getProperties().get("x", Float.class) / 32f, reposition.getProperties().get("y", Float.class) / 32f));
                 }
                 if (o.getName() == null) {
@@ -848,8 +841,19 @@ public class PlatformScene implements Screen, Telegraph {
                 Surface platform = new Surface(worldX, worldY, worldHeight, worldWidth, TiledMapInfo.PIXELS_PER_WORLD_METER, constants.get("platforms"), true, rotationRad);
 
                 platform.setDebugColor(Color.BLUE);
+/*
+<<<<<<< HEAD
+                platform.getObstacle().setName("platform " + id);
+                /*
+                if (o.getProperties().get("isStair", Boolean.class)) {
+                    platform.getObstacle().setName("stair " + id);
+                } else {
+                    platform.getObstacle().setName("platform " + id);
+                }
 
 
+=======
+  */
                 platform.getObstacle().setName("platform " + id);
                 addSprite(platform);
                 platform.setFilter();
@@ -1048,17 +1052,15 @@ public class PlatformScene implements Screen, Telegraph {
         for (Enemy e: enemies){
             if (e instanceof MindMaintenance && ((MindMaintenance) e).isShooting()){
                 System.out.println("MAINTENANCE IS SHOOTING");
-                ((MindMaintenance) e).resetShootCooldown();
                 units = TiledMapInfo.PIXELS_PER_WORLD_METER;
                 Vector2 position = e.getObstacle().getPosition();
-                float direction = 1;
-                if (avatar.getObstacle().getPosition().x < position.x){
-                    direction = -1;
-                }
+                float direction = maintenance.isFacingRight() ? 1 : -1;
+                position.set(position.x + direction, position.y);
                 JsonValue bulletjv = constants.get("bullet");
                 Texture texture = directory.getEntry("platform-bullet", Texture.class);
 
                 ShieldWall wall = new ShieldWall(units, bulletjv, position, direction);
+                System.out.println("ShieldWall shot at " + position);
                 shieldWalls.add(wall);
                 wall.setTexture(texture);
                 addQueuedObject(wall);
@@ -1306,7 +1308,6 @@ public class PlatformScene implements Screen, Telegraph {
         }
 
         queuedTeleportPosition = new Vector2(crosshairWorld.x, crosshairWorld.y);
-
     }
 
     /**
