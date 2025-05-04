@@ -757,7 +757,7 @@ public class PlatformScene implements Screen, Telegraph {
                 if (o.getName().startsWith("mind maintenance")) {
                     Texture texture = directory.getEntry("mind-maintenance-active", Texture.class);
 
-                    maintenance = new MindMaintenance(units, constants.get("mind-maintenance"), new float[]{worldX, worldY}, this);
+                    maintenance = new MindMaintenance(units, constants.get("mind-maintenance"), new float[]{worldX, worldY}, this, dispatcher);
                     maintenance.setTexture(texture);
                     addSprite(maintenance);
 
@@ -1644,7 +1644,7 @@ public class PlatformScene implements Screen, Telegraph {
         float mouseX = Gdx.input.getX();
         float mouseY = Gdx.graphics.getHeight() - Gdx.input.getY();
 
-        batch.drawText(dreamShardCountText, 11, height - 50);
+        batch.drawText(dreamShardCountText, 11, 50);
 
         float units = TiledMapInfo.PIXELS_PER_WORLD_METER;
         Vector3 playerWorldPos = new Vector3(avatar.getObstacle().getX() * units,
@@ -1714,8 +1714,10 @@ public class PlatformScene implements Screen, Telegraph {
             TextureRegion meterFrame = fearMeterSprite.getKeyFrame(frameIndex);
 
             // where to draw
+
             float meterX = 40;
             float meterY = 600;
+
             float meterWidth  = 7* meterFrame.getRegionWidth() / units;
             float meterHeight = 7*meterFrame.getRegionHeight() / units;
 
