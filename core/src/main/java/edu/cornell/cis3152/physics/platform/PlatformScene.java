@@ -66,7 +66,7 @@ import com.badlogic.gdx.graphics.g2d.TextureRegion;
 public class PlatformScene implements Screen, Telegraph {
     // SOME EXIT CODES FOR GDXROOT
     /** Exit code for quitting the game */
-    public static final int EXIT_QUIT = 0;
+    public static final int EXIT_PAUSE = 0;
     /** Exit code for advancing to next level */
     public static final int EXIT_NEXT = 1;
     /** Exit code for jumping back to previous level */
@@ -257,12 +257,16 @@ public class PlatformScene implements Screen, Telegraph {
     private Animator teleportAnimator;
     private TextureRegion teleportSpritesheet;
     private boolean isTeleporting = false;
+    private final float TELEPORT_SURFACE_BUFFER = 0.1f;
 
     private float teleportAnimationTime = 0f;
     private Vector2 preTeleportPosition;
     private Vector2 teleportPosition;
     private float teleportAngle;
     private boolean teleportDirectionRight;
+
+    /** Used to ensure scene doesn't reset when from pause scene*/
+    private boolean resumingFromPause = false;
 
 
     /*==============================ContactListener Getters/Setters===============================*/
@@ -994,7 +998,7 @@ public class PlatformScene implements Screen, Telegraph {
         // Now it is time to maybe switch screens.
         if (input.didExit()) {
             pause();
-            listener.exitScreen(this, EXIT_QUIT);
+            listener.exitScreen(this, EXIT_PAUSE);
             return false;
         } else if (input.didAdvance()) {
             pause();
@@ -1264,17 +1268,13 @@ public class PlatformScene implements Screen, Telegraph {
         Vector2 crosshairScreen = input.getMouse();
 
         // Unproject the crosshair screen position to get world coordinates
-        Vector3 crosshairTemp = new Vector3(
-            crosshairScreen.x,
-            crosshairScreen.y,
-            0
-        );
+        Vector3 crosshairTemp = new Vector3(crosshairScreen.x, crosshairScreen.y, 0);
         camera.unproject(crosshairTemp);
         Vector2 crosshairWorld = new Vector2(crosshairTemp.x / units, crosshairTemp.y / units);
 
         // clamp
         Vector2 delta = new Vector2(crosshairWorld).sub(playerPosition);
-        // Convert teleport range from (screen or arbitrary) units to world units.
+        // Convert teleport range from screen units to world units.
         float teleportRangeWorld = avatar.getTeleportRangeRadius() / units;
         if (delta.len() > teleportRangeWorld) {
             delta.nor().scl(teleportRangeWorld);
@@ -1291,85 +1291,22 @@ public class PlatformScene implements Screen, Telegraph {
                             public boolean reportFixture(Fixture fixture) {
                                 Object userData = fixture.getBody().getUserData();
                                 if (userData instanceof Surface) {
-                                    if (fixture.testPoint(realTeleportPos)) {
-                                        isInsideSurface[0] = true;
-                                        return false; // Stop the query
-                                    }
+                                    isInsideSurface[0] = true;
+                                    return false; // Stop
                                 }
-                                return true; // Continue the query
+                                return true; // Continue
                             }
-                        }, crosshairWorld.x - 0.1f, crosshairWorld.y - 0.1f,
-            crosshairWorld.x + 0.1f, crosshairWorld.y + 0.1f);
+                        },
+            crosshairWorld.x - TELEPORT_SURFACE_BUFFER, crosshairWorld.y - TELEPORT_SURFACE_BUFFER,
+            crosshairWorld.x + TELEPORT_SURFACE_BUFFER, crosshairWorld.y + TELEPORT_SURFACE_BUFFER);
 
         if (isInsideSurface[0]) {
             System.out.println("Cannot place teleport in a surface");
             return;
         }
 
-        Vector2 rayStart = new Vector2(playerPosition.x, playerPosition.y);
-        Vector2 rayEnd = new Vector2(crosshairWorld.x, 0);
-        PlatformRayCast callback = new PlatformRayCast();
-        world.rayCast(callback, rayStart, rayEnd);
+        queuedTeleportPosition = new Vector2(crosshairWorld.x, crosshairWorld.y);
 
-        if (callback.getPlatformFixture() == null) {
-            System.out.println("Player is not shadowed, cannot teleport");
-            return;
-        }
-
-        // Use raycast to find platform below cursor
-        rayStart = new Vector2(crosshairWorld.x, crosshairWorld.y);
-        rayEnd = new Vector2(crosshairWorld.x, 0);
-        world.rayCast(callback, rayStart, rayEnd);
-
-        if (callback.getPlatformFixture() == null) {
-            System.out.println("Teleport location is not shadowed, cannot teleport");
-            return;
-        }
-
-        if (callback.getHitPointCount()%2 == 1){
-            System.out.println("Cannot teleport inside of surface");
-            return;
-        }
-        Vector2 hitPoint = callback.getHitPoint();
-        Vector2 initialPosition = new Vector2(crosshairWorld.x, crosshairWorld.y + 0.75f);
-        Vector2 teleporterPosition = new Vector2(crosshairWorld.x, crosshairWorld.y + 0.75f);
-
-        // Calculate distance in world coordinates
-        float worldDistance = playerPosition.dst(teleporterPosition);
-        float maxTeleportRange = avatar.getTeleportRangeRadius() / units;
-
-        // Check if destination is outside range
-        if (worldDistance > maxTeleportRange) {
-            Vector2 direction = new Vector2(
-                initialPosition.x - playerPosition.x,
-                initialPosition.y - playerPosition.y
-            ).nor();
-
-            // Clamp position to max distance
-            teleporterPosition = new Vector2(
-                playerPosition.x + direction.x * maxTeleportRange,
-                playerPosition.y + direction.y * maxTeleportRange
-            );
-        }
-
-        // Raycast to check if the clamped position is above a surface
-        Vector2 rayStartForClamped = new Vector2(teleporterPosition.x, teleporterPosition.y);
-        Vector2 rayEndForClamped = new Vector2(teleporterPosition.x, 0);
-        PlatformRayCast clampedCallback = new PlatformRayCast();
-        world.rayCast(clampedCallback, rayStartForClamped, rayEndForClamped);
-
-        if (clampedCallback.getPlatformFixture() != null) {
-            Vector2 clampedHitPoint = clampedCallback.getHitPoint();
-            // Ensure the teleporter position is above the surface
-            if (teleporterPosition.y <= clampedHitPoint.y) {
-                teleporterPosition.y = clampedHitPoint.y + 0.75f; // Adjust to be above the surface
-            }
-        } else {
-            System.out.println("No platform found at clamped position");
-            return;
-        }
-
-        queuedTeleportPosition = teleporterPosition;
     }
 
     /**
@@ -1623,24 +1560,33 @@ public class PlatformScene implements Screen, Telegraph {
         float scaledHeight = originalHeight * scaleFactor;
 
         float mouseX = Gdx.input.getX();
-        float mouseY = Gdx.graphics.getHeight() - Gdx.input.getY();
+        float mouseY = Gdx.input.getY();
 
         batch.drawText(dreamShardCountText, 11, 50);
 
         float units = TiledMapInfo.PIXELS_PER_WORLD_METER;
-        Vector3 playerWorldPos = new Vector3(avatar.getObstacle().getX() * units,
-            avatar.getObstacle().getY() * units,
-            0);
-        camera.project(playerWorldPos);
 
-        float teleportRadiusScreen = avatar.getTeleportRangeRadius() + 80f; // Because drawTeleportRadius uses it directly with u.
+        // Get player position in WORLD coordinates
+        Vector2 playerPosition = avatar.getObstacle().getPosition();
 
-        Vector2 delta = new Vector2(mouseX - playerWorldPos.x, mouseY - playerWorldPos.y);
-        if (delta.len() > teleportRadiusScreen) {
-            delta.nor().scl(teleportRadiusScreen);
-            mouseX = playerWorldPos.x + delta.x;
-            mouseY = playerWorldPos.y + delta.y;
+        // Get mouse in WORLD coordinates
+        Vector3 crosshairTemp = new Vector3(mouseX, mouseY, 0);
+        camera.unproject(crosshairTemp);
+        Vector2 crosshairWorld = new Vector2(crosshairTemp.x / units, crosshairTemp.y / units);
+
+        // done in WORLD coordinates just like teleport() method :(
+        Vector2 delta = new Vector2(crosshairWorld).sub(playerPosition);
+        float teleportRangeWorld = avatar.getTeleportRangeRadius() / units;
+        if (delta.len() > teleportRangeWorld) {
+            delta.nor().scl(teleportRangeWorld);
+            crosshairWorld = new Vector2(playerPosition).add(delta);
         }
+
+        // Revert to SCREEN coordinate
+        Vector3 clampedScreenPos = new Vector3(crosshairWorld.x * units, crosshairWorld.y * units, 0);
+        camera.project(clampedScreenPos);
+        mouseX = clampedScreenPos.x;
+        mouseY = clampedScreenPos.y;
 
         float crossX = mouseX - scaledWidth/2;
         float crossY = mouseY - scaledHeight/2;
@@ -1651,38 +1597,30 @@ public class PlatformScene implements Screen, Telegraph {
             batch.setColor(Color.WHITE);
         } else {
             boolean canTeleport = false;
-            Vector3 crossTemp = new Vector3(mouseX, mouseY, 0);
-            camera.unproject(crossTemp);
-            Vector2 crossWorld = new Vector2(crossTemp.x / units, crossTemp.y / units);
-            final boolean[] insideSurface = {false};
+            final boolean[] isInsideSurface = {false};
+            //Vector2 finalCrosshairWorld = crosshairWorld;
             world.QueryAABB(new QueryCallback() {
                                 @Override
                                 public boolean reportFixture(Fixture fixture) {
-                                    if (fixture.getBody().getUserData() instanceof Surface
-                                        && fixture.testPoint(crossWorld)) {
-                                        insideSurface[0] = true;
+                                    Object userData = fixture.getBody().getUserData();
+                                    if (userData instanceof Surface) {
+                                        isInsideSurface[0] = true;
                                         return false;
                                     }
                                     return true;
                                 }
                             },
-                crossWorld.x - 0.1f, crossWorld.y - 0.1f,
-                crossWorld.x + 0.1f, crossWorld.y + 0.1f);
+                crosshairWorld.x - TELEPORT_SURFACE_BUFFER, crosshairWorld.y - TELEPORT_SURFACE_BUFFER,
+                crosshairWorld.x + TELEPORT_SURFACE_BUFFER, crosshairWorld.y + TELEPORT_SURFACE_BUFFER);
 
-            if (!insideSurface[0]) {
-                PlatformRayCast teleportCallback = new PlatformRayCast();
-                world.rayCast(teleportCallback, crossWorld, new Vector2(crossWorld.x, 0));
-                if (teleportCallback.getPlatformFixture() != null) {
-                    canTeleport = true;
-                }
+            if (!isInsideSurface[0]) {
+                canTeleport = true;
             }
 
             Color prev = batch.getColor();
             batch.setColor(canTeleport ? Color.WHITE : Color.BLACK);
             batch.draw(crosshairTexture, crossX, crossY, scaledWidth, scaledHeight);
             batch.setColor(prev);
-
-            batch.draw(crosshairTexture, crossX, crossY, scaledWidth, scaledHeight);
         }
 
         if (fearMeterSprite != null && avatar != null) {
@@ -1770,13 +1708,21 @@ public class PlatformScene implements Screen, Telegraph {
     public void resize(int width, int height) {
         this.width  = width;
         this.height = height;
-        if (camera == null) {
-            camera = new OrthographicCamera();
+        if (!resumingFromPause) {
+            if (camera == null) {
+                camera = new OrthographicCamera();
+            }
+            camera.setToOrtho(false, width, height);
+            scale.x = 1;
+            scale.y = 1;
+            reset();
+        } else {
+            resumingFromPause = false; // Reset the flag
         }
-        camera.setToOrtho( false, width, height );
-        scale.x = 1;
-        scale.y = 1;
-        reset();
+    }
+
+    public void setResumingFromPause(boolean value) {
+        resumingFromPause = value;
     }
 
     /**
