@@ -280,7 +280,6 @@ public class PlatformScene implements Screen, Telegraph {
     public void performHarvest(Enemy enemy)
     {
         queuedHarvestedEnemy.add(enemy);
-        enemies.remove(enemy);
     }
 
 
@@ -1055,7 +1054,8 @@ public class PlatformScene implements Screen, Telegraph {
                 units = TiledMapInfo.PIXELS_PER_WORLD_METER;
                 Vector2 position = e.getObstacle().getPosition();
                 float direction = maintenance.isFacingRight() ? 1 : -1;
-                position.set(position.x + direction, position.y);
+                float spawnOffset = 0.1f;
+                position.set(position.x , position.y);
                 JsonValue bulletjv = constants.get("bullet");
                 Texture texture = directory.getEntry("platform-bullet", Texture.class);
 
@@ -1145,6 +1145,7 @@ public class PlatformScene implements Screen, Telegraph {
                 for (Enemy harvest_enemy : queuedHarvestedEnemy) {
                     if (!harvest_enemy.getObstacle().isRemoved()) {
                         harvest_enemy.getObstacle().markRemoved(true);
+                        enemies.remove(harvest_enemy);
                         avatar.setFearMeter(avatar.getFearMeter() + 3);
                         harvest_enemy.dispatchHarvest();
                     }

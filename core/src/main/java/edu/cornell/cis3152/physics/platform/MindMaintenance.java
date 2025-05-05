@@ -615,6 +615,11 @@ public class MindMaintenance extends Enemy {
                 pos.x + rayLength * MathUtils.cos(angleToPlayer),
                 pos.y + rayLength * MathUtils.sin(angleToPlayer)
             );
+
+            boolean playerIsOnRight = player.getObstacle().getPosition().x > pos.x;
+            if ((facingRight && !playerIsOnRight) || (!facingRight && playerIsOnRight)) {
+                facingRight = playerIsOnRight;
+            }
         } else {
             float maxAngleOffset = 30 * MathUtils.degreesToRadians; // 30 degrees in radians
 
