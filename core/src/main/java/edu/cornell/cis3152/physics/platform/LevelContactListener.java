@@ -64,6 +64,7 @@ public class LevelContactListener implements ContactListener {
             handleGroundContact(bd1, bd2, fd1, fd2, fix1, fix2);
             handleHarvestingCollision(bd1, bd2, fd1, fd2);
             handleFallSensorContact(bd1, bd2, fd1, fd2);
+            handleSpearHitSurface(bd1, bd2);
 
         } catch (Exception e) {
             e.printStackTrace();
@@ -525,4 +526,18 @@ public class LevelContactListener implements ContactListener {
 
         }
     }
+    private void handleSpearHitSurface(ObstacleSprite bd1, ObstacleSprite bd2) {
+        if ((bd1 instanceof Spear && bd2 instanceof Surface) || (bd2 instanceof Spear && bd1 instanceof Surface)) {
+            Spear spear = (bd1 instanceof Spear) ? (Spear) bd1 : (Spear) bd2;
+            Surface surface = (bd1 instanceof Surface) ? (Surface) bd1 : (Surface) bd2;
+
+            spear.getObstacle().markRemoved(true);
+
+            spear.getObstacle().setVX(0);
+            spear.getObstacle().setVY(0);
+
+            System.out.println("Spear hit Surface: removed spear.");
+        }
+    }
+
 }

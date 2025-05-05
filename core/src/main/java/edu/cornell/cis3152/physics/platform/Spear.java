@@ -10,11 +10,9 @@ import edu.cornell.gdiac.physics2.ObstacleSprite;
 import edu.cornell.gdiac.physics2.PolygonObstacle;
 import edu.cornell.gdiac.math.Poly2;
 
-import static edu.cornell.cis3152.physics.platform.CollisionFiltering.CATEGORY_PLAYER;
-import static edu.cornell.cis3152.physics.platform.CollisionFiltering.CATEGORY_SCENERY;
 import com.badlogic.gdx.graphics.Texture;
 
-
+import static edu.cornell.cis3152.physics.platform.CollisionFiltering.*;
 
 public class Spear extends ObstacleSprite {
 
@@ -35,10 +33,25 @@ public class Spear extends ObstacleSprite {
 
         float width = 1.0f;
         float height = 0.2f;
-        float halfW = units * width / 15;
+
+        if (direction > 0) {
+            width = 0.7f;
+            height = 0.15f;
+        }
+
+        float halfW = units * width / 10;
         float halfH = units * height / 25;
 
-        Poly2 p = new Poly2(-halfW, -halfH, halfW, halfH);
+        Poly2 p;
+        float offset = 0f;
+
+        if (direction > 0) {
+            offset = halfW * 1.2f;
+            p = new Poly2(-halfW + offset, -halfH, halfW + offset, halfH);
+        } else {
+            p = new Poly2(-halfW, -halfH, halfW, halfH);
+        }
+
         obstacle = new PolygonObstacle(p, pos.x, pos.y);
         obstacle.setDensity(8.0f);
         obstacle.setPhysicsUnits(units);
@@ -51,7 +64,12 @@ public class Spear extends ObstacleSprite {
         obstacle.setVX(velocity.x);
         obstacle.setVY(velocity.y);
 
-        mesh.set(-halfW * 32, -halfH * 28, 2 * halfW * 16, 2 * halfH * 16);
+        if (direction > 0) {
+            mesh.set((-halfW + offset) * 32, -halfH * 28, 2 * halfW * 16, 2 * halfH * 16);
+        } else {
+            mesh.set(-halfW * 32, -halfH * 28, 2 * halfW * 16, 2 * halfH * 16);
+        }
+
         travelAnimator = new Animator(travelTex, 1, 5, 0.2f, 5, 0, 4, true);
         endAnimator = new Animator(endTex, 1, 5, 0.2f, 5, 0, 4, false);
     }
@@ -95,8 +113,8 @@ public class Spear extends ObstacleSprite {
                 continue;
             }
             Filter filter = fixture.getFilterData();
-            filter.categoryBits = CATEGORY_SCENERY;
-            filter.maskBits = CATEGORY_PLAYER;
+            filter.categoryBits = CATEGORY_BULLET;
+            filter.maskBits = CATEGORY_PLAYER | CATEGORY_SCENERY;
             fixture.setFilterData(filter);
         }
     }
@@ -116,23 +134,22 @@ public class Spear extends ObstacleSprite {
         float width = currentFrame.getRegionWidth() * scale;
         float height = currentFrame.getRegionHeight() * scale;
 
-        // ✅ 用负宽度绘制来翻转图像
-        if (direction > 0) {
-            // 向右飞，镜像画
-            batch.draw(currentFrame,
-                drawX + width / 2, // 起始点改为右侧
-                drawY - height / 2,
-                -width,  // 负宽度 = 水平翻转
-                height
-            );
-        } else {
-            // 向左飞，正常画
-            batch.draw(currentFrame,
-                drawX - width / 2,
-                drawY - height / 2,
-                width,
-                height
-            );
+        if (direction > 0 && !currentFrame.isFlipX()) {
+            currentFrame.flip(true, false);
+        } else if (direction < 0 && currentFrame.isFlipX()) {
+            currentFrame.flip(true, false);
         }
+
+        float drawOffset = 0f;
+        if (direction > 0) {
+            drawOffset = width * 0.3f; // 增加偏移量，使视觉表现和碰撞箱更好地对齐
+        }
+
+        batch.draw(currentFrame,
+            drawX - width / 2 + drawOffset, // 添加偏移
+            drawY - height / 2,
+            width,
+            height
+        );
     }
 }

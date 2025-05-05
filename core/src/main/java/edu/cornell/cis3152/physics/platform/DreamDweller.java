@@ -155,7 +155,7 @@ public class DreamDweller extends Enemy {
         Player player = scene.getAvatar();
 
         Vector2 pos = obstacle.getPosition();
-        float rayLength = 10f;
+        float rayLength = 5f;
         float angle = MathUtils.atan2(
             player.getObstacle().getY() - pos.y,
             player.getObstacle().getX() - pos.x

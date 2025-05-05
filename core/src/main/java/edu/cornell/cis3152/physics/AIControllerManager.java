@@ -625,7 +625,6 @@ public class AIControllerManager {
 
         switch (newState) {
             case IDLE_LOOK:
-                data.stateDuration = random.nextFloat() * 2.0f + 1.0f; // 1-3 seconds
                 data.horizontal = 0;
                 break;
 

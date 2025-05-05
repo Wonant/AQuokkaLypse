@@ -1071,20 +1071,21 @@ public class PlatformScene implements Screen, Telegraph {
                 Texture spearTravelTex = directory.getEntry("platform-spear-travel-sprite", Texture.class);
                 Texture spearEndTex    = directory.getEntry("platform-spear-end-sprite", Texture.class);
 
-                float[] angleOffsets = new float[] { -20f, -14f, -3f, 8f };
-                float[] yOffsets = new float[] { -0.4f, 0.0f, 0.4f, 0.8f };
+                float[] rightAngles = new float[] { -8f, -3f, 3f, 8f };
+                float[] leftAngles  = new float[] { 188f, 183f, 177f, 172f };
+                float[] yOffsets = new float[] {-0.8f, -0.4f, 0.4f, 0.8f };
 
                 pendingSpears.clear();
                 spearTimer = 0f;
                 spearIndex = 0;
 
                 float direction = (playerPos.x < position.x) ? -1f : 1f;
+                float[] chosenAngles = (direction > 0) ? rightAngles : leftAngles;
 
-                for (int i = 0; i < angleOffsets.length; i++) {
+                for (int i = 0; i < chosenAngles.length; i++) {
                     Vector2 spawnPos = new Vector2(position.x, position.y + yOffsets[i]);
 
-                    float baseAngleDeg = (direction > 0) ? 0f : 180f;
-                    float angleDeg = baseAngleDeg + angleOffsets[i];
+                    float angleDeg = chosenAngles[i];
                     float angleRad = (float) Math.toRadians(angleDeg);
 
                     Vector2 velocity = new Vector2(
