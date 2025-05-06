@@ -1581,10 +1581,10 @@ public class PlatformScene implements Screen, Telegraph {
                 batch.setColor(Color.BLUE);
                 obj.draw(batch);
                 batch.setColor(Color.WHITE);
-
+            }
             else if (obj instanceof Spear) {
                 ((Spear) obj).drawOwnAnimation(batch);
-            } 
+            }
             else {
                 obj.draw(batch);
             }
