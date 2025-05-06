@@ -102,6 +102,7 @@
         }
     },
     "jsons"  : {
+        "level_select":"levels/level_select.json",
         "tutorial1" : "levels/tutorial_1.json",
         "tutorial2" : "levels/tutorial_2.json",
         "easy1" : "levels/easy1.json",

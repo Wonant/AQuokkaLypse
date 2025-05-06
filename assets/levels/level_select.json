@@ -1,6 +1,6 @@
 {
   "world" : {
-    "bounds"  : [80,40],
+    "bounds"  : [39,37],
     "gravity" : -14.7,
     "volume": 0.8
   },
@@ -13,7 +13,7 @@
     "restitution": 0.0
   },
   "goal" : {
-    "pos"       : [[21.0, 10.0], [29.0, 12.0], [57, 13]],
+    "pos"       : [[]],
     "size"      : 1.0,
     "density"   : 0.0,
     "friction"  : 0.0,
