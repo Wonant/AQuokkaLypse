@@ -436,18 +436,20 @@ public class LevelContactListener implements ContactListener {
             Spear spear = (bd1 instanceof Spear) ? (Spear) bd1 : (Spear) bd2;
             Player player = (bd1 instanceof Player) ? (Player) bd1 : (Player) bd2;
 
-            spear.getObstacle().markRemoved(true);
-
-            //  player.setFearMeter(Math.max(0, player.getFearMeter() - 1));
-
-
-            spear.getObstacle().setVX(0);
-            spear.getObstacle().setVY(0);
             player.setBlinded(true);
             player.setBlindTimer(0);
 
-            System.out.println("Spear hit Player: -1 fear, no push.");
+            if (player.getTakeDamageCooldown() <= 0) {
+                player.setTakingDamage(true);
+                System.out.println("Spear hit Player: DAMAGE TAKEN");
+            } else {
+                System.out.println("Spear hit Player: blinded but no damage (cooldown)");
+            }
 
+            // 矛消失
+            spear.getObstacle().markRemoved(true);
+            spear.getObstacle().setVX(0);
+            spear.getObstacle().setVY(0);
         }
     }
     private void handleSpearHitSurface(ObstacleSprite bd1, ObstacleSprite bd2) {

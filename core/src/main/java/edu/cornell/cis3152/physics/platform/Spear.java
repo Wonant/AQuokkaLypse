@@ -41,7 +41,7 @@ public class Spear extends ObstacleSprite {
         Poly2 p;
         float bodyOffsetX = 0f;
         p = new Poly2(-halfW, -halfH, halfW, halfH);
-        float hitboxOffsetX = (direction > 0) ? halfW * 2.0f : 0f;
+        float hitboxOffsetX = (direction > 0) ? halfW * 2f : 0f;
 
         obstacle = new PolygonObstacle(p, pos.x+ hitboxOffsetX, pos.y);
         obstacle.setDensity(8.0f);

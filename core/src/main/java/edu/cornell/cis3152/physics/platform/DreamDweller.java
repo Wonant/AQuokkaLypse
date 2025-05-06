@@ -167,12 +167,10 @@ public class DreamDweller extends Enemy {
             pos.y + rayLength * MathUtils.sin(angle)
         );
 
-        // Step 1: Check if we hit the player
         EnemyVisionRaycast playerRaycast = new EnemyVisionRaycast(EnemyVisionRaycast.VisionMode.PLAYER_CHECK, 4f);
         world.rayCast(playerRaycast, start, end);
         boolean hitPlayer = playerRaycast.getHitPlayer() != null;
 
-        // Step 2: Check if there's a wall in the way
         boolean blocked = false;
         if (hitPlayer) {
             EnemyVisionRaycast wallRaycast = new EnemyVisionRaycast(EnemyVisionRaycast.VisionMode.WALL_CHECK, 0f);
