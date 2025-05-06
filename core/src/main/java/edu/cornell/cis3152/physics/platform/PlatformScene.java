@@ -73,6 +73,8 @@ public class PlatformScene implements Screen, Telegraph {
     public static final int EXIT_PREV = 2;
     /** Exit code for level select */
     public static final int EXIT_LEVELSELECT = 3;
+    public static final int FROM_LEVELSELECT = 4;
+
     /** How many frames after winning/losing do we continue? */
     public static final int EXIT_COUNT = 120;
 
@@ -293,6 +295,7 @@ public class PlatformScene implements Screen, Telegraph {
     private boolean isFading = false;
     private Color fadeColor = new Color(0, 0, 0, 0);
 
+    int nextIndex = 0;
 
     /*==============================ContactListener Getters/Setters===============================*/
 
@@ -506,6 +509,10 @@ public class PlatformScene implements Screen, Telegraph {
             Bullet bullet = (Bullet) sprite;
             bullet.setFilter();
         }
+    }
+
+    public int getDoorDestination(){
+        return nextIndex;
     }
 
     /**
@@ -806,7 +813,15 @@ public class PlatformScene implements Screen, Telegraph {
                 float worldY = y / units;
                 float worldHeight = height / units;
                 if (o.getName().startsWith("door")) {
-                    if(!isLevelSelect) {
+                    if(isLevelSelect) {
+                        int destination = o.getProperties().get("level", Integer.class);
+                        Door door = new Door(units, worldX, worldY, worldWidth, worldHeight,
+                            destination);
+                        doors.add(door);
+                        addSprite(door);
+                        door.setFilter();
+                    }
+                    else{
                         Door door = new Door(units, worldX, worldY, worldWidth, worldHeight,
                             level + 1);
                         doors.add(door);
@@ -1110,10 +1125,12 @@ public class PlatformScene implements Screen, Telegraph {
         } else if (countdown == 0) {
             if (failed) {
                 reset();
-            } else if (complete) {
+            } else if (complete && !isLevelSelect) {
                 pause();
                 listener.exitScreen(this, EXIT_LEVELSELECT);
                 return false;
+            } else if (complete){
+                listener.exitScreen(this, FROM_LEVELSELECT);
             }
         }
         if (!isFailure() && (avatar.getObstacle().getY() < -1 || avatar.getFearMeter() == 0)) {
@@ -1211,6 +1228,7 @@ public class PlatformScene implements Screen, Telegraph {
         for (Door d: doors){
             if(d.isActive() && checkCollectedAllGoals() && avatar.isTakingDoor()){
                 setComplete(true);
+                nextIndex = d.getDestination();
             }
         }
 

@@ -47,6 +47,9 @@ public class Door extends ObstacleSprite {
 //        mesh.set(-width * units / 2.0f, -height * units / 2.0f, width * units, height * units);
         mesh.set(0, 0, 0, 0);
     }
+    public int getDestination(){
+        return destination;
+    }
 
     /** returns true if the Player is in front of the door */
     public boolean isActive(){
