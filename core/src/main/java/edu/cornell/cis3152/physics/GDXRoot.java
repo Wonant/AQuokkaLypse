@@ -181,6 +181,9 @@ public class GDXRoot extends Game implements ScreenListener {
                 // Go back to the previous Arena
                 current = (current + controllers.length - 1) % controllers.length;
                 setScreen(controllers[current]);
+            } else if (exitCode == PlatformScene.EXIT_LEVELSELECT)
+            {
+                setScreen(controllers[0]);
             } else if (exitCode == PlatformScene.EXIT_PAUSE) {
                 if (screen instanceof PlatformScene) {
                     // Quit the application
@@ -208,7 +211,7 @@ public class GDXRoot extends Game implements ScreenListener {
                     setScreen(pausedScreen);
                     break;
                 case PauseScene.EXIT_LEVELSELECT:
-                    // TODO: Level Select
+                    setScreen(controllers[0]);
                     break;
                 case PauseScene.EXIT_SETTINGS:
                     // TODO: SETTINGS
