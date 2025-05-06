@@ -19,6 +19,7 @@ import com.badlogic.gdx.ai.msg.Telegraph;
 import com.badlogic.gdx.graphics.g2d.Sprite;
 import com.badlogic.gdx.graphics.glutils.FrameBuffer;
 import com.badlogic.gdx.graphics.glutils.ShaderProgram;
+import com.badlogic.gdx.graphics.glutils.ShapeRenderer;
 import com.badlogic.gdx.maps.MapLayer;
 import com.badlogic.gdx.maps.MapObject;
 import com.badlogic.gdx.maps.objects.PolygonMapObject;
@@ -29,6 +30,7 @@ import edu.cornell.cis3152.physics.AIControllerManager;
 import edu.cornell.cis3152.physics.ObstacleGroup;
 
 import java.util.*;
+import java.util.stream.Collectors;
 
 import com.badlogic.gdx.*;
 import com.badlogic.gdx.graphics.*;
@@ -80,6 +82,8 @@ public class PlatformScene implements Screen, Telegraph {
     /** The drawing camera for this scene */
     protected OrthographicCamera camera;
     protected OrthographicCamera uiCamera;
+    protected OrthographicCamera miniCam;
+    private Matrix4       mainProj;
     /** Reference to the sprite batch */
     protected SpriteBatch batch;
 
@@ -231,6 +235,11 @@ public class PlatformScene implements Screen, Telegraph {
     private TiledMapRenderer tiledRenderer;
     private String tiledLevelName;
 
+    // minimap
+    private MinimapRenderer minimapRenderer;
+    private boolean miniMapActive;
+    private boolean miniMapLastActive;
+    private float miniMapTime;
 
     /** projectile pooled lists */
     protected PooledList<Door> doors = new PooledList<Door>();
@@ -266,7 +275,7 @@ public class PlatformScene implements Screen, Telegraph {
 
     // Shaders
     private Shader vortexShader, tendrilShader, rippleShader;
-    private Shader rayShader;
+    private Shader rayShader, blurShader;
     private FrameBuffer sceneBuffer;
     private Texture blankTexture, screenTexture;
     private Sprite blankSprite;
@@ -596,7 +605,7 @@ public class PlatformScene implements Screen, Telegraph {
         countdown = -1;
 
         BitmapFont smallFont = new BitmapFont(displayFont.getData(), displayFont.getRegions(), false);
-        smallFont.getData().setScale(0.5f);
+        smallFont.getData().setScale(0.2f);
         dreamShardCountText = new TextLayout();
         dreamShardCountText.setFont(smallFont);
         dreamShardCountText.setAlignment(TextAlign.left);
@@ -618,10 +627,23 @@ public class PlatformScene implements Screen, Telegraph {
         drawScareLimit = avatar.getHarvestDuration();
         drawScareCooldown = 0;
 
-        uiCamera = new OrthographicCamera(Gdx.graphics.getWidth(), Gdx.graphics.getHeight());
-        uiCamera.setToOrtho(false, Gdx.graphics.getWidth(), Gdx.graphics.getHeight());
+
+        float sw = Gdx.graphics.getWidth();
+        float sh = Gdx.graphics.getHeight();
+
+        uiCamera = new OrthographicCamera(sw, sh);
+        uiCamera.setToOrtho(false, sw, sh);
         uiCamera.update();
+
+
+        miniCam = new OrthographicCamera(sw/2, sh/2);
+        miniCam.setToOrtho(false, sw, sh);
+        miniCam.zoom = 3f;
+
+
+        // is this not supposed to be removed?
         units = height / bounds.height;
+
 
         Texture fear = directory.getEntry("fear-meter-sprite-sheet", Texture.class);
         Texture swirl = directory.getEntry("swirl-active", Texture.class);
@@ -642,6 +664,7 @@ public class PlatformScene implements Screen, Telegraph {
         rippleShader = new Shader(Gdx.files.internal("shaders/ripple.vert"),Gdx.files.internal("shaders/ripple.frag"));
         rayShader = new Shader(Gdx.files.internal("shaders/screen.vert"), Gdx.files.internal("shaders/fallingrays.frag"));
         glowShader = new Shader(Gdx.files.internal("shaders/star_pulse.vert"), Gdx.files.internal("shaders/star_pulse.frag"));
+        blurShader = new Shader(Gdx.files.internal("shaders/screen_blur.vert"), Gdx.files.internal("shaders/screen_blur.frag"));
         if (!glowShader.isCompiled()) {
             System.out.println("Swirl shader compile error: " + vortexShader.getLog());
         }
@@ -738,9 +761,13 @@ public class PlatformScene implements Screen, Telegraph {
         playerSlowed = false;
         lastCritterSawTime = -1f;
         timeSinceStart = 0;
+        miniMapActive = false;
+        miniMapLastActive = false;
+
         //minimap = new Minimap(this);
 
         float units = TiledMapInfo.PIXELS_PER_WORLD_METER;
+        minimapRenderer = new MinimapRenderer(tiledMap.map, batch, units, bounds.width, bounds.height);
         int level = 0;
 
 
@@ -1858,7 +1885,9 @@ public class PlatformScene implements Screen, Telegraph {
 
         String cameraPositionText = "Camera Position: (" + camera.position.x + ", " + camera.position.y + ", zoom " + camera.zoom + ")" +
             "\n Viewport: (" + camera.viewportWidth + ", " + camera.viewportHeight + ")" +
-            "\n Bounds: (" + bounds.width + ", " + bounds.height + ")";
+            "\n Bounds: (" + bounds.width + ", " + bounds.height + ")" +
+            "\n UICamera Pos: (" + uiCamera.position.x + ", " + uiCamera.position.y + ")" +
+            "\n miniMapCamera Pos: (" + miniCam.position.x + ", " + miniCam.position.y + ")";
         displayFont.draw(batch, cameraPositionText, 10, height - 100);
 
         if (complete && !failed) {
@@ -1902,6 +1931,7 @@ public class PlatformScene implements Screen, Telegraph {
             camera = new OrthographicCamera();
         }
         camera.setToOrtho( false, width, height );
+
         scale.x = 1;
         scale.y = 1;
         reset();
@@ -1983,9 +2013,76 @@ public class PlatformScene implements Screen, Telegraph {
                 postUpdate(delta);
             }
             ScreenUtils.clear(0.9f, 0.9f, 0.93f, 1.0f);
-            tiledRenderer.renderAllLayers(camera);
-            draw(delta);
-            drawUI();
+
+
+
+
+            Vector2 p = avatar.getObstacle().getPosition();
+            miniCam.update();
+
+
+            InputController input = InputController.getInstance();
+
+            if (input.didToggleMap()) {
+                miniMapActive = !miniMapActive;
+                if (miniMapActive) miniMapTime = 0f;
+            }
+
+
+
+            if (miniMapActive) {
+                sceneBuffer.begin();
+                ScreenUtils.clear(0.9f, 0.9f, 0.93f, 1.0f);
+                tiledRenderer.renderAllLayers(camera);
+                draw(delta);
+                sceneBuffer.end();
+
+                Texture scene = sceneBuffer.getColorBufferTexture();
+                scene.setFilter(Texture.TextureFilter.Linear, Texture.TextureFilter.Linear);
+
+                ShaderProgram prevShader = batch.getShader();
+                Matrix4        prevProj  = batch.getProjectionMatrix().cpy();
+                Matrix4        prevTrans = batch.getTransformMatrix();
+
+                Matrix4 screenProj = new Matrix4().setToOrtho2D(
+                    0, 0,
+                    Gdx.graphics.getWidth(),
+                    Gdx.graphics.getHeight());
+
+                batch.setProjectionMatrix(screenProj);
+                batch.setTransformMatrix(new Matrix4());
+
+                ShaderProgram prev = batch.getShader();
+                batch.setShader(blurShader);
+                blurShader.bind();
+                blurShader.setUniformi("u_scene", 0);
+                blurShader.setUniformf("u_texel",
+                    1f / scene.getWidth(), 1f / scene.getHeight());
+                blurShader.setUniformf("u_strength",
+                    Math.min(miniMapTime / 0.75f, 1f));
+
+                Gdx.gl.glActiveTexture(GL20.GL_TEXTURE0);
+                scene.bind();
+
+                batch.begin();
+                batch.draw(scene,
+                    0,                0,
+                    Gdx.graphics.getWidth(),  Gdx.graphics.getHeight(),
+                    0, 1, 1, 0);   // u,v coords
+                batch.end();
+
+                batch.setShader(prevShader);
+                batch.setProjectionMatrix(prevProj);
+                batch.setTransformMatrix(prevTrans);
+
+                minimapRenderer.render(p, miniCam, miniMapTime);
+                miniMapTime += delta;                 // advance the shader clock
+            } else {
+                tiledRenderer.renderAllLayers(camera);
+                draw(delta);
+                drawUI();
+            }
+
 
 //            sceneBuffer.begin();
 //            ScreenUtils.clear(0.9f, 0.9f, 0.93f, 1.0f);

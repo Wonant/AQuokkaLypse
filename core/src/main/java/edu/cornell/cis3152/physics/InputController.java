@@ -102,6 +102,10 @@ public class InputController {
     /** For the gamepad crosshair control */
     private float momentum;
 
+    /** minimap button */
+    private boolean mapPressed;
+    private boolean mapPrevious;
+
     /** An X-Box controller (if it is connected) */
     XBoxController xbox;
 
@@ -142,6 +146,10 @@ public class InputController {
 
     public boolean isInteractDown() {
         return interactPressed;
+    }
+
+    public boolean didToggleMap() {
+        return mapPressed && !mapPrevious;
     }
 
     /**
@@ -339,6 +347,7 @@ public class InputController {
         exitPrevious = exitPressed;
         nextPrevious = nextPressed;
         prevPrevious = prevPressed;
+        mapPrevious = mapPressed;
 
         teleportPrevious = m1Pressed;
 
@@ -438,6 +447,7 @@ public class InputController {
             vertical += 1.0f;
         }
 
+        mapPressed = Gdx.input.isKeyPressed(Input.Keys.M);
 
         shiftPressed = Gdx.input.isKeyPressed(Input.Keys.SHIFT_LEFT);
 

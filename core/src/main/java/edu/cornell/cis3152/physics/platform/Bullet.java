@@ -87,8 +87,8 @@ public class Bullet extends ObstacleSprite {
         mesh.set( -radius, -radius, 2 * radius, 2 * radius );
         width = radius;
         height = radius;
-        bulletSprite = new Animator(animation, 1, 5, 0.066f, 5, 0, 4);
-        bulletEndSprite = new Animator(endAnimation, 1, 3, 0.066f, 3, 0, 2, false);
+        bulletSprite = new Animator(animation, 1, 5, 0.1f, 5, 0, 4);
+        bulletEndSprite = new Animator(endAnimation, 1, 3, 0.01f, 3, 0, 2, false);
         timeAlive = 0;
         this.direction   = angle.cpy();
     }
@@ -126,7 +126,7 @@ public class Bullet extends ObstacleSprite {
         float drawWidth = frame.getRegionWidth()/10f;
         float drawHeight = frame.getRegionHeight()/10f;
 
-        float originX = drawWidth/1.3f;
+        float originX = drawWidth / 1.3f;
         float originY = drawHeight / 2f;
 
         batch.draw(frame,

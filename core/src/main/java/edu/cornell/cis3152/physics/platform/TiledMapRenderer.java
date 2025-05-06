@@ -26,10 +26,22 @@ public class TiledMapRenderer {
         this.unitScale = unitScale;
     }
 
-    private void renderLayersHelper(MapLayer layer) {
+    private static float getParallax(MapLayer layer, String key){
+        String raw = layer.getProperties().get(key, String.class);
+        return raw != null ? Float.parseFloat(raw) : 1f;
+    }
+
+    private void renderLayersHelper(MapLayer layer, OrthographicCamera camera, float PX, float PY) {
+
+        float layerPx = layer.getParallaxX();
+        float layerPy = layer.getParallaxY();
+        PY *= layerPy;
+        PX *= layerPx;
+
+        System.out.println("parallax: " + PX);
         if (layer instanceof MapGroupLayer) {
             for (MapLayer l : ((MapGroupLayer) layer).getLayers()) {
-                renderLayersHelper(l);
+                renderLayersHelper(l, camera, PX, PY);
             }
             return;
         }
@@ -42,6 +54,12 @@ public class TiledMapRenderer {
         TiledMapTileLayer tileLayer = (TiledMapTileLayer)layer;
         float tileW = tileLayer.getTileWidth(); // * unitScale;
         float tileH = tileLayer.getTileHeight();// * unitScale;
+
+        float offX = camera.position.x - camera.viewportWidth  * 0.5f;
+        float offY = camera.position.y - camera.viewportHeight * 0.5f;
+        offX *= (1f - PX);
+        offY *= (1f - PY);
+
 
         for (int y = 0; y < tileLayer.getHeight(); y++) {
             for (int x = 0; x < tileLayer.getWidth(); x++) {
@@ -59,8 +77,8 @@ public class TiledMapRenderer {
                 float degrees  = rotSteps * 90f;
 
 
-                float worldX = x * tileW;
-                float worldY = y * tileH;
+                float worldX = x * tileW + offX;
+                float worldY = y * tileH + offY;
 
                 batch.draw(
                     region,
@@ -87,7 +105,7 @@ public class TiledMapRenderer {
 
 
         for (MapLayer layer : map.getLayers()) {
-            renderLayersHelper(layer);
+            renderLayersHelper(layer, camera,1f, 1f);
         }
 
         batch.end();
