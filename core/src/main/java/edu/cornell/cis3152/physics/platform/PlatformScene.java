@@ -1581,10 +1581,10 @@ public class PlatformScene implements Screen, Telegraph {
                 batch.setColor(Color.BLUE);
                 obj.draw(batch);
                 batch.setColor(Color.WHITE);
-
+            }
             else if (obj instanceof Spear) {
                 ((Spear) obj).drawOwnAnimation(batch);
-            } 
+            }
             else {
                 obj.draw(batch);
             }
@@ -1949,11 +1949,6 @@ public class PlatformScene implements Screen, Telegraph {
         } else {
             resumingFromPause = false; // Reset the flag
         }
-        camera.setToOrtho( false, width, height );
-
-        scale.x = 1;
-        scale.y = 1;
-        reset();
 
     }
 
