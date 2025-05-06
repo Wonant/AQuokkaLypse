@@ -329,9 +329,6 @@ public class AIControllerManager {
                 if (seesPlayer) {
                     data.dweller.setShooting(true);
                 }
-                else if (seesPlayer || data.dweller.isSus()){
-                    data.stateTimer = 0;
-                }
                 else{
                     data.dweller.setShooting(false);
                 }
@@ -344,7 +341,6 @@ public class AIControllerManager {
         }
 
         if (data.state == DwellerFSM.IDLE_LOOK) {
-                data.dweller.setVisionAngle(data.movingRight ? 270 : 90);
                 data.dweller.setMovement(0);
                 data.dweller.applyForce();
             }
@@ -355,7 +351,6 @@ public class AIControllerManager {
 
         switch (newState) {
             case IDLE_LOOK:
-                data.stateDuration = random.nextFloat() * 2.0f + 1.0f; // 1-3 seconds
                 data.horizontal = 0;
                 break;
 
