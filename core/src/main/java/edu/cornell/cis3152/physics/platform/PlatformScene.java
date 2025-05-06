@@ -543,7 +543,7 @@ public class PlatformScene implements Screen, Telegraph {
         constants = directory.getEntry(mapkey,JsonValue.class);
         JsonValue defaults = constants.get("world");
 
-        crosshairTexture  = new TextureRegion(directory.getEntry( "ragdoll-crosshair", Texture.class ));
+        crosshairTexture  = new TextureRegion(directory.getEntry( "crosshair", Texture.class ));
         scareEffectTexture = new TextureRegion(directory.getEntry("platform-scare-effect", Texture.class));
 
         scale = new Vector2();
@@ -745,7 +745,7 @@ public class PlatformScene implements Screen, Telegraph {
 
 
         // dream shard creation from tiled layer
-        Texture texture = directory.getEntry( "shared-goal", Texture.class );
+        Texture texture = directory.getEntry( "shard", Texture.class );
         MapLayer shardLayer = tiledMap.get().getLayers().get("Shards");
         JsonValue goal = constants.get("goal");
 
@@ -861,14 +861,6 @@ public class PlatformScene implements Screen, Telegraph {
             }
         }
 
-
-        texture = directory.getEntry( "shared-test", Texture.class );
-        Texture shadowedTexture = directory.getEntry("shared-shadow-test", Texture.class);
-
-
-
-        // Create Player
-        texture = directory.getEntry( "player-walk", Texture.class );
         avatar = new Player(units, constants.get("player"), playerSpawnPos, this);
 
         Texture dreamwalker = directory.getEntry("player-sprite-sheet", Texture.class);
@@ -1254,7 +1246,7 @@ public class PlatformScene implements Screen, Telegraph {
     }
 
     public void initTeleportAnimation() {
-        Texture teleportTexture = directory.getEntry("teleport-teleport", Texture.class);
+        Texture teleportTexture = directory.getEntry("teleport", Texture.class);
         teleportAnimator = new Animator(teleportTexture, 2, 10, 0.08f, 10, 0, 9, false);
     }
 
