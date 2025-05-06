@@ -71,8 +71,10 @@ public class PlatformScene implements Screen, Telegraph {
     public static final int EXIT_NEXT = 1;
     /** Exit code for jumping back to previous level */
     public static final int EXIT_PREV = 2;
+    /** Exit code for level select */
+    public static final int EXIT_LEVELSELECT = 3;
     /** How many frames after winning/losing do we continue? */
-    public static final int EXIT_COUNT = 180;
+    public static final int EXIT_COUNT = 120;
 
     public static final int STUN_COST = 1;
     public static final int TELEPORT_COST = 2;
@@ -285,6 +287,12 @@ public class PlatformScene implements Screen, Telegraph {
     private int spearIndex = 0;
     private static final float SPEAR_FIRE_INTERVAL = 0.1f;
 
+    // FADE CONSTANTS
+    private float fadeAlpha = 0f;
+    private float fadeSpeed = 0.01f;
+    private boolean isFading = false;
+    private Color fadeColor = new Color(0, 0, 0, 0);
+
 
     /*==============================ContactListener Getters/Setters===============================*/
 
@@ -369,6 +377,8 @@ public class PlatformScene implements Screen, Telegraph {
     public void setComplete(boolean value) {
         if (value) {
             countdown = EXIT_COUNT;
+            isFading = true;
+            fadeAlpha = 0f;
         }
         complete = value;
     }
@@ -394,6 +404,8 @@ public class PlatformScene implements Screen, Telegraph {
     public void setFailure(boolean value) {
         if (value) {
             countdown = EXIT_COUNT;
+            isFading = true;
+            fadeAlpha = 0f;
         }
         failed = value;
     }
@@ -1100,7 +1112,7 @@ public class PlatformScene implements Screen, Telegraph {
                 reset();
             } else if (complete) {
                 pause();
-                listener.exitScreen(this, EXIT_NEXT);
+                listener.exitScreen(this, EXIT_LEVELSELECT);
                 return false;
             }
         }
@@ -1856,7 +1868,7 @@ public class PlatformScene implements Screen, Telegraph {
             // where to draw
 
             float meterX = 40;
-            float meterY = 600;
+            float meterY = 500;
 
             float meterWidth  = 7* meterFrame.getRegionWidth() / units;
             float meterHeight = 7*meterFrame.getRegionHeight() / units;
@@ -1871,8 +1883,8 @@ public class PlatformScene implements Screen, Telegraph {
                 float indicatorWidth  = visibilityIndicatorTexture.getWidth()  / units;
                 float indicatorHeight = visibilityIndicatorTexture.getHeight() / units;
 
-                float startX = meterX + 90;
-                float startY = meterY + 20;
+                float startX = meterX + 130;
+                float startY = meterY + 50;
 
                 for (int i = 0; i < enemiesAlerted; i++) {
                     float x = startX + i * (indicatorWidth + 10);  // 2px spacing
@@ -1899,12 +1911,22 @@ public class PlatformScene implements Screen, Telegraph {
             "\n Bounds: (" + bounds.width + ", " + bounds.height + ")" +
             "\n UICamera Pos: (" + uiCamera.position.x + ", " + uiCamera.position.y + ")" +
             "\n miniMapCamera Pos: (" + miniCam.position.x + ", " + miniCam.position.y + ")";
-        displayFont.draw(batch, cameraPositionText, 10, height - 100);
+        //displayFont.draw(batch, cameraPositionText, 10, height - 100);
 
-        if (complete && !failed) {
+        /*if (complete && !failed) {
             batch.drawText(goodMessage, width/2, height/2);
         } else if (failed) {
             batch.drawText(badMessage, width/2, height/2);
+        }*/
+
+        // FADE TO BLACK
+        if ((complete || failed) && isFading) {
+            fadeAlpha = Math.min(fadeAlpha + fadeSpeed, 1.0f);
+
+            fadeColor.a = fadeAlpha;
+            batch.setColor(fadeColor);
+            batch.draw(blankTexture, 0, 0, width, height);
+            batch.setColor(Color.WHITE);
         }
 
         batch.setColor(Color.WHITE);
