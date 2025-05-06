@@ -52,15 +52,15 @@ public class LevelContactListener implements ContactListener {
 
             ObstacleSprite bd1 = (ObstacleSprite)body1.getUserData();
             ObstacleSprite bd2 = (ObstacleSprite)body2.getUserData();
-            //System.out.println(fd1 + " " + fd2 + " " + bd1 + " " + bd2);
 
             handleShieldWallContact(bd1, bd2);
             handleDoorContact(bd1, bd2);
             handleDreamShardContact(bd1, bd2, fd1, fd2);
-            //handleFollowSensorContact(bd1, bd2, fd1, fd2);
+
             handleWalkSensorContact(bd1, bd2, fd1, fd2);
             handleBulletCollision(bd1, bd2, fd1, fd2);
             handleSpearHitPlayer(bd1, bd2);
+            handleSpearHitSurface(bd1,bd2);
             handleGroundContact(bd1, bd2, fd1, fd2, fix1, fix2);
             handleHarvestingCollision(bd1, bd2, fd1, fd2);
             handleFallSensorContact(bd1, bd2, fd1, fd2);
@@ -93,10 +93,7 @@ public class LevelContactListener implements ContactListener {
 
         Object bd1 = body1.getUserData();
         Object bd2 = body2.getUserData();
-        //System.out.println(fd1 + " " + fd2 + " " + bd1 + " " + bd2);
 
-        handleWalkSensorEndContact(bd1, bd2, fd1, fd2);
-        //handleFollowSensorEndContact(fix1, fix2, fd1, fd2);
         handleHarvestingEndContact(bd1, bd2, fd1, fd2);
         handleGroundEndContact(bd1, bd2, fd1, fd2, fix1, fix2);
         handleShieldWallEndContact((ObstacleSprite) bd1, (ObstacleSprite) bd2);
@@ -187,8 +184,6 @@ public class LevelContactListener implements ContactListener {
             (!("fall_sensor".equals(fd1) || "fall_sensor".equals(fd2)) ) &&
             !("player_sensor".equals(fd1) || "player_sensor".equals(fd2))) {
 
-            //System.out.println("drema shard contact handler sees: bd1:" + bd1 + " \nbd2: " + bd2 + " \nfd1: " + fd1 + " \nfd2: " + fd2);
-
             Shard collectedShard = (bd1 instanceof Shard) ? (Shard) bd1 : (Shard) bd2;
 
             if (!collectedShard.getObstacle().isRemoved()) {
@@ -202,8 +197,6 @@ public class LevelContactListener implements ContactListener {
     private void handleWalkSensorContact(ObstacleSprite bd1, ObstacleSprite bd2, Object fd1, Object fd2) {
         if (("walk_sensor".equals(fd1) && (bd2 instanceof Surface || bd2 instanceof Enemy)) ||
             ("walk_sensor".equals(fd2) && (bd2 instanceof Surface || bd2 instanceof Enemy))) {
-            // System.out.println("walk_sensor collision detected with: " + bd1 + " and " + bd2);
-
 
             // Ensure the Enemy reference is correctly retrieved
             Enemy e = (bd1 instanceof Enemy) ? (Enemy) bd1
@@ -212,9 +205,6 @@ public class LevelContactListener implements ContactListener {
 
             if (e != null) {
                 e.setSeesWall(true);
-                // System.out.println("Enemy sees wall");
-            } else {
-                // System.out.println("WARNING: Walk sensor collision detected but Enemy reference is null.");
             }
         }
     }
@@ -274,7 +264,6 @@ public class LevelContactListener implements ContactListener {
         } else if (enemy instanceof MindMaintenance) {
             MindMaintenance maintenance = (MindMaintenance) enemy;
             maintenance.setStunned(true);
-            maintenance.setStunTexture(dreamWalkerScene.directory);
             System.out.println("Maintenance is stunned");
         } else if (enemy instanceof DreamDweller) {
             DreamDweller dweller = (DreamDweller) enemy;
@@ -325,9 +314,9 @@ public class LevelContactListener implements ContactListener {
         // if there is a collision between an enemy and the player's scare sensor
         if(( (dreamWalkerScene.getAvatar().getScareSensorName().equals(fd1) && bd2 instanceof Enemy)
             || (dreamWalkerScene.getAvatar().getScareSensorName().equals(fd2) && bd1 instanceof Enemy) )){
+            System.out.println("FD1: " + fd1 + " FD2: " + fd2);
             Enemy harvestedEnemy;
-                if (dreamWalkerScene.getAvatar().getScareSensorName().equals(fd1) && fd2 != "walk_sensor" && fd2 != "follow_sensor" && fd2 != "vision_sensor" )
-                {
+                if (dreamWalkerScene.getAvatar().getScareSensorName().equals(fd1)){
                     harvestedEnemy = (Enemy) bd2;
                     if (harvestedEnemy instanceof CuriosityCritter) {
                         CuriosityCritter critter = (CuriosityCritter) harvestedEnemy;
@@ -337,11 +326,15 @@ public class LevelContactListener implements ContactListener {
                                 critter.dropShard()
                             );
                         }
-                    }
-                    dreamWalkerScene.performHarvest(harvestedEnemy);
+                        dreamWalkerScene.performHarvest(harvestedEnemy);
 
-                } else if (dreamWalkerScene.getAvatar().getScareSensorName().equals(fd2) && fd1 != "walk_sensor" && fd1 != "follow_sensor" && fd1 != "vision_sensor")
-                {
+                    }
+                    else if (harvestedEnemy instanceof MindMaintenance && dreamWalkerScene.getAvatar().isHarvesting()) {
+                        dreamWalkerScene.performHarvest(harvestedEnemy);
+                    }
+
+                }
+                else if (dreamWalkerScene.getAvatar().getScareSensorName().equals(fd2)) {
                     harvestedEnemy = (Enemy) bd1;
                     if (harvestedEnemy instanceof CuriosityCritter) {
                         CuriosityCritter critter = (CuriosityCritter) harvestedEnemy;
@@ -351,8 +344,12 @@ public class LevelContactListener implements ContactListener {
                                 critter.dropShard()
                             );
                         }
+                        dreamWalkerScene.performHarvest(harvestedEnemy);
+
                     }
-                    dreamWalkerScene.performHarvest(harvestedEnemy);
+                    else if (harvestedEnemy instanceof MindMaintenance && dreamWalkerScene.getAvatar().isHarvesting()) {
+                        dreamWalkerScene.performHarvest(harvestedEnemy);
+                    }
 
                 }
 
@@ -378,24 +375,20 @@ public class LevelContactListener implements ContactListener {
         }
     }
 
+
     private void handleHarvestingEndContact(Object bd1, Object bd2, Object fd1, Object fd2) {
         if ((dreamWalkerScene.getAvatar().getScareSensorName().equals(fd1) && bd2 instanceof Enemy) ||
             (dreamWalkerScene.getAvatar().getScareSensorName().equals(fd2) && bd1 instanceof Enemy)) {
 
             Enemy harvestedEnemy;
-            // if the enemy is not a Mind Maintenance
-            if (!(bd2 instanceof MindMaintenance) && !(bd1 instanceof MindMaintenance)) {
-                if (dreamWalkerScene.getAvatar().getScareSensorName().equals(fd1) &&
-                    fd2 != "walk_sensor" && fd2 != "follow_sensor" && fd2 != "vision_sensor") {
-
-                    harvestedEnemy = (Enemy) bd2;
-                    dreamWalkerScene.removeHarvestedEnemy(harvestedEnemy);
-                } else if (dreamWalkerScene.getAvatar().getScareSensorName().equals(fd2) &&
-                    fd1 != "walk_sensor" && fd1 != "follow_sensor" && fd1 != "vision_sensor") {
-
-                    harvestedEnemy = (Enemy) bd1;
-                    dreamWalkerScene.removeHarvestedEnemy(harvestedEnemy);
-                }
+            if (dreamWalkerScene.getAvatar().getScareSensorName().equals(fd1) &&
+                fd2 != "walk_sensor" && fd2 != "follow_sensor" && fd2 != "vision_sensor") {
+                harvestedEnemy = (Enemy) bd2;
+                dreamWalkerScene.removeHarvestedEnemy(harvestedEnemy);
+            } else if (dreamWalkerScene.getAvatar().getScareSensorName().equals(fd2) &&
+                fd1 != "walk_sensor" && fd1 != "follow_sensor" && fd1 != "vision_sensor") {
+                harvestedEnemy = (Enemy) bd1;
+                dreamWalkerScene.removeHarvestedEnemy(harvestedEnemy);
             }
         }
     }
@@ -465,17 +458,33 @@ public class LevelContactListener implements ContactListener {
             Spear spear = (bd1 instanceof Spear) ? (Spear) bd1 : (Spear) bd2;
             Player player = (bd1 instanceof Player) ? (Player) bd1 : (Player) bd2;
 
+            player.setBlinded(true);
+            player.setBlindTimer(0);
+
+            if (player.getTakeDamageCooldown() <= 0) {
+                player.setTakingDamage(true);
+                System.out.println("Spear hit Player: DAMAGE TAKEN");
+            } else {
+                System.out.println("Spear hit Player: blinded but no damage (cooldown)");
+            }
+
+            // 矛消失
             spear.getObstacle().markRemoved(true);
+            spear.getObstacle().setVX(0);
+            spear.getObstacle().setVY(0);
+        }
+    }
+    private void handleSpearHitSurface(ObstacleSprite bd1, ObstacleSprite bd2) {
+        if ((bd1 instanceof Spear && bd2 instanceof Surface) || (bd2 instanceof Spear && bd1 instanceof Surface)) {
+            Spear spear = (bd1 instanceof Spear) ? (Spear) bd1 : (Spear) bd2;
+            Surface surface = (bd1 instanceof Surface) ? (Surface) bd1 : (Surface) bd2;
 
-            player.setFearMeter(Math.max(0, player.getFearMeter() - 1));
-
+            spear.getObstacle().markRemoved(true);
 
             spear.getObstacle().setVX(0);
             spear.getObstacle().setVY(0);
-            player.setBlinded(true);
 
-            System.out.println("Spear hit Player: -1 fear, no push.");
-
+            System.out.println("Spear hit Surface: removed spear.");
         }
     }
 }

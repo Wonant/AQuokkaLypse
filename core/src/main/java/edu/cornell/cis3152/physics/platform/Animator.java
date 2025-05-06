@@ -75,4 +75,8 @@ public class Animator {
         spriteSheet.setFrame(actualIndex);
         return spriteSheet;
     }
+    public TextureRegion getLastFrame() {
+        spriteSheet.setFrame(endFrame);
+        return spriteSheet;
+    }
 }

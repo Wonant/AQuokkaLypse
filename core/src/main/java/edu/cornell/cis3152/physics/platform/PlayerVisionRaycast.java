@@ -31,11 +31,9 @@ public class PlayerVisionRaycast implements RayCastCallback {
             if (userData instanceof Surface) {
                 Surface surface = (Surface) userData;
                 String name = surface.getObstacle().getName();
-//                System.out.println("Distance from start ray to first surface: " + (point.y - surface.getObstacle().getY()));
                 if (point.y - surface.getObstacle().getY() <= stepHeightThreshold && name.startsWith("stair")) {
                     hitNormal.set(normal).nor();
                     posAboveStair.set(point).add(normal.cpy().nor());
-//                    System.out.println("Position above stair" + posAboveStair);
                     hitFixture = fixture;
                     closestFraction = fraction;
                     fixtureIsStair = true;

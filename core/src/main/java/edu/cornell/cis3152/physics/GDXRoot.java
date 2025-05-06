@@ -30,14 +30,25 @@ public class GDXRoot extends Game implements ScreenListener {
     private LoadingScene loading;
     /** The main menu scene */
     private MainMenuScene mainMenu;
+    /** The pause scene */
+    private PauseScene pauseScene;
+    private PlatformScene pausedScreen;
     /** Array of Arena controllers (one per map) */
     private PlatformScene[] controllers;
     /** Index of the current Arena */
     private int current;
     /** Array of map keys for each level */
-    private String[] maps = {"tutorial1", "tutorial2", "easy1", "medium1", "hard1"};
-    private String[] tiled = {"maps/tutorial_1.tmx", "maps/tutorial_2.tmx", "maps/easy_level.tmx",
+    /*
+<<<<<<< HEAD
+    private String[] maps = {"platform-constants", "platform-constants2", "platform-constants", "platform-constants"};
+    private String[] tiled = {"maps/level_select.tmx", "maps/easy_level.tmx", "maps/tutorial_2.tmx", "maps/tutorial1.tmx" };
+=======
+
+     */
+    private String[] maps = {"tutorial1","tutorial1", "tutorial2", "easy1", "medium1", "hard1"};
+    private String[] tiled = {"maps/level_select.tmx", "maps/tutorial_1.tmx", "maps/tutorial_2.tmx", "maps/easy_level.tmx",
                                 "maps/medium1.tmx", "maps/hard1.tmx"};
+
     /** Current map index for switching levels */
     private int currentMapIndex = 0;
 
@@ -68,6 +79,10 @@ public class GDXRoot extends Game implements ScreenListener {
         if (mainMenu != null) {
             mainMenu.dispose();
             mainMenu = null;
+        }
+        if (pauseScene != null) {
+            pauseScene.dispose();
+            pauseScene = null;
         }
         if (controllers != null) {
             for (int i = 0; i < controllers.length; i++) {
@@ -125,11 +140,13 @@ public class GDXRoot extends Game implements ScreenListener {
 
             // Create one Arena for each map key
             controllers = new PlatformScene[maps.length];
+            boolean isLevelSelect = true;
             for (int i = 0; i < maps.length; i++) {
-                controllers[i] = new PlatformScene(directory, maps[i], tiled[i]);
+                controllers[i] = new PlatformScene(directory, maps[i], tiled[i], isLevelSelect);
                 controllers[i].setScreenListener(this);
                 controllers[i].setSpriteBatch(batch);
                 controllers[i].reset();
+                isLevelSelect = false;
             }
 
             setScreen(mainMenu);
@@ -156,18 +173,53 @@ public class GDXRoot extends Game implements ScreenListener {
                     break;
             }
         }
-        else if (exitCode == PlatformScene.EXIT_NEXT) {
-            current = (current + 1) % controllers.length;
-            setScreen(controllers[current]);
+        else if (screen instanceof PlatformScene) {
+            if (exitCode == PlatformScene.EXIT_NEXT) {
+                current = (current + 1) % controllers.length;
+                setScreen(controllers[current]);
+            } else if (exitCode == PlatformScene.EXIT_PREV) {
+                // Go back to the previous Arena
+                current = (current + controllers.length - 1) % controllers.length;
+                setScreen(controllers[current]);
+            } else if (exitCode == PlatformScene.EXIT_PAUSE) {
+                if (screen instanceof PlatformScene) {
+                    // Quit the application
+
+                    pausedScreen = (PlatformScene) screen;
+                    if (pauseScene == null) {
+                        pauseScene = new PauseScene(directory, batch, screen);
+                        pauseScene.setScreenListener(this);
+                    }
+
+                    setScreen(pauseScene);
+                }
+            }
         }
-        else if (exitCode == PlatformScene.EXIT_PREV) {
-            // Go back to the previous Arena
-            current = (current + controllers.length - 1) % controllers.length;
-            setScreen(controllers[current]);
-        }
-        else if (exitCode == PlatformScene.EXIT_QUIT) {
-            // Quit the application
-            Gdx.app.exit();
+        else if (screen == pauseScene) {
+            switch (exitCode) {
+                case PauseScene.EXIT_RESUME:
+                    // Resume the game
+                    ((PlatformScene)pausedScreen).setResumingFromPause(true);
+                    setScreen(pausedScreen);
+                    break;
+                case PauseScene.EXIT_RESTART:
+                    // Return to main menu
+                    ((PlatformScene)pausedScreen).setResumingFromPause(false);
+                    setScreen(pausedScreen);
+                    break;
+                case PauseScene.EXIT_LEVELSELECT:
+                    // TODO: Level Select
+                    break;
+                case PauseScene.EXIT_SETTINGS:
+                    // TODO: SETTINGS
+                    // Would show options screen - for now, just resume
+                    ((PlatformScene)pausedScreen).setResumingFromPause(true);
+                    setScreen(pausedScreen);
+                    break;
+                case PauseScene.EXIT_QUIT:
+                    Gdx.app.exit();
+                    break;
+            }
         }
     }
 

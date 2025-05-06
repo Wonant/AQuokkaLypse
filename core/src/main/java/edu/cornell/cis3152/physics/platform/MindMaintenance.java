@@ -35,14 +35,13 @@ public class MindMaintenance extends Enemy {
     private float max_speed;
     private float jump_force;
     private int jumpLimit;
-    private int shotLimit;
 
+    private boolean sus = false;
     private float movement;
     private boolean facingRight;
     private int jumpCooldown;
     private boolean isJumping;
-    private int shootCooldown;
-    private int shootLimit = 60;
+
     private boolean isGrounded;
     private boolean isShooting;
 
@@ -69,10 +68,6 @@ public class MindMaintenance extends Enemy {
     private Vector2 debugLookStart = new Vector2();
     private Vector2 debugLookEnd = new Vector2();
 
-    // time before enemy resumes normal behavior after detecting player
-    private float susCooldown = 100;
-    private float susCountdown = susCooldown;
-
     /** game logic stuff */
 
     // where the maintenance is looking, 0 is relative down of the critter's central location, iterates clockwise
@@ -93,17 +88,21 @@ public class MindMaintenance extends Enemy {
     private Animator walkingSprite;
     private Animator turnSprite;
     private Animator alertSprite;
-    private Animator alertWalk;
+    private Animator alertWalkSprite;
     private Animator attackSprite;
     private Animator stunnedSprite;
     private MindMaintenance.AnimationState animationState;
 
+    private final int TURN_FRAME_DURATION = 24;
     private final int ATTACK_FRAME_DURATION = 29;
     private final int STUN_FRAME_DURATION   = 20;
     private boolean inAttackAnimation = false;
+    private boolean inChasingAnimation = false;
     private int     attackFrameCounter = 0;
     private boolean inStunAnimation   = false;
-    private int     stunFrameCounter  = 0;;
+    private int     stunFrameCounter  = 0;
+    private boolean inTurnAnimation   = false;
+    private int     turnFrameCounter  = 0;
 
 
     private enum AnimationState {
@@ -118,11 +117,13 @@ public class MindMaintenance extends Enemy {
 
     public void createAnimators(Texture mindmaintenance) {
         //idleSprite = new Animator();
-        walkingSprite = new Animator(mindmaintenance, 10, 13, 0.08f, 130, 0,15);
-        turnSprite = new Animator(mindmaintenance, 10, 13, 0.08f, 130, 17,27);
-        alertSprite = new Animator(mindmaintenance, 10, 13, 0.08f, 130, 42,67);
-        attackSprite = new Animator(mindmaintenance, 10, 13, 0.08f, 130, 87,115, false);
-        stunnedSprite = new Animator(mindmaintenance, 10, 13, 0.08f, 130, 116, 135, false);
+        walkingSprite = new Animator(mindmaintenance, 10, 13, 0.06f, 130, 0,15);
+        turnSprite = new Animator(mindmaintenance, 10, 13, 0.06f, 130, 16,39);
+        alertSprite = new Animator(mindmaintenance, 10, 13, 0.08f, 130, 40,64);
+        alertWalkSprite = new Animator(mindmaintenance, 10, 13, 0.05f, 130, 65,82);
+        attackSprite = new Animator(mindmaintenance, 10, 13, 0.05f, 130, 83, 110);
+        stunnedSprite = new Animator(mindmaintenance, 10, 13, 0.08f, 130, 111, 129);
+
     }
 
     public float getMovement() {
@@ -149,14 +150,25 @@ public class MindMaintenance extends Enemy {
 
     public boolean isSafeToWalk(){return safeToWalk;}
 
-    public boolean isSus(){return susCountdown > 0;}
 
     public boolean isShooting() {
-        return isShooting && shootCooldown <= 0 && !isStunned();
+        return isShooting;
     }
 
     public void setShooting(boolean value) {
         isShooting = value;
+    }
+
+    public void setTurning(boolean value) {
+        inTurnAnimation = value;
+    }
+
+    public boolean isSus(){
+        return sus;
+    }
+
+    public void setSus(boolean value) {
+        sus = value;
     }
 
     public boolean isJumping() {
@@ -242,7 +254,6 @@ public class MindMaintenance extends Enemy {
         isJumping   = false;
         facingRight   = true;
         jumpCooldown = 0;
-        shootCooldown = 0;
         //deg
         visionAngle = 0;
 
@@ -252,15 +263,6 @@ public class MindMaintenance extends Enemy {
         mesh.set(-drawWidth/1.5f, -drawHeight/1.6f, drawWidth*1.5f, drawHeight*1.5f);
     }
 
-    public void setActiveTexture(AssetDirectory directory){
-        Texture texture = directory.getEntry( "mind-maintenance-active", Texture.class );
-        this.setTexture(texture);
-    }
-
-    public void setStunTexture(AssetDirectory directory){
-        Texture texture = directory.getEntry( "mind-maintenance-inactive", Texture.class );
-        this.setTexture(texture);
-    }
     /**
      * Creates a sensor fixture to detect ground contact.
      * This sensor prevents double-jumping by detecting when the player is on the ground.
@@ -329,17 +331,6 @@ public class MindMaintenance extends Enemy {
         attachHead();
     }
 
-    public void updateFollowSensor(Player player) {
-        Vector2 enemyPos = obstacle.getPosition();
-        Vector2 playerPos = player.getObstacle().getPosition();
-        Vector2 visionRef = new Vector2(enemyPos.x, enemyPos.y + 5.0f);
-        visionRef.sub(enemyPos).nor();
-        playerPos.sub(enemyPos).nor();
-        followAngle = MathUtils.atan2(playerPos.y,playerPos.x) - MathUtils.atan2(visionRef.y,visionRef.x);
-        headBody.setTransform(headBody.getPosition(), followAngle);
-    }
-
-
     public boolean isPlatformStep(World world, float raylength) {
         Vector2 start = (isFacingRight()) ?
             obstacle.getBody().getPosition().cpy().add(width/2 + 0.1f, height/2) :
@@ -397,7 +388,7 @@ public class MindMaintenance extends Enemy {
         boolean groundExists = (groundVisionRaycast.getHitFixture() != null);
         if (!groundExists)
         {
-            System.out.println("Don't see the GROUND RUN!!");
+            System.out.println("Don't see the GROUND TURN!!");
         }
         groundVisionRaycast.reset();
 
@@ -474,13 +465,23 @@ public class MindMaintenance extends Enemy {
         }
     }
 
-    public void resetShootCooldown(){
-        shootCooldown = shootLimit;
+    public void resetTurnSprite(){turnSprite.reset();}
+
+    public void resetAttackSprite(){
+        System.out.println("RESET ATTACK");
+        attackFrameCounter = 0;
+        turnSprite.reset();
+        isShooting = false;
     }
+
+    public void setAttacking(boolean value){inAttackAnimation = value;}
+
+    public void setChasing(boolean value){inChasingAnimation = value;}
 
     @Override
     public void update(float dt) {
         lookForPlayer();
+
         if (isStunned()) {
             animationState = AnimationState.STUN;
             super.update(dt);
@@ -490,41 +491,42 @@ public class MindMaintenance extends Enemy {
         if (isPlatformStep(scene.world, stepRayLength)) {
             System.out.println("MM's seen a step");
         }
+
+        if(checkBehindForPlayer()){
+            setSus(true);
+            super.update(dt);
+            return;
+        }
+
+        if (!canContinue()) {
+            safeToWalk = false;
+
+        } else {
+            safeToWalk = true;
+        }
+
         if (inAttackAnimation) {
             animationState = AnimationState.ATTACK;
             attackFrameCounter++;
-            if (attackFrameCounter >= ATTACK_FRAME_DURATION) {
-                inAttackAnimation = false;
-                resetShootCooldown();
+            isShooting = false;
+            if(attackFrameCounter == 40){
+                isShooting = true;
             }
             super.update(dt);
             return;
         }
 
-        if (isShooting()) {
-            if (!inAttackAnimation) {
-                inAttackAnimation    = true;
-                attackFrameCounter   = 0;
-                attackSprite.reset();
-            }
+        if (inChasingAnimation) {
+            animationState = AnimationState.ALERT;
+            super.update(dt);
+            return;
         }
 
-        if (isAwareOfPlayer()) {
-            animationState = AnimationState.ALERT;
-        }
-        else if (movement == 0) {
+        if (inTurnAnimation){
             animationState = MindMaintenance.AnimationState.TURN;
         }
         else{
             animationState = MindMaintenance.AnimationState.WALK;
-        }
-
-        if (!canContinue()) {
-            safeToWalk = false;
-            setMovement(-getMovement());
-            applyForce();
-        } else {
-            safeToWalk = true;
         }
 
         if (isJumping()) {
@@ -532,16 +534,7 @@ public class MindMaintenance extends Enemy {
         } else {
             jumpCooldown = Math.max(0, jumpCooldown - 1);
         }
-        if (isAwareOfPlayer()) {
-            //updateFollowSensor(scene.getAvatar());
-            susCountdown = susCooldown;
-        }
-        else{
-            susCountdown--;
-        }
-        if (!isShooting()) {
-            shootCooldown = Math.max(0, shootCooldown - 1);
-        }
+
         super.update(dt);
     }
 
@@ -569,12 +562,13 @@ public class MindMaintenance extends Enemy {
                 frame = stunnedSprite.getCurrentFrame(Gdx.graphics.getDeltaTime());
                 break;
             case ALERT:
-                frame = alertSprite.getCurrentFrame(Gdx.graphics.getDeltaTime());
+                frame = alertWalkSprite.getCurrentFrame(Gdx.graphics.getDeltaTime());
                 break;
             default:
                 frame = alertSprite.getCurrentFrame(Gdx.graphics.getDeltaTime());
                 break;
         }
+
 
         if(facingRight){
             frame.flip(true,false);
@@ -601,69 +595,21 @@ public class MindMaintenance extends Enemy {
             1f,             // scaleY
             0f              // rotation (in degrees)
         );
-        /*
-        if (obstacle != null && mesh != null) {
-            float scaleFactor = 1.4f; // Increase sprite size by 20%
-            float x = obstacle.getX();
-            float y = obstacle.getY();
-            float a = obstacle.getAngle();
-
-            transform.idt();
-            transform.preScale(scaleFactor, scaleFactor); // Scale up sprite only
-            transform.preRotate((float) ((double) (a * 180.0F) / Math.PI));
-            transform.preTranslate(x * u, y * u);
-
-            batch.setTextureRegion(sprite);
-            batch.drawMesh(mesh, transform, false);
-            batch.setTexture((Texture) null);
-        }
-
-         */
     }
 
-    public boolean checkFollowRaycast() {
-        World world = obstacle.getBody().getWorld();
-        Player player = scene.getAvatar();
-        Vector2 pos = obstacle.getPosition();
-
-        float rayLength = 7f;
-        float followSensorAngle = MathUtils.atan2(player.getObstacle().getPosition().y - pos.y,
-            player.getObstacle().getPosition().x - pos.x);
-
-        Vector2 start = (facingRight) ? new Vector2(pos.x + width/2, pos.y + height/4) :
-            new Vector2(pos.x - width/2, pos.y + height/4);
-        //Vector2 end = (facingRight) ? new Vector2(pos.x + width + rayLength, pos.y + height/4) :
-        new Vector2(pos.x - width - rayLength, pos.y + height/4);
-        Vector2 end = new Vector2(
-            pos.x + rayLength * MathUtils.cos(followSensorAngle),
-            pos.y + rayLength * MathUtils.sin(followSensorAngle)
-        );
-
-        EnemyVisionRaycast playerFollowRaycast = new EnemyVisionRaycast(EnemyVisionRaycast.VisionMode.PLAYER_CHECK, 4f);
-        world.rayCast(playerFollowRaycast, start, end);
-
-        debugFollowStart.set(start);
-        debugFollowEnd.set(end);
-
-        boolean playerVisible = (playerFollowRaycast.getHitPlayer() != null);
-
-        if (playerVisible)
-        {
-            debugFollowEnd.set(playerFollowRaycast.getHitPoint());
+    public void turnShift(){
+        Vector2 current = obstacle.getPosition();
+        float shift = 0.75f;
+        if (facingRight){
+            shift = -0.75f;
         }
-        if (playerFollowRaycast.getHitFixture() != null) {
-            debugFollowEnd.set(playerFollowRaycast.getHitPoint());
-        }
-
-        playerFollowRaycast.reset();
-        return playerVisible;
+        obstacle.setPosition(current.x + shift, current.y);
     }
-
     public void lookForPlayer() {
         World world = obstacle.getBody().getWorld();
         Player player = scene.getAvatar();
         Vector2 pos = obstacle.getPosition();
-        float rayLength = 5.2f;
+        float rayLength = 8;
         Vector2 start, end;
 
         start = (facingRight) ? new Vector2(pos.x + width/2, pos.y + height/4) :
@@ -676,26 +622,28 @@ public class MindMaintenance extends Enemy {
 
         float forwardAngle = facingRight ? 0 : MathUtils.PI;
 
-        if (isAwareOfPlayer()) {
+        float maxAngleOffset = 30 * MathUtils.degreesToRadians; // 30 degrees
+
+        float angleDiff = angleToPlayer - forwardAngle;
+        if (angleDiff > MathUtils.PI) angleDiff -= MathUtils.PI2;
+        if (angleDiff < -MathUtils.PI) angleDiff += MathUtils.PI2;
+
+        if (Math.abs(angleDiff) <= maxAngleOffset) {
+            // Player is within the vision cone
             end = new Vector2(
                 pos.x + rayLength * MathUtils.cos(angleToPlayer),
                 pos.y + rayLength * MathUtils.sin(angleToPlayer)
             );
+
+            boolean playerIsOnRight = player.getObstacle().getPosition().x > pos.x;
+            if ((facingRight && !playerIsOnRight) || (!facingRight && playerIsOnRight)) {
+                facingRight = playerIsOnRight;
+            }
         } else {
-            float maxAngleOffset = 30 * MathUtils.degreesToRadians; // 30 degrees in radians
-
-            float angleDiff = angleToPlayer - forwardAngle;
-            if (angleDiff > MathUtils.PI) angleDiff -= MathUtils.PI2;
-            if (angleDiff < -MathUtils.PI) angleDiff += MathUtils.PI2;
-
-            float clampedDiff = MathUtils.clamp(angleDiff, -maxAngleOffset, maxAngleOffset);
-
-            float clampedAngle = forwardAngle + clampedDiff;
-
-            end = new Vector2(
-                pos.x + rayLength * MathUtils.cos(clampedAngle),
-                pos.y + rayLength * MathUtils.sin(clampedAngle)
-            );
+            // Player is outside the cone, no raycast
+            setAwareOfPlayer(false);
+            wasAware = false;
+            return; // Exit early
         }
 
         EnemyVisionRaycast playerRaycast = new EnemyVisionRaycast(EnemyVisionRaycast.VisionMode.PLAYER_CHECK, 4f);
@@ -712,6 +660,9 @@ public class MindMaintenance extends Enemy {
         } else if (playerRaycast.getHitFixture() != null) {
             debugLookEnd.set(playerRaycast.getHitPoint());
         }
+        else{
+            setAwareOfPlayer(false);
+        }
 
         // message dispatch
         if (isAware && !wasAware) {
@@ -725,40 +676,32 @@ public class MindMaintenance extends Enemy {
         playerRaycast.reset();
     }
 
+    private boolean checkBehindForPlayer() {
+        World world = obstacle.getBody().getWorld();
+        Vector2 pos = obstacle.getPosition();
+        float rearRayLength = 6f;
+        float rearAngle = facingRight ? MathUtils.PI : 0;
 
+        Vector2 rearStart = (facingRight)
+            ? new Vector2(pos.x + width / 2, pos.y + height / 4)
+            : new Vector2(pos.x - width / 2, pos.y + height / 4);
 
-    /**
-     * Draws the player sprite.
-     * The sprite is flipped horizontally if the player is facing left.
-     *
-     * @param batch  The sprite batch used for drawing.
-     */
-    /*
-    @Override
-    public void draw(SpriteBatch batch) {
-        if (facingRight) {
-            flipCache.setToScaling(1, 1);
-        } else {
-            flipCache.setToScaling(-1, 1);
+        Vector2 rearEnd = new Vector2(
+            rearStart.x + rearRayLength * MathUtils.cos(rearAngle),
+            rearStart.y + rearRayLength * MathUtils.sin(rearAngle)
+        );
+
+        EnemyVisionRaycast rearRaycast = new EnemyVisionRaycast(EnemyVisionRaycast.VisionMode.PLAYER_CHECK, 2f);
+        world.rayCast(rearRaycast, rearStart, rearEnd);
+
+        boolean hit = rearRaycast.getHitPlayer() != null;
+        if (hit) {
+            debugLookStart.set(rearStart);
+            debugLookEnd.set(rearRaycast.getHitPoint());
         }
-        if (obstacle != null && mesh != null) {
-            float scaleFactor = 1.4f; // Increase sprite size by 20%
-            float x = obstacle.getX();
-            float y = obstacle.getY();
-            float a = obstacle.getAngle();
-            float u = obstacle.getPhysicsUnits();
-
-            transform.idt();
-            transform.preScale(scaleFactor, scaleFactor); // Scale up sprite only
-            transform.preRotate((float) ((double) (a * 180.0F) / Math.PI));
-            transform.preTranslate(x * u, y * u);
-
-            batch.setTextureRegion(sprite);
-            batch.drawMesh(mesh, transform, false);
-            batch.setTexture((Texture) null);
-        }
+        rearRaycast.reset();
+        return hit;
     }
-     */
 
     /**
      * Draws the debug outlines for the physics body and sensor.
@@ -783,6 +726,7 @@ public class MindMaintenance extends Enemy {
 
             batch.outline(sensorOutline, transform);
         }
+        /*
         if (walkSensorOutline != null) {
             batch.setTexture(Texture2D.getBlank());
             batch.setColor(Color.RED);
@@ -814,6 +758,8 @@ public class MindMaintenance extends Enemy {
 
             batch.setColor(Color.WHITE);
         }
+
+         */
         batch.setColor(Color.PURPLE);
         drawRayDebug(batch, debugRayStart, debugRayEnd);
         if (isAwareOfPlayer()) {
@@ -852,14 +798,11 @@ public class MindMaintenance extends Enemy {
         World world = obstacle.getBody().getWorld();
         Vector2 pos = obstacle.getBody().getPosition();
 
-
-
         // Convert world coordinates to screen units using your physics unit conversion.
         float u = obstacle.getPhysicsUnits();
         Path2 fallRayPath = new Path2();
         PathFactory factory = new PathFactory();
-        factory.makeLine(debugGroundStart.x * u, debugGroundStart.y * u,
-            debugGroundEnd.x * u, debugGroundEnd.y * u, fallRayPath);
+        factory.makeLine(debugGroundStart.x * u, debugGroundStart.y * u, debugGroundEnd.x * u, debugGroundEnd.y * u, fallRayPath);
 
         // Draw the fall check ray in a distinct color (yellow in this example)
         batch.setTexture(Texture2D.getBlank());

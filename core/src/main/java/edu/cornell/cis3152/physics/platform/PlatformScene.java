@@ -66,7 +66,7 @@ import edu.cornell.gdiac.audio.SoundEffectManager;
 public class PlatformScene implements Screen, Telegraph {
     // SOME EXIT CODES FOR GDXROOT
     /** Exit code for quitting the game */
-    public static final int EXIT_QUIT = 0;
+    public static final int EXIT_PAUSE = 0;
     /** Exit code for advancing to next level */
     public static final int EXIT_NEXT = 1;
     /** Exit code for jumping back to previous level */
@@ -132,15 +132,9 @@ public class PlatformScene implements Screen, Telegraph {
     /** Countdown active for winning or losing */
     protected int countdown;
 
+    /** Used to slightly modify the PlatformScene for Level Select usage */
+    private boolean isLevelSelect;
 
-    /** Texture asset for character avatar */
-    private TextureRegion avatarTexture;
-    /** Texture asset for the spinning barrier */
-    private TextureRegion barrierTexture;
-    /** Texture asset for the bullet */
-    private TextureRegion bulletTexture;
-    /** Texture asset for the bridge plank */
-    private TextureRegion bridgeTexture;
 
     /** The jump sound. We only want to play once. */
     private SoundEffect jumpSound;
@@ -157,9 +151,6 @@ public class PlatformScene implements Screen, Telegraph {
     private MindMaintenance maintenance;
     private DreamDweller dreamDweller;
     private TextureRegion visionConeRegion;
-    private Texture vision;
-    private Texture light;
-    private int prev_debug;
     private Sprite visionCone;
 
     /** manages ai control for all entities */
@@ -261,11 +252,11 @@ public class PlatformScene implements Screen, Telegraph {
 
     // global game units
     float units;
-    private String mapkey  = "platform-constants";
+    private String mapkey;
 
     private Animator teleportAnimator;
-    private TextureRegion teleportSpritesheet;
     private boolean isTeleporting = false;
+    private final float TELEPORT_SURFACE_BUFFER = 0.1f;
 
     private float teleportAnimationTime = 0f;
     private Vector2 preTeleportPosition;
@@ -285,6 +276,15 @@ public class PlatformScene implements Screen, Telegraph {
     private Shader glowShader;
 
     private float globalTime;
+
+    /** Used to ensure scene doesn't reset when from pause scene*/
+    private boolean resumingFromPause = false;
+
+    private Array<Spear> pendingSpears = new Array<>();
+    private float spearTimer = 0f;
+    private int spearIndex = 0;
+    private static final float SPEAR_FIRE_INTERVAL = 0.1f;
+
 
     /*==============================ContactListener Getters/Setters===============================*/
 
@@ -307,7 +307,6 @@ public class PlatformScene implements Screen, Telegraph {
     public void performHarvest(Enemy enemy)
     {
         queuedHarvestedEnemy.add(enemy);
-        enemies.remove(enemy);
     }
 
 
@@ -566,14 +565,15 @@ public class PlatformScene implements Screen, Telegraph {
      *
      * The game has default gravity and other settings
      */
-    public PlatformScene(AssetDirectory directory, String mapkey, String tiled) {
+    public PlatformScene(AssetDirectory directory, String mapkey, String tiled, Boolean isLevelSelect) {
+        this.isLevelSelect = isLevelSelect;
         this.directory = directory;
         this.mapkey = mapkey;
         tiledLevelName = tiled;
         constants = directory.getEntry(mapkey,JsonValue.class);
         JsonValue defaults = constants.get("world");
 
-        crosshairTexture  = new TextureRegion(directory.getEntry( "ragdoll-crosshair", Texture.class ));
+        crosshairTexture  = new TextureRegion(directory.getEntry( "crosshair", Texture.class ));
         scareEffectTexture = new TextureRegion(directory.getEntry("platform-scare-effect", Texture.class));
 
         scale = new Vector2();
@@ -794,10 +794,13 @@ public class PlatformScene implements Screen, Telegraph {
                 float worldY = y / units;
                 float worldHeight = height / units;
                 if (o.getName().startsWith("door")) {
-                    Door door = new Door(units, worldX, worldY, worldWidth, worldHeight, level + 1);
-                    doors.add(door);
-                    addSprite(door);
-                    door.setFilter();
+                    if(!isLevelSelect) {
+                        Door door = new Door(units, worldX, worldY, worldWidth, worldHeight,
+                            level + 1);
+                        doors.add(door);
+                        addSprite(door);
+                        door.setFilter();
+                    }
                 }
                 if (o.getName().startsWith("Player")) {
                     playerSpawnPos.set(worldX, worldY);
@@ -823,7 +826,6 @@ public class PlatformScene implements Screen, Telegraph {
                     // Have to do after body is created
                     dreamDweller.setFilter();
                     dreamDweller.createSensor();
-                    dreamDweller.createVisionSensor();
                     enemies.add(dreamDweller);
                     //aiManager.register(maintenance);
                     aiCManager.register(dreamDweller);
@@ -850,9 +852,10 @@ public class PlatformScene implements Screen, Telegraph {
 
 
         // dream shard creation from tiled layer
-        Texture texture = directory.getEntry( "shared-goal", Texture.class );
+        Texture texture = directory.getEntry( "shard", Texture.class );
         MapLayer shardLayer = tiledMap.get().getLayers().get("Shards");
         JsonValue goal = constants.get("goal");
+
         totalShards = shardLayer.getProperties().get("totalShards", Integer.class);
         collectedShards = 0;
 
@@ -866,9 +869,7 @@ public class PlatformScene implements Screen, Telegraph {
 
                 MapObject reposition = o.getProperties().get("path", MapObject.class);
 
-                System.out.println(worldX);
                 if (reposition != null) {
-                    System.out.println(reposition.getProperties().get("x", Float.class) / 32f);
                     possibleShardPos.put(shardID, new Vector2(reposition.getProperties().get("x", Float.class) / 32f, reposition.getProperties().get("y", Float.class) / 32f));
                 }
                 if (o.getName() == null) {
@@ -947,8 +948,6 @@ public class PlatformScene implements Screen, Telegraph {
                 Surface platform = new Surface(worldX, worldY, worldHeight, worldWidth, TiledMapInfo.PIXELS_PER_WORLD_METER, constants.get("platforms"), true, rotationRad);
 
                 platform.setDebugColor(Color.BLUE);
-
-
                 platform.getObstacle().setName("platform " + id);
                 addSprite(platform);
                 platform.setFilter();
@@ -956,14 +955,6 @@ public class PlatformScene implements Screen, Telegraph {
             }
         }
 
-
-        texture = directory.getEntry( "shared-test", Texture.class );
-        Texture shadowedTexture = directory.getEntry("shared-shadow-test", Texture.class);
-
-
-
-        // Create Player
-        texture = directory.getEntry( "player-walk", Texture.class );
         avatar = new Player(units, constants.get("player"), playerSpawnPos, this);
 
         Texture dreamwalker = directory.getEntry("player-sprite-sheet", Texture.class);
@@ -982,6 +973,59 @@ public class PlatformScene implements Screen, Telegraph {
         aiManager.setPlayer(avatar);
 
 
+        JsonValue maintainers = constants.get("mind-maintenance");
+        JsonValue maintenancePos = maintainers.get("pos");
+
+        for (int i = 0; i < maintenancePos.size; i++) {
+
+            texture = directory.getEntry( "maintenance-walk", Texture.class );
+            Texture turning = directory.getEntry("maintenance-turn", Texture.class);
+
+            //texture = directory.getEntry("mind-maintenance-active", Texture.class);
+
+
+            maintenance = new MindMaintenance(units, constants.get("mind-maintenance"), maintenancePos.get(i).asFloatArray(), this, dispatcher);
+            //maintenance.setTexture(texture);
+            addSprite(maintenance);
+//            maintenance.createAnimators(texture, turning);
+            // Have to do after body is created
+            maintenance.setFilter();
+            maintenance.createSensor();
+            maintenance.createVisionSensor();
+            enemies.add(maintenance);
+            //aiManager.register(maintenance);
+            aiCManager.register(maintenance);
+            texture = directory.getEntry("vision_cone", Texture.class);
+            visionConeRegion = new TextureRegion(texture);
+            visionCone = new Sprite(visionConeRegion.getTexture());
+            visionCone.setRegion(visionConeRegion);
+            visionCone.setSize(240, 200);
+            visionCone.setOrigin(visionCone.getWidth() / 2, 0);
+        }
+
+        JsonValue dreamdwellers = constants.get("dream-dweller");
+        JsonValue dwellersPos = dreamdwellers.get("pos");
+        for (int i = 0; i < dwellersPos.size; i++) {
+            texture = directory.getEntry("dream-dweller-active", Texture.class);
+
+            dreamDweller = new DreamDweller(units, constants.get("dream-dweller"), dwellersPos.get(i).asFloatArray(), this);
+            dreamDweller.setTexture(texture);
+            addSprite(dreamDweller);
+            // Have to do after body is created
+            dreamDweller.setFilter();
+            dreamDweller.createSensor();
+            enemies.add(dreamDweller);
+            //aiManager.register(maintenance);
+            aiCManager.register(dreamDweller);
+            texture = directory.getEntry("vision_cone", Texture.class);
+            visionConeRegion = new TextureRegion(texture);
+            visionCone = new Sprite(visionConeRegion.getTexture());
+            visionCone.setRegion(visionConeRegion);
+            visionCone.setSize(240, 200);
+            visionCone.setOrigin(visionCone.getWidth() / 2, 0);
+            visionCone.setColor(new Color(0.8f, 0.2f, 0.8f, 0.5f));
+
+        }
 
         if (dreamShardCountText != null) {
             dreamShardCountText.setText("Dream Shards: " + (totalShards - collectedShards));
@@ -1039,7 +1083,7 @@ public class PlatformScene implements Screen, Telegraph {
         // Now it is time to maybe switch screens.
         if (input.didExit()) {
             pause();
-            listener.exitScreen(this, EXIT_QUIT);
+            listener.exitScreen(this, EXIT_PAUSE);
             return false;
         } else if (input.didAdvance()) {
             pause();
@@ -1089,40 +1133,65 @@ public class PlatformScene implements Screen, Telegraph {
         for (Enemy e: enemies){
             if (e instanceof MindMaintenance && ((MindMaintenance) e).isShooting()){
                 System.out.println("MAINTENANCE IS SHOOTING");
-                ((MindMaintenance) e).resetShootCooldown();
                 units = TiledMapInfo.PIXELS_PER_WORLD_METER;
                 Vector2 position = e.getObstacle().getPosition();
-                float direction = 1;
-                if (avatar.getObstacle().getPosition().x < position.x){
-                    direction = -1;
-                }
+                float direction = maintenance.isFacingRight() ? 1 : -1;
+                float spawnOffset = 0.1f;
+                position.set(position.x , position.y);
                 JsonValue bulletjv = constants.get("bullet");
                 Texture texture = directory.getEntry("platform-bullet", Texture.class);
 
                 ShieldWall wall = new ShieldWall(units, bulletjv, position, direction);
+                System.out.println("ShieldWall shot at " + position);
                 shieldWalls.add(wall);
                 wall.setTexture(texture);
                 addQueuedObject(wall);
             }
-            else  if (e instanceof DreamDweller && ((DreamDweller) e).isShooting()){
-
+            else if (e instanceof DreamDweller && ((DreamDweller) e).isShooting()) {
                 units = TiledMapInfo.PIXELS_PER_WORLD_METER;
                 Vector2 position = e.getObstacle().getPosition();
-                float direction = 1;
-                if (avatar.getObstacle().getPosition().x < position.x){
-                    direction = -1;
-                }
+                Vector2 playerPos = avatar.getObstacle().getPosition();
+
+                float speed = 11.5f;
                 JsonValue spearjv = constants.get("spear");
-                Texture texture = directory.getEntry("platform-spear", Texture.class);
-                Texture textureflip = directory.getEntry("platform-spear-right", Texture.class);
-                Spear spear = new Spear(units, spearjv, position, direction);
-                spears.add(spear);
-                if(direction < 0) {
-                    spear.setTexture(texture);
-                } else if (direction > 0) {
-                    spear.setTexture(textureflip);
+                Texture spearTravelTex = directory.getEntry("platform-spear-travel-sprite", Texture.class);
+                Texture spearEndTex    = directory.getEntry("platform-spear-end-sprite", Texture.class);
+
+                float[] rightAngles = new float[] { -8f, -3f, 3f, 8f };
+                float[] leftAngles  = new float[] { 188f, 183f, 177f, 172f };
+                float[] yOffsets = new float[] {-0.8f, -0.4f, 0.4f, 0.8f };
+
+                pendingSpears.clear();
+                spearTimer = 0f;
+                spearIndex = 0;
+
+                float direction = (playerPos.x < position.x) ? -1f : 1f;
+                float[] chosenAngles = (direction > 0) ? rightAngles : leftAngles;
+
+                for (int i = 0; i < chosenAngles.length; i++) {
+                    Vector2 spawnPos = new Vector2(position.x, position.y + yOffsets[i]);
+
+                    float angleDeg = chosenAngles[i];
+                    float angleRad = (float) Math.toRadians(angleDeg);
+
+                    Vector2 velocity = new Vector2(
+                        speed * (float) Math.cos(angleRad),
+                        speed * (float) Math.sin(angleRad)
+                    );
+
+                    Spear spear = new Spear(units, spearjv, spawnPos, velocity, spearTravelTex, spearEndTex);
+                    pendingSpears.add(spear);
                 }
+            }
+        }
+        if (pendingSpears.size > 0 && spearIndex < pendingSpears.size) {
+            spearTimer += dt;
+            if (spearTimer >= SPEAR_FIRE_INTERVAL) {
+                Spear spear = pendingSpears.get(pendingSpears.size - 1 - spearIndex);
+                spears.add(spear);
                 addQueuedObject(spear);
+                spearIndex++;
+                spearTimer = 0f;
             }
         }
 
@@ -1193,6 +1262,7 @@ public class PlatformScene implements Screen, Telegraph {
                 for (Enemy harvest_enemy : queuedHarvestedEnemy) {
                     if (!harvest_enemy.getObstacle().isRemoved()) {
                         harvest_enemy.getObstacle().markRemoved(true);
+                        enemies.remove(harvest_enemy);
                         avatar.setFearMeter(avatar.getFearMeter() + 3);
                         harvest_enemy.dispatchHarvest();
                     }
@@ -1290,7 +1360,9 @@ public class PlatformScene implements Screen, Telegraph {
 
                 // Apply the teleport
                 avatar.getObstacle().setPosition(queuedTeleportPosition);
-                avatar.setFearMeter(Math.max(0, avatar.getFearMeter() - TELEPORT_COST));
+                if(!isLevelSelect){
+                    avatar.setFearMeter(Math.max(0, avatar.getFearMeter() - TELEPORT_COST));
+                }
                 queuedTeleportPosition = null;
             }
         }
@@ -1307,7 +1379,7 @@ public class PlatformScene implements Screen, Telegraph {
     }
 
     public void initTeleportAnimation() {
-        Texture teleportTexture = directory.getEntry("teleport-teleport", Texture.class);
+        Texture teleportTexture = directory.getEntry("teleport", Texture.class);
         teleportAnimator = new Animator(teleportTexture, 2, 10, 0.08f, 10, 0, 9, false);
     }
 
@@ -1325,17 +1397,13 @@ public class PlatformScene implements Screen, Telegraph {
         Vector2 crosshairScreen = input.getMouse();
 
         // Unproject the crosshair screen position to get world coordinates
-        Vector3 crosshairTemp = new Vector3(
-            crosshairScreen.x,
-            crosshairScreen.y,
-            0
-        );
+        Vector3 crosshairTemp = new Vector3(crosshairScreen.x, crosshairScreen.y, 0);
         camera.unproject(crosshairTemp);
         Vector2 crosshairWorld = new Vector2(crosshairTemp.x / units, crosshairTemp.y / units);
 
         // clamp
         Vector2 delta = new Vector2(crosshairWorld).sub(playerPosition);
-        // Convert teleport range from (screen or arbitrary) units to world units.
+        // Convert teleport range from screen units to world units.
         float teleportRangeWorld = avatar.getTeleportRangeRadius() / units;
         if (delta.len() > teleportRangeWorld) {
             delta.nor().scl(teleportRangeWorld);
@@ -1352,85 +1420,21 @@ public class PlatformScene implements Screen, Telegraph {
                             public boolean reportFixture(Fixture fixture) {
                                 Object userData = fixture.getBody().getUserData();
                                 if (userData instanceof Surface) {
-                                    if (fixture.testPoint(realTeleportPos)) {
-                                        isInsideSurface[0] = true;
-                                        return false; // Stop the query
-                                    }
+                                    isInsideSurface[0] = true;
+                                    return false; // Stop
                                 }
-                                return true; // Continue the query
+                                return true; // Continue
                             }
-                        }, crosshairWorld.x - 0.1f, crosshairWorld.y - 0.1f,
-            crosshairWorld.x + 0.1f, crosshairWorld.y + 0.1f);
+                        },
+            crosshairWorld.x - TELEPORT_SURFACE_BUFFER, crosshairWorld.y - TELEPORT_SURFACE_BUFFER,
+            crosshairWorld.x + TELEPORT_SURFACE_BUFFER, crosshairWorld.y + TELEPORT_SURFACE_BUFFER);
 
         if (isInsideSurface[0]) {
             System.out.println("Cannot place teleport in a surface");
             return;
         }
 
-        Vector2 rayStart = new Vector2(playerPosition.x, playerPosition.y);
-        Vector2 rayEnd = new Vector2(crosshairWorld.x, 0);
-        PlatformRayCast callback = new PlatformRayCast();
-        world.rayCast(callback, rayStart, rayEnd);
-
-        if (callback.getPlatformFixture() == null) {
-            System.out.println("Player is not shadowed, cannot teleport");
-            return;
-        }
-
-        // Use raycast to find platform below cursor
-        rayStart = new Vector2(crosshairWorld.x, crosshairWorld.y);
-        rayEnd = new Vector2(crosshairWorld.x, 0);
-        world.rayCast(callback, rayStart, rayEnd);
-
-        if (callback.getPlatformFixture() == null) {
-            System.out.println("Teleport location is not shadowed, cannot teleport");
-            return;
-        }
-
-        if (callback.getHitPointCount()%2 == 1){
-            System.out.println("Cannot teleport inside of surface");
-            return;
-        }
-        Vector2 hitPoint = callback.getHitPoint();
-        Vector2 initialPosition = new Vector2(crosshairWorld.x, crosshairWorld.y + 0.75f);
-        Vector2 teleporterPosition = new Vector2(crosshairWorld.x, crosshairWorld.y + 0.75f);
-
-        // Calculate distance in world coordinates
-        float worldDistance = playerPosition.dst(teleporterPosition);
-        float maxTeleportRange = avatar.getTeleportRangeRadius() / units;
-
-        // Check if destination is outside range
-        if (worldDistance > maxTeleportRange) {
-            Vector2 direction = new Vector2(
-                initialPosition.x - playerPosition.x,
-                initialPosition.y - playerPosition.y
-            ).nor();
-
-            // Clamp position to max distance
-            teleporterPosition = new Vector2(
-                playerPosition.x + direction.x * maxTeleportRange,
-                playerPosition.y + direction.y * maxTeleportRange
-            );
-        }
-
-        // Raycast to check if the clamped position is above a surface
-        Vector2 rayStartForClamped = new Vector2(teleporterPosition.x, teleporterPosition.y);
-        Vector2 rayEndForClamped = new Vector2(teleporterPosition.x, 0);
-        PlatformRayCast clampedCallback = new PlatformRayCast();
-        world.rayCast(clampedCallback, rayStartForClamped, rayEndForClamped);
-
-        if (clampedCallback.getPlatformFixture() != null) {
-            Vector2 clampedHitPoint = clampedCallback.getHitPoint();
-            // Ensure the teleporter position is above the surface
-            if (teleporterPosition.y <= clampedHitPoint.y) {
-                teleporterPosition.y = clampedHitPoint.y + 0.75f; // Adjust to be above the surface
-            }
-        } else {
-            System.out.println("No platform found at clamped position");
-            return;
-        }
-
-        queuedTeleportPosition = teleporterPosition;
+        queuedTeleportPosition = new Vector2(crosshairWorld.x, crosshairWorld.y);
     }
 
     /**
@@ -1577,10 +1581,16 @@ public class PlatformScene implements Screen, Telegraph {
                 batch.setColor(Color.BLUE);
                 obj.draw(batch);
                 batch.setColor(Color.WHITE);
-            } else {
+
+            else if (obj instanceof Spear) {
+                ((Spear) obj).drawOwnAnimation(batch);
+            } 
+            else {
                 obj.draw(batch);
             }
         }
+
+
 
         if (debug) {
             // Draw the outlines
@@ -1771,24 +1781,33 @@ public class PlatformScene implements Screen, Telegraph {
         float scaledHeight = originalHeight * scaleFactor;
 
         float mouseX = Gdx.input.getX();
-        float mouseY = Gdx.graphics.getHeight() - Gdx.input.getY();
+        float mouseY = Gdx.input.getY();
 
         batch.drawText(dreamShardCountText, 11, 50);
 
         float units = TiledMapInfo.PIXELS_PER_WORLD_METER;
-        Vector3 playerWorldPos = new Vector3(avatar.getObstacle().getX() * units,
-            avatar.getObstacle().getY() * units,
-            0);
-        camera.project(playerWorldPos);
 
-        float teleportRadiusScreen = avatar.getTeleportRangeRadius() + 80f; // Because drawTeleportRadius uses it directly with u.
+        // Get player position in WORLD coordinates
+        Vector2 playerPosition = avatar.getObstacle().getPosition();
 
-        Vector2 delta = new Vector2(mouseX - playerWorldPos.x, mouseY - playerWorldPos.y);
-        if (delta.len() > teleportRadiusScreen) {
-            delta.nor().scl(teleportRadiusScreen);
-            mouseX = playerWorldPos.x + delta.x;
-            mouseY = playerWorldPos.y + delta.y;
+        // Get mouse in WORLD coordinates
+        Vector3 crosshairTemp = new Vector3(mouseX, mouseY, 0);
+        camera.unproject(crosshairTemp);
+        Vector2 crosshairWorld = new Vector2(crosshairTemp.x / units, crosshairTemp.y / units);
+
+        // done in WORLD coordinates just like teleport() method :(
+        Vector2 delta = new Vector2(crosshairWorld).sub(playerPosition);
+        float teleportRangeWorld = avatar.getTeleportRangeRadius() / units;
+        if (delta.len() > teleportRangeWorld) {
+            delta.nor().scl(teleportRangeWorld);
+            crosshairWorld = new Vector2(playerPosition).add(delta);
         }
+
+        // Revert to SCREEN coordinate
+        Vector3 clampedScreenPos = new Vector3(crosshairWorld.x * units, crosshairWorld.y * units, 0);
+        camera.project(clampedScreenPos);
+        mouseX = clampedScreenPos.x;
+        mouseY = clampedScreenPos.y;
 
         float crossX = mouseX - scaledWidth/2;
         float crossY = mouseY - scaledHeight/2;
@@ -1799,38 +1818,30 @@ public class PlatformScene implements Screen, Telegraph {
             batch.setColor(Color.WHITE);
         } else {
             boolean canTeleport = false;
-            Vector3 crossTemp = new Vector3(mouseX, mouseY, 0);
-            camera.unproject(crossTemp);
-            Vector2 crossWorld = new Vector2(crossTemp.x / units, crossTemp.y / units);
-            final boolean[] insideSurface = {false};
+            final boolean[] isInsideSurface = {false};
+            //Vector2 finalCrosshairWorld = crosshairWorld;
             world.QueryAABB(new QueryCallback() {
                                 @Override
                                 public boolean reportFixture(Fixture fixture) {
-                                    if (fixture.getBody().getUserData() instanceof Surface
-                                        && fixture.testPoint(crossWorld)) {
-                                        insideSurface[0] = true;
+                                    Object userData = fixture.getBody().getUserData();
+                                    if (userData instanceof Surface) {
+                                        isInsideSurface[0] = true;
                                         return false;
                                     }
                                     return true;
                                 }
                             },
-                crossWorld.x - 0.1f, crossWorld.y - 0.1f,
-                crossWorld.x + 0.1f, crossWorld.y + 0.1f);
+                crosshairWorld.x - TELEPORT_SURFACE_BUFFER, crosshairWorld.y - TELEPORT_SURFACE_BUFFER,
+                crosshairWorld.x + TELEPORT_SURFACE_BUFFER, crosshairWorld.y + TELEPORT_SURFACE_BUFFER);
 
-            if (!insideSurface[0]) {
-                PlatformRayCast teleportCallback = new PlatformRayCast();
-                world.rayCast(teleportCallback, crossWorld, new Vector2(crossWorld.x, 0));
-                if (teleportCallback.getPlatformFixture() != null) {
-                    canTeleport = true;
-                }
+            if (!isInsideSurface[0]) {
+                canTeleport = true;
             }
 
             Color prev = batch.getColor();
             batch.setColor(canTeleport ? Color.WHITE : Color.BLACK);
             batch.draw(crosshairTexture, crossX, crossY, scaledWidth, scaledHeight);
             batch.setColor(prev);
-
-            batch.draw(crosshairTexture, crossX, crossY, scaledWidth, scaledHeight);
         }
 
         if (fearMeterSprite != null && avatar != null) {
@@ -1875,7 +1886,7 @@ public class PlatformScene implements Screen, Telegraph {
         }
 
         if (avatar.isBlinded()) {
-            float alpha = MathUtils.clamp(1.2f - avatar.getBlindProgress(), 0f, 1.0f);
+            float alpha = MathUtils.clamp(1.8f * (float)Math.pow(0.5, avatar.getBlindProgress()*20), 0f, 1.0f);
             batch.setColor(1, 1, 1, alpha);
             batch.draw(Texture2D.getBlank(), 0, 0, width, height);
             batch.setColor(Color.WHITE);
@@ -1927,14 +1938,27 @@ public class PlatformScene implements Screen, Telegraph {
     public void resize(int width, int height) {
         this.width  = width;
         this.height = height;
-        if (camera == null) {
-            camera = new OrthographicCamera();
+        if (!resumingFromPause) {
+            if (camera == null) {
+                camera = new OrthographicCamera();
+            }
+            camera.setToOrtho(false, width, height);
+            scale.x = 1;
+            scale.y = 1;
+            reset();
+        } else {
+            resumingFromPause = false; // Reset the flag
         }
         camera.setToOrtho( false, width, height );
 
         scale.x = 1;
         scale.y = 1;
         reset();
+
+    }
+
+    public void setResumingFromPause(boolean value) {
+        resumingFromPause = value;
     }
 
     /**
