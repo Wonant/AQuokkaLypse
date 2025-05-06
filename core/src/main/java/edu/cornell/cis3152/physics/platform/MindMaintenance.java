@@ -510,7 +510,6 @@ public class MindMaintenance extends Enemy {
             attackFrameCounter++;
             isShooting = false;
             if(attackFrameCounter == 40){
-                System.out.println("Should shoot");
                 isShooting = true;
             }
             super.update(dt);
@@ -680,7 +679,7 @@ public class MindMaintenance extends Enemy {
     private boolean checkBehindForPlayer() {
         World world = obstacle.getBody().getWorld();
         Vector2 pos = obstacle.getPosition();
-        float rearRayLength = 4f;
+        float rearRayLength = 6f;
         float rearAngle = facingRight ? MathUtils.PI : 0;
 
         Vector2 rearStart = (facingRight)

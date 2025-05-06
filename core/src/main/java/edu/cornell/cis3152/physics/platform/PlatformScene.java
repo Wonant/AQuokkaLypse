@@ -1229,7 +1229,9 @@ public class PlatformScene implements Screen, Telegraph {
 
                 // Apply the teleport
                 avatar.getObstacle().setPosition(queuedTeleportPosition);
-                avatar.setFearMeter(Math.max(0, avatar.getFearMeter() - TELEPORT_COST));
+                if(!isLevelSelect){
+                    avatar.setFearMeter(Math.max(0, avatar.getFearMeter() - TELEPORT_COST));
+                }
                 queuedTeleportPosition = null;
             }
         }

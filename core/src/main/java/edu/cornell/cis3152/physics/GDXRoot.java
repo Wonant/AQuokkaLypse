@@ -45,8 +45,8 @@ public class GDXRoot extends Game implements ScreenListener {
 =======
 
      */
-    private String[] maps = {"tutorial1", "tutorial2", "easy1", "medium1", "hard1"};
-    private String[] tiled = {"maps/tutorial_1.tmx", "maps/tutorial_2.tmx", "maps/easy_level.tmx",
+    private String[] maps = {"tutorial1","tutorial1", "tutorial2", "easy1", "medium1", "hard1"};
+    private String[] tiled = {"maps/level_select.tmx", "maps/tutorial_1.tmx", "maps/tutorial_2.tmx", "maps/easy_level.tmx",
                                 "maps/medium1.tmx", "maps/hard1.tmx"};
 
     /** Current map index for switching levels */
