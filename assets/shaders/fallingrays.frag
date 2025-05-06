@@ -1,53 +1,49 @@
 #version 140
-
 in  vec2 v_uv;
 out vec4 fragColor;
 
-// The rendered UI-camera texture
+// Your scene already rendered into this texture
 uniform sampler2D u_scene;
-// Screen resolution (px)
+// Screen size in pixels
 uniform vec2      u_resolution;
-// Overall dim factor (<1 → darker)
+// How much to dim the scene (0=black,1=normal)
 uniform float     u_dim;
-// RGB tint to multiply (e.g. warm sunset)
-uniform vec3      u_tint;
-// Player’s world X position
-uniform float     u_playerX;
-// How fast the rays drift per unit X
-uniform float     u_raySpeed;
-// How many rays across the screen
-uniform float     u_rayCount;
-// Width of each ray (in [0,1] of stripe pattern)
-uniform float     u_rayWidth;
-// How strong the rays blend over the scene
-uniform float     u_rayStrength;
+// Light colour (e.g. warm white)
+uniform vec3      u_lightColor;
+// Light centre in UV space (0–1)
+uniform vec2      u_lightPos;
+// Radius of falloff (in UV distance)
+uniform float     u_lightRadius;
+// Strength of the bloom/glow
+uniform float     u_bloomStrength;
+// How big the blur kernel is (in px)
+uniform float     u_bloomRadius;
 
 void main() {
-    // 1) sample the base UI scene
-    vec3 scene = texture(u_scene, v_uv).rgb;
+    // 1) basic scene sample + dim
+    vec3 sceneCol = texture(u_scene,v_uv).rgb;
+    vec3 base     = sceneCol * u_dim;
 
-    // 2) dim & tint
-    vec3 base = scene * u_dim;
-    base = mix(base, base * u_tint, 0.2);
+    float d    = distance(v_uv, u_lightPos);
+    float glow = smoothstep(u_lightRadius, 0.0, d);
 
-    // 3) build a moving vertical‐stripe pattern
-    //    normalize to aspect‐correct X
-    float aspect = u_resolution.x/u_resolution.y;
-    float x = (v_uv.x - 0.5)*aspect + 0.5;
-    // drift stripes by playerX
-    float p = x * u_rayCount + u_playerX * u_raySpeed;
-    // stripe intensity: 0→1 in a triangular/abs(sin) shape
-    float stripe = abs(sin(p * 3.14159));
-    // sharpen into narrow beams
-    float beam = smoothstep(1.0 - u_rayWidth, 1.0, stripe);
-    // final ray mask
-    float mask = beam * u_rayStrength;
 
-    // 4) ray color (warm pale light)
-    vec3 rayColor = vec3(1.0,0.85,0.6);
+    vec3 bloom = vec3(0.0);
+    float cnt  = 0.0;
+    // we’ll do a simple 3×3 sample
+    for(int xo=-1; xo<=1; ++xo){
+      for(int yo=-1; yo<=1; ++yo){
+        vec2 off = vec2(xo,yo) * (u_bloomRadius / u_resolution);
+        float g2 = texture(u_scene, v_uv + off).r * glow;
+        bloom += g2 * u_lightColor;  // tint while we blur
+        cnt   += 1.0;
+      }
+    }
+    bloom = bloom / cnt * u_bloomStrength;
 
-    // 5) composite
-    vec3 color = base + rayColor * mask;
+    // 4) composite: dimmed base + direct glow + blurred bloom
+    vec3  direct   = u_lightColor * glow;
+    vec3  colorOut = base + direct + bloom;
 
-    fragColor = vec4(color, 1.0);
+    fragColor = vec4(colorOut,1.0);
 }

@@ -693,7 +693,7 @@
         public void createAnimators(Texture dreamwalker, Texture absorb) {
             walkingSprite = new Animator(dreamwalker, 11, 16, 0.033f, 176, 0, 15);
             idleSprite = new Animator(dreamwalker, 11, 16, 0.033f, 176, 37, 56);
-            jumpSprite = new Animator(dreamwalker, 11, 16, 0.066f, 176, 20, 26, false);
+            jumpSprite = new Animator(dreamwalker, 11, 16, 0.033f, 176, 20, 26, false);
             stairSprite = new Animator(dreamwalker, 11, 16, 0.033f, 176, 126, 133);
             fallSprite = new Animator(dreamwalker, 11, 16, 0.033f, 176, 134, 134);
             landingSprite = new Animator(dreamwalker, 11, 16, 0.033f, 176, 138, 156, false);
@@ -1004,7 +1004,7 @@
                 animationState = AnimationState.LAND;
             }
 
-            if (isLanding) {
+            if (isLanding && !isHarvesting()) {
                 if (movement != 0) {
                     isLanding = false;
                 } else {

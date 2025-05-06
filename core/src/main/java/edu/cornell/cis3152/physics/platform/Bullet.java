@@ -13,7 +13,10 @@
  */
  package edu.cornell.cis3152.physics.platform;
 
+import com.badlogic.gdx.Gdx;
 import com.badlogic.gdx.graphics.Color;
+import com.badlogic.gdx.graphics.Texture;
+import com.badlogic.gdx.graphics.g2d.TextureRegion;
 import com.badlogic.gdx.math.Vector2;
 import com.badlogic.gdx.math.Vector3;
 import com.badlogic.gdx.physics.box2d.BodyDef;
@@ -28,19 +31,16 @@ import edu.cornell.gdiac.physics2.WheelObstacle;
 
 import static edu.cornell.cis3152.physics.platform.CollisionFiltering.*;
 
-/**
- * A bullet fired by Traci
- *
- * An ObstacleSprite is a sprite (specifically a textured mesh) that is
- * connected to a obstacle. It is designed to be the same size as the
- * physics object, and it tracks the physics object, matching its position
- * and angle at all times.
- *
- * The reason we use a textured mesh instead of a image is because it allows
- * us more control over the size and shape of the image. We will talk about
- * how to use these later in class. For now, just notice how we create meshes
- */
+
 public class Bullet extends ObstacleSprite {
+
+    private Animator bulletSprite;
+    private Animator bulletEndSprite;
+    public Vector2 angle;
+    private float timeAlive;
+    private float speed;
+    private Vector2 direction;
+    private float width, height;
 
     /**
      * Creates a bullet with the given physics units and settings
@@ -52,24 +52,24 @@ public class Bullet extends ObstacleSprite {
      * @param units     The physics units
      * @param settings  The bullet physics constants
      * @param pos       Traci's position
-     * @param right     Whether to go to the right of Traci
      */
-    public Bullet(float units, JsonValue settings, Vector2 pos, Vector2 angle) {
+    public Bullet(float units, JsonValue settings, Vector2 pos, Vector2 angle, Texture animation, Texture endAnimation) {
         float offset = settings.getFloat( "offset", 0 );
         Vector2 v_offset = angle.scl(offset);
         float s = settings.getFloat( "size" );
         float radius = s * units / 2.0f;
+        this.angle = angle;
 
         // Create a circular obstacle
         obstacle = new WheelObstacle( pos.x + v_offset.x, pos.y + v_offset.y, s/2 );
-        obstacle.setDensity( settings.getFloat( "density", 0 ) );
+        obstacle.setDensity(0);
         obstacle.setPhysicsUnits( units );
         obstacle.setBullet( true );
         obstacle.setGravityScale( 0 );
         obstacle.setUserData( this );
         obstacle.setName( "bullet" );
 
-        float speed = settings.getFloat( "speed", 0 );
+        speed = settings.getFloat( "speed", 0 );
         float vx = speed * angle.x;
         float vy = speed * angle.y;
 
@@ -85,6 +85,61 @@ public class Bullet extends ObstacleSprite {
         // physics body, we want (0,0) to be in the center of the mesh. So
         // the method call below is (x,y,w,h) where x, y is the bottom left.
         mesh.set( -radius, -radius, 2 * radius, 2 * radius );
+        width = radius;
+        height = radius;
+        bulletSprite = new Animator(animation, 1, 5, 0.066f, 5, 0, 4);
+        bulletEndSprite = new Animator(endAnimation, 1, 3, 0.066f, 3, 0, 2, false);
+        timeAlive = 0;
+        this.direction   = angle.cpy();
+    }
+
+    public float getTimeAlive() {
+        return timeAlive;
+    }
+
+    public float getWidth() {
+        return width;
+    }
+
+    public float getHeight() {
+        return height;
+    }
+
+
+
+    @Override
+    public void update(float dt) {
+        timeAlive += dt;
+
+        super.update(dt);
+    }
+
+    @Override
+    public void draw(SpriteBatch batch) {
+
+        TextureRegion frame = new TextureRegion();
+        frame = bulletSprite.getCurrentFrame(Gdx.graphics.getDeltaTime());
+
+        float u = obstacle.getPhysicsUnits();
+        float posX = obstacle.getX() * u;
+        float posY = obstacle.getY() * u;
+        float drawWidth = frame.getRegionWidth()/10f;
+        float drawHeight = frame.getRegionHeight()/10f;
+
+        float originX = drawWidth/1.3f;
+        float originY = drawHeight / 2f;
+
+        batch.draw(frame,
+            posX - originX, // lower-left x position
+            posY - originY, // lower-left y position
+            posX,        // originX used for scaling and rotation
+            posY,        // originY
+            drawWidth,      // width
+            drawHeight,     // height
+            1f,             // scaleX
+            1f,             // scaleY
+            (float) Math.toDegrees(Math.atan2(angle.y, angle.x))
+        );
     }
 
     public void setFilter() {

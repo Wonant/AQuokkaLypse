@@ -11,7 +11,7 @@ uniform sampler2D iChannel1;  // optional second noise
 
 // tweak these to taste
 const float BASE_RADIUS  = 0.5;   // circle radius in UV‐space
-const float TENDRIL_PERT = 0.15;  // how much the radius wiggles
+const float TENDRIL_PERT = 0.45;  // how much the radius wiggles
 const float FADE_WIDTH   = 0.1;   // how wide the fade band is
 
 const vec4 waterColor = vec4(0.62,0.1,0.1,1.0);
@@ -27,7 +27,9 @@ float height(in vec2 uv) {
     return texture(iChannel0,uv).b
          * texture(iChannel1,uv + vec2(0.0,iTime*0.1)).b;
 }
+
 const vec2 NE = vec2(0.05,0.0);
+
 vec3 normal(in vec2 uv) {
     return normalize(vec3(
         height(uv+NE.xy)-height(uv-NE.xy),
@@ -62,12 +64,12 @@ void main() {
     // 5) shade & mix
     vec3 n    = normal(suv);
     vec4 lit  = waterColor
-               + waterColor * max(dot(lightDir,n),0.0) * 0.15;
+               + waterColor * max(dot(lightDir,n),0.0) * 0.40;
     vec4 txt  = texture(iChannel0, suv * 0.8);
     vec4 col  = mix(lit, txt, 0.3);
 
     // 6) add a glow in the core
-    float glow = smoothstep(0.0, BASE_RADIUS*0.6, BASE_RADIUS - dist);
+    float glow = smoothstep(0.0, BASE_RADIUS*0.9, BASE_RADIUS - dist);
     col.rgb   += vec3(0.2,0.3,0.6) * glow;
 
     // 7) smooth fade‐out

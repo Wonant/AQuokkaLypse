@@ -75,6 +75,8 @@
 
         "swirl-end" : "swirlAnimation/end_spritesheet.png",
         "swirl-active" : "swirlAnimation/traveling_spritesheet.png",
+        "bullet-end" : "bullet/end_spritesheet.png",
+        "bullet-active" : "bullet/traveling_spritesheet.png",
 
         "abstract-glassy" : "shaders/abstract_field.jpg",
         "player-walk" : "platform/walk.png",

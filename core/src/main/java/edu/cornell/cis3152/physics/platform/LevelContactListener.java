@@ -59,7 +59,6 @@ public class LevelContactListener implements ContactListener {
             handleDreamShardContact(bd1, bd2, fd1, fd2);
             //handleFollowSensorContact(bd1, bd2, fd1, fd2);
             handleWalkSensorContact(bd1, bd2, fd1, fd2);
-            //handleVisionSensorContact(bd1, bd2, fd1, fd2);
             handleBulletCollision(bd1, bd2, fd1, fd2);
             handleSpearHitPlayer(bd1, bd2);
             handleGroundContact(bd1, bd2, fd1, fd2, fix1, fix2);
@@ -99,7 +98,6 @@ public class LevelContactListener implements ContactListener {
         handleWalkSensorEndContact(bd1, bd2, fd1, fd2);
         //handleFollowSensorEndContact(fix1, fix2, fd1, fd2);
         handleHarvestingEndContact(bd1, bd2, fd1, fd2);
-        handleVisionSensorEndContact(fd1, fd2, fix1, fix2);
         handleGroundEndContact(bd1, bd2, fd1, fd2, fix1, fix2);
         handleShieldWallEndContact((ObstacleSprite) bd1, (ObstacleSprite) bd2);
         handleFallSensorEndContact((ObstacleSprite) bd1, (ObstacleSprite) bd2, fd1, fd2);
@@ -398,30 +396,6 @@ public class LevelContactListener implements ContactListener {
                     harvestedEnemy = (Enemy) bd1;
                     dreamWalkerScene.removeHarvestedEnemy(harvestedEnemy);
                 }
-            }
-        }
-    }
-
-    private void handleVisionSensorEndContact(Object fd1, Object fd2, Fixture fix1, Fixture fix2) {
-        if ("dweller_vision_sensor".equals(fd1) || "dweller_vision_sensor".equals(fd2)) {
-            Object bodyDataA = fix1.getBody().getUserData();
-            Object bodyDataB = fix2.getBody().getUserData();
-
-            DreamDweller dweller = null;
-            Player playerObj = null;
-
-            if (bodyDataA instanceof DreamDweller && bodyDataB instanceof Player) {
-                dweller = (DreamDweller) bodyDataA;
-                playerObj = (Player) bodyDataB;
-            } else if (bodyDataA instanceof Player && bodyDataB instanceof DreamDweller) {
-                dweller = (DreamDweller) bodyDataB;
-                playerObj = (Player) bodyDataA;
-            }
-
-            if (dweller != null) {
-                dweller.setAwareOfPlayer(true);
-                dreamWalkerScene.getAvatar().setTakingDamage(false);
-                System.out.println("Dream Dweller lost sight of player");
             }
         }
     }

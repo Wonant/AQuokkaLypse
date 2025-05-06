@@ -17,12 +17,14 @@ import com.badlogic.gdx.ai.msg.MessageDispatcher;
 import com.badlogic.gdx.ai.msg.Telegram;
 import com.badlogic.gdx.ai.msg.Telegraph;
 import com.badlogic.gdx.graphics.g2d.Sprite;
+import com.badlogic.gdx.graphics.glutils.FrameBuffer;
 import com.badlogic.gdx.graphics.glutils.ShaderProgram;
-import com.badlogic.gdx.graphics.glutils.ShapeRenderer;
 import com.badlogic.gdx.maps.MapLayer;
 import com.badlogic.gdx.maps.MapObject;
 import com.badlogic.gdx.maps.objects.PolygonMapObject;
 import com.badlogic.gdx.maps.objects.RectangleMapObject;
+import com.badlogic.gdx.scenes.scene2d.Stage;
+import com.badlogic.gdx.utils.viewport.ScreenViewport;
 import edu.cornell.cis3152.physics.AIControllerManager;
 import edu.cornell.cis3152.physics.ObstacleGroup;
 
@@ -37,7 +39,6 @@ import com.badlogic.gdx.physics.box2d.*;
 import com.badlogic.gdx.utils.JsonValue;
 import com.badlogic.gdx.utils.ScreenUtils;
 import edu.cornell.cis3152.physics.platform.aibehavior.AIManager;
-import edu.cornell.cis3152.physics.platform.aibehavior.BehaviorLoop;
 import edu.cornell.gdiac.assets.AssetDirectory;
 import edu.cornell.gdiac.util.*;
 import edu.cornell.gdiac.graphics.*;
@@ -266,9 +267,13 @@ public class PlatformScene implements Screen, Telegraph {
     // Shaders
     private Shader vortexShader, tendrilShader, rippleShader;
     private Shader rayShader;
-    private Texture blankTexture;
+    private FrameBuffer sceneBuffer;
+    private Texture blankTexture, screenTexture;
     private Sprite blankSprite;
     private Texture abstractGlassyTexture;
+
+    private VertexBuffer bulletVB;
+    private Shader glowShader;
 
     private float globalTime;
 
@@ -447,6 +452,10 @@ public class PlatformScene implements Screen, Telegraph {
         tiledMap.disposeMap();
         visibilityIndicatorTexture.dispose();
         abstractGlassyTexture.dispose();
+        if (bulletVB != null) {
+            bulletVB.dispose();
+            bulletVB = null;
+        }
     }
 
 
@@ -621,6 +630,7 @@ public class PlatformScene implements Screen, Telegraph {
         dispatcher.addListener(this, MessageType.CRITTER_SEES_PLAYER);
         dispatcher.addListener(this, MessageType.CRITTER_LOST_PLAYER);
 
+        // SHADERS
 
 
         vortexShader = new Shader(Gdx.files.internal("shaders/vortex.vert"),Gdx.files.internal("shaders/vortex.frag"));
@@ -631,6 +641,39 @@ public class PlatformScene implements Screen, Telegraph {
         tendrilShader = new Shader(Gdx.files.internal("shaders/tendrils.vert"),Gdx.files.internal("shaders/tendrils.frag"));
         rippleShader = new Shader(Gdx.files.internal("shaders/ripple.vert"),Gdx.files.internal("shaders/ripple.frag"));
         rayShader = new Shader(Gdx.files.internal("shaders/screen.vert"), Gdx.files.internal("shaders/fallingrays.frag"));
+        glowShader = new Shader(Gdx.files.internal("shaders/star_pulse.vert"), Gdx.files.internal("shaders/star_pulse.frag"));
+        if (!glowShader.isCompiled()) {
+            System.out.println("Swirl shader compile error: " + vortexShader.getLog());
+        }
+
+        float[] verts = {
+            // x,    y,    u,   v
+            -0.5f, -0.5f, 0f, 0f,
+            0.5f, -0.5f, 1f, 0f,
+            0.5f,  0.5f, 1f, 1f,
+            -0.5f,  0.5f, 0f, 1f
+        };
+        short[] idx = { 0,1,2,  2,3,0 };
+
+        int stride = 4 * 4; //4 bytes by 4 bytes
+
+        bulletVB = new VertexBuffer(stride, 4, 6);
+        bulletVB.setupAttribute(ShaderProgram.POSITION_ATTRIBUTE, 2, GL30.GL_FLOAT, false, 0);
+        bulletVB.setupAttribute(ShaderProgram.TEXCOORD_ATTRIBUTE+"0", 2, GL30.GL_FLOAT, false, 8);
+        bulletVB.enableAttribute(ShaderProgram.POSITION_ATTRIBUTE);
+        bulletVB.enableAttribute(ShaderProgram.TEXCOORD_ATTRIBUTE+"0");
+
+        bulletVB.bind();
+        bulletVB.loadVertexData(verts, 4, GL30.GL_STATIC_DRAW);
+        bulletVB.loadIndexData(idx,    6, GL30.GL_STATIC_DRAW);
+        bulletVB.unbind();
+
+        sceneBuffer = new FrameBuffer(
+            Pixmap.Format.RGBA8888,
+            Gdx.graphics.getWidth(),
+            Gdx.graphics.getHeight(),
+            false
+        );
 
         Pixmap pix = new Pixmap(1,1,Pixmap.Format.RGBA8888);
         pix.setColor(Color.WHITE);
@@ -675,7 +718,7 @@ public class PlatformScene implements Screen, Telegraph {
      */
     private void createAnimators(Texture fearMeter, Texture swirl) {
         fearMeterSprite = new Animator(fearMeter, 2, 6, 0.033f, 11, 0, 10);
-        swirlSprite = new Animator(swirl, 1, 6, 0.066f, 6, 0, 5);
+        swirlSprite = new Animator(swirl, 1, 6, 0.10f, 6, 0, 5);
     }
 
     /**
@@ -692,6 +735,10 @@ public class PlatformScene implements Screen, Telegraph {
         possibleShardPos = new HashMap<>();
         enemiesAlerted = 0;
         crittersAlerted = 0;
+        playerSlowed = false;
+        lastCritterSawTime = -1f;
+        timeSinceStart = 0;
+        //minimap = new Minimap(this);
 
         float units = TiledMapInfo.PIXELS_PER_WORLD_METER;
         int level = 0;
@@ -1096,9 +1143,18 @@ public class PlatformScene implements Screen, Telegraph {
         if (input.inStunMode()) {
             stunModeOn = true;
             avatar.setStunning(input.didM1());
+
         } else {
             stunModeOn = false;
             avatar.setTeleporting(input.didM1());
+        }
+
+        // player damage
+
+        if (enemiesAlerted > 0) {
+            avatar.setTakingDamage(true);
+        } else {
+            avatar.setTakingDamage(false);
         }
 
 
@@ -1122,8 +1178,6 @@ public class PlatformScene implements Screen, Telegraph {
             createBullet();
             avatar.setFearMeter(avatar.getFearMeter() - STUN_COST);
             // also turn avatar to direction of cursor
-
-            // we need a functin for this lol
             Vector2 crosshairScreen = input.getMouse();
 
             // Unproject the crosshair screen position to get world coordinates
@@ -1136,8 +1190,8 @@ public class PlatformScene implements Screen, Telegraph {
             Vector2 crosshairWorld = new Vector2(crosshairTemp.x / units, crosshairTemp.y / units);
 
             avatar.setFaceRight(crosshairWorld.x > avatar.getObstacle().getX());
-
         }
+
 
         avatar.setInteracting(input.isInteractDown());
 
@@ -1157,6 +1211,15 @@ public class PlatformScene implements Screen, Telegraph {
                     if (!s.getObstacle().isRemoved()) {
                         s.getObstacle().markRemoved(true);
                         incrementGoal();
+                        float units = TiledMapInfo.PIXELS_PER_WORLD_METER;
+                        Vector2 worldPos = s.getObstacle().getPosition();
+                        Vector3 screen = new Vector3(
+                            worldPos.x * units,
+                            worldPos.y * units,
+                            0
+                        );
+                        camera.project(screen);
+
                     }
                     iter.remove();
                     continue;
@@ -1366,10 +1429,10 @@ public class PlatformScene implements Screen, Telegraph {
         Vector2 shootAngle = crosshairWorld.sub(player.getPosition());
         shootAngle.nor();
 
-        Texture texture = directory.getEntry("platform-bullet", Texture.class);
+        Texture texture = directory.getEntry("bullet-active", Texture.class);
+        Texture texture2 = directory.getEntry("bullet-end", Texture.class);
 
-        Bullet bullet = new Bullet(units, bulletjv, player.getPosition(), shootAngle.nor());
-        bullet.setTexture(texture);
+        Bullet bullet = new Bullet(units, bulletjv, player.getPosition(), shootAngle.nor(), texture, texture2);
         addQueuedObject(bullet);
         SoundEffectManager sounds = SoundEffectManager.getInstance();
         //sounds.play("fire", fireSound, volume);
@@ -1499,12 +1562,53 @@ public class PlatformScene implements Screen, Telegraph {
             }
         }
 
-        drawTeleport();
+        drawTeleport(dt);
         batch.end();
-        // Draw a final message
-        //batch.setColor(foregroundColor);
-        //batch.draw(foregroundTexture, 0, 0, width, height);
 
+        // shaders
+
+        for (ObstacleSprite sprite : sprites) {
+            if (sprite instanceof Bullet) {
+                drawBulletEffect((Bullet)sprite, dt);
+            }
+        }
+
+
+        // atmospheric shaders
+    }
+
+    private void drawBulletEffect(Bullet bullet, float dt) {
+        float t = bullet.getTimeAlive();
+        float units = TiledMapInfo.PIXELS_PER_WORLD_METER;
+        Vector2 pos = bullet.getObstacle().getPosition();
+        float cx = pos.x * units;
+        float cy = pos.y * units;
+
+        float w = bullet.getWidth()  * units;
+        float h = bullet.getHeight() * units;
+
+        ShaderProgram prev = batch.getShader();
+
+        batch.setBlendMode(SpriteBatch.BlendMode.ADDITIVE);
+
+        batch.setShader(glowShader);
+        glowShader.bind();
+
+        glowShader.setUniformf("u_time",      t);
+        glowShader.setUniformf("u_flashDur",  0.2f);
+        glowShader.setUniformf("u_glowInt",   0.5f);
+        glowShader.setUniformi("u_spikes",    4);
+        glowShader.setUniformf("u_dir", bullet.angle.x, bullet.angle.y);
+
+        Texture glassyCopy = new Texture(abstractGlassyTexture.getTextureData());
+        glassyCopy.bind(0);
+
+        batch.begin();
+        batch.draw(glassyCopy, cx - w/2, cy - h/2, w, h);
+        batch.end();
+
+        batch.setShader(prev);
+        batch.setBlendMode(SpriteBatch.BlendMode.ALPHA_BLEND);
     }
 
     private void drawVortexOverlay(Shard shard, float dt, float sTime) {
@@ -1518,9 +1622,6 @@ public class PlatformScene implements Screen, Telegraph {
         float radius = 165;  // half‐size of the effect in pixels
 
         // configure blank sprite to cover the circle
-        blankSprite.setSize(radius*2, radius*2);
-        blankSprite.setOrigin(radius, radius);
-        blankSprite.setPosition(cx - radius, cy - radius);
 
         // tell the batch to use your GDIAC Shader
         batch.setShader(vortexShader);
@@ -1575,7 +1676,7 @@ public class PlatformScene implements Screen, Telegraph {
         batch.end();
     }
 
-    private void drawTeleport()
+    private void drawTeleport(float dt)
     {
         float units = TiledMapInfo.PIXELS_PER_WORLD_METER;
 
@@ -1615,14 +1716,15 @@ public class PlatformScene implements Screen, Telegraph {
             sprite.draw(batch);
 
             // Draw at teleport origin
-            x = preTeleportPosition.x * units + xOffset;
-            y = preTeleportPosition.y * units - scaledHeight * 3/5;
+            float cx = preTeleportPosition.x * units + xOffset;
+            float cy = preTeleportPosition.y * units - scaledHeight * 3/5;
 
             sprite = new Sprite(frameToDraw);
             sprite.setSize(scaledWidth, scaledHeight);
             sprite.setOriginCenter();
             sprite.setRotation(teleportAngle);
-            sprite.setPosition(x, y);
+            sprite.setPosition(cx, cy);
+
             sprite.draw(batch);
         }
 
@@ -1777,31 +1879,11 @@ public class PlatformScene implements Screen, Telegraph {
         float cx = worldPos.x * u;
         float cy = worldPos.y * u;
         float radius = 300;
-        blankSprite.setSize(radius*2, radius*2);
-        blankSprite.setOrigin(radius, radius);
-        blankSprite.setPosition(cx - radius, cy - radius);
-        batch.flush();
-
-        batch.setBlendMode(SpriteBatch.BlendMode.ADDITIVE);
-
-        ShaderProgram prev = batch.getShader();
-        batch.setShader(rippleShader);
-        rippleShader.bind();
-        rippleShader.setUniformf("iResolution", radius*2, radius*2) ;
-        // use your existing “scare timer” or vortexTimer here
-        rippleShader.setUniformf("iTime", globalTime);
-        rippleShader.setUniformi("iMask", 1);
-        scareEffectTexture.getTexture().bind(1);
-
+        float size = scareEffectTexture.getRegionWidth() * 0.5f;
+        float size2 = scareEffectTexture.getRegionHeight() * 0.5f;
         batch.begin();
-        batch.draw(scareEffectTexture, cx - radius/2.4f, cy - radius/2, radius, radius);
+        batch.draw(scareEffectTexture, avatar.getObstacle().getX() * u - size * 0.42f, avatar.getObstacle().getY() * u - size2 *0.57f, size, size2);
         batch.end();
-
-        batch.setShader(prev);
-        batch.setBlendMode(SpriteBatch.BlendMode.ALPHA_BLEND);
-//        float size = scareEffectTexture.getRegionWidth() * 0.5f;
-//        float size2 = scareEffectTexture.getRegionHeight() * 0.5f;
-//        batch.draw(scareEffectTexture, avatar.getObstacle().getX() * u - size * 0.42f, avatar.getObstacle().getY() * u - size2 *0.57f, size, size2);
     }
 
     /**
@@ -1878,11 +1960,19 @@ public class PlatformScene implements Screen, Telegraph {
                     diff.nor().scl(250);
                     position.lerp(new Vector3((playerPosition).add(diff)), 0.1f);
                 }
-                float lerp = 3.0f;
-                position.x += (this.avatar.getObstacle().getX() * units - position.x) * lerp * delta;
-                position.y += (this.avatar.getObstacle().getY() * units - position.y) * lerp * delta;
-                camera.position.set(position);
-                camera.zoom = 0.8f;
+                if (dis < 30.0) {
+                    float lerp = 6.0f;
+                    position.x += (this.avatar.getObstacle().getX() * units - position.x) * lerp * delta;
+                    position.y += (this.avatar.getObstacle().getY() * units - position.y) * lerp * delta;
+                    camera.position.set(position);
+                } else {
+                    float lerp = 3.0f;
+                    position.x += (this.avatar.getObstacle().getX() * units - position.x) * lerp * delta;
+                    position.y += (this.avatar.getObstacle().getY() * units - position.y) * lerp * delta;
+                    camera.position.set(position);
+                }
+
+                camera.zoom = 0.7f;
                 clampCamera();
                 camera.update();
             }
@@ -1896,6 +1986,51 @@ public class PlatformScene implements Screen, Telegraph {
             tiledRenderer.renderAllLayers(camera);
             draw(delta);
             drawUI();
+
+//            sceneBuffer.begin();
+//            ScreenUtils.clear(0.9f, 0.9f, 0.93f, 1.0f);
+//            Gdx.gl30.glClear(GL30.GL_COLOR_BUFFER_BIT);
+//            tiledRenderer.renderAllLayers(camera);
+//            draw(delta);
+//            drawUI();
+//            sceneBuffer.end();
+//
+//            Texture sceneTex = sceneBuffer.getColorBufferTexture();
+//            sceneTex.setFilter(Texture.TextureFilter.Linear, Texture.TextureFilter.Linear);
+//            sceneTex.setWrap(Texture.TextureWrap.ClampToEdge, Texture.TextureWrap.ClampToEdge);
+//
+//            ShaderProgram old = batch.getShader();
+//            Matrix4 oldProj    = batch.getProjectionMatrix().cpy();
+//            batch.setProjectionMatrix(uiCamera.combined);
+//
+//            batch.setShader(rayShader);
+//            rayShader.bind();
+//
+//            rayShader.setUniformi ("u_scene",        0);
+//            rayShader.setUniformf("u_resolution",
+//                Gdx.graphics.getWidth(),
+//                Gdx.graphics.getHeight()
+//            );
+//            rayShader.setUniformf("u_dim",           0.8f);
+//            rayShader.setUniformf("u_lightColor",    1f,0.85f,0.6f);
+//            rayShader.setUniformf("u_lightPos",      avatar.getObstacle().getX()/bounds.width,
+//                1);
+//            rayShader.setUniformf("u_lightRadius",   0.2f);
+//            rayShader.setUniformf("u_bloomStrength", 0.04f);
+//            rayShader.setUniformf("u_bloomRadius",   6.0f);
+//
+//            Gdx.gl.glActiveTexture(GL30.GL_TEXTURE0);
+//            sceneTex.bind(0);
+//
+//            batch.begin();
+//            batch.draw(sceneTex,
+//                0, height,
+//                width, -height);
+//            batch.end();
+//            batch.setShader(old);
+//            batch.setProjectionMatrix(oldProj);
+//
+//            drawUI();
         }
     }
 
