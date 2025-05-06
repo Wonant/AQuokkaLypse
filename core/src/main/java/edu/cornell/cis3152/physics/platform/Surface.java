@@ -283,7 +283,7 @@ public class Surface extends ObstacleSprite {
             Filter filter = fixture.getFilterData();
             filter.categoryBits = CATEGORY_SCENERY;
             // Scenery collides with players and enemies.
-            filter.maskBits = CATEGORY_PLAYER | CATEGORY_ENEMY | CATEGORY_BULLET;
+            filter.maskBits = CATEGORY_PLAYER | CATEGORY_ENEMY | CATEGORY_BULLET| CATEGORY_ENEMY_PROJECTILE;
             fixture.setFilterData(filter);
         }
     }

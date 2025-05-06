@@ -1,6 +1,5 @@
 package edu.cornell.cis3152.physics.platform;
 
-import com.badlogic.gdx.graphics.g2d.SpriteBatch;
 import com.badlogic.gdx.graphics.g2d.TextureRegion;
 import com.badlogic.gdx.math.Vector2;
 import com.badlogic.gdx.physics.box2d.Filter;
@@ -9,7 +8,6 @@ import com.badlogic.gdx.utils.JsonValue;
 import edu.cornell.gdiac.physics2.ObstacleSprite;
 import edu.cornell.gdiac.physics2.PolygonObstacle;
 import edu.cornell.gdiac.math.Poly2;
-
 import com.badlogic.gdx.graphics.Texture;
 
 import static edu.cornell.cis3152.physics.platform.CollisionFiltering.*;
@@ -18,14 +16,12 @@ public class Spear extends ObstacleSprite {
 
     private boolean filterActivated;
     private float timeAlive;
-    private float maxAge = 2.0f; //
+    private float maxAge = 2.0f;
     private boolean dead = false;
     private float direction; // -1 for left, 1 for right
-    private float speed = 22.5f;
     private TextureRegion currentFrame;
     private Animator travelAnimator;
     private Animator endAnimator;
-
 
     public Spear(float units, JsonValue settings, Vector2 pos, Vector2 velocity, Texture travelTex, Texture endTex) {
         timeAlive = 0f;
@@ -36,23 +32,18 @@ public class Spear extends ObstacleSprite {
 
         if (direction > 0) {
             width = 0.7f;
-            height = 0.15f;
+            height = 0.23f;
         }
 
         float halfW = units * width / 10;
         float halfH = units * height / 25;
 
         Poly2 p;
-        float offset = 0f;
+        float bodyOffsetX = 0f;
+        p = new Poly2(-halfW, -halfH, halfW, halfH);
+        float hitboxOffsetX = (direction > 0) ? halfW * 2.0f : 0f;
 
-        if (direction > 0) {
-            offset = halfW * 1.2f;
-            p = new Poly2(-halfW + offset, -halfH, halfW + offset, halfH);
-        } else {
-            p = new Poly2(-halfW, -halfH, halfW, halfH);
-        }
-
-        obstacle = new PolygonObstacle(p, pos.x, pos.y);
+        obstacle = new PolygonObstacle(p, pos.x+ hitboxOffsetX, pos.y);
         obstacle.setDensity(8.0f);
         obstacle.setPhysicsUnits(units);
         obstacle.setBullet(true);
@@ -60,15 +51,11 @@ public class Spear extends ObstacleSprite {
         obstacle.setUserData(this);
         obstacle.setName("spear");
         obstacle.setFixedRotation(true);
-
         obstacle.setVX(velocity.x);
         obstacle.setVY(velocity.y);
 
-        if (direction > 0) {
-            mesh.set((-halfW + offset) * 32, -halfH * 28, 2 * halfW * 16, 2 * halfH * 16);
-        } else {
-            mesh.set(-halfW * 32, -halfH * 28, 2 * halfW * 16, 2 * halfH * 16);
-        }
+        // 用于调试渲染 mesh 边界（可选）
+        mesh.set(-halfW * 32, -halfH * 28, 2 * halfW * 16, 2 * halfH * 16);
 
         travelAnimator = new Animator(travelTex, 1, 5, 0.2f, 5, 0, 4, true);
         endAnimator = new Animator(endTex, 1, 5, 0.2f, 5, 0, 4, false);
@@ -94,9 +81,10 @@ public class Spear extends ObstacleSprite {
         } else if (obstacle.getBody() != null) {
             setFilter();
         }
+
         Vector2 vel = new Vector2(obstacle.getVX(), obstacle.getVY());
         if (vel.len2() > 0.01f) {
-            float angle = (vel.angleDeg() + 180f) % 360f; // 取得当前速度向量的角度
+            float angle = (vel.angleDeg() + 180f) % 360f;
             obstacle.setAngle((float) Math.toRadians(angle));
         }
     }
@@ -113,7 +101,7 @@ public class Spear extends ObstacleSprite {
                 continue;
             }
             Filter filter = fixture.getFilterData();
-            filter.categoryBits = CATEGORY_BULLET;
+            filter.categoryBits = CATEGORY_ENEMY_PROJECTILE;
             filter.maskBits = CATEGORY_PLAYER | CATEGORY_SCENERY;
             fixture.setFilterData(filter);
         }
@@ -134,22 +122,22 @@ public class Spear extends ObstacleSprite {
         float width = currentFrame.getRegionWidth() * scale;
         float height = currentFrame.getRegionHeight() * scale;
 
+        // Flip only visually
         if (direction > 0 && !currentFrame.isFlipX()) {
             currentFrame.flip(true, false);
         } else if (direction < 0 && currentFrame.isFlipX()) {
             currentFrame.flip(true, false);
         }
 
-        float drawOffset = 0f;
-        if (direction > 0) {
-            drawOffset = width * 0.3f;
-        }
 
         batch.draw(currentFrame,
-            drawX - width / 2 + drawOffset,
+            drawX - width / 2,
             drawY - height / 2,
             width,
             height
         );
     }
 }
+
+
+

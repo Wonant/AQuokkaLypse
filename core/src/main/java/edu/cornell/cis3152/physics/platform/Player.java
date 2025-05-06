@@ -710,7 +710,7 @@
                 Filter filter = fixture.getFilterData();
                 filter.categoryBits = CATEGORY_PLAYER;
                 // Player should collide with scenery but not with enemies.
-                filter.maskBits = CATEGORY_SCENERY;
+                filter.maskBits = CATEGORY_SCENERY| CATEGORY_ENEMY_PROJECTILE;
                 fixture.setFilterData(filter);
             }
         }
