@@ -838,7 +838,7 @@
                 return;
             }
 
-            float maxUpwardVelocity = 15.0f;
+            float maxUpwardVelocity = 10.0f;
             float maxFallingVelocity = -20.0f;
 
             Vector2 pos = obstacle.getPosition();
