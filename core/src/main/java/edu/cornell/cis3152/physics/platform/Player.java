@@ -1303,5 +1303,8 @@
         public void setBlindTimer(float time) {
             this.blindTimer = time;
         }
+        public int getTakeDamageCooldown() {
+            return takeDamageCooldown;
+        }
 
     }
