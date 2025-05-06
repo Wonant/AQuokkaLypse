@@ -123,31 +123,6 @@ public class DreamDweller extends Enemy {
         factory.makeRect((sensorCenter.x - w / 2) * u, (sensorCenter.y - h / 2) * u, w * u, h * u, sensorOutline);
         sensorShape.dispose();
 
-        createHarvestSensor(width, height);
-    }
-
-    public void createHarvestSensor(float harvestWidth, float harvestHeight) {
-        float u = obstacle.getPhysicsUnits();
-        float maxSafeRadius = Math.min(harvestWidth, harvestHeight) / 2 * u;
-
-        PathFactory factory = new PathFactory();
-        harvestOutline = new Path2();
-        factory.makeRoundedRect(-harvestWidth / 2 * u, -harvestHeight / 2 * u,
-            harvestWidth * u, harvestHeight * u,
-            maxSafeRadius, harvestOutline);
-
-        PolygonShape harvestShape = new PolygonShape();
-        harvestShape.setAsBox(harvestWidth / 2, harvestHeight / 2);
-
-        FixtureDef harvestDef = new FixtureDef();
-        harvestDef.shape = harvestShape;
-        harvestDef.isSensor = true;
-
-        Body body = obstacle.getBody();
-        Fixture harvestFixture = body.createFixture(harvestDef);
-        harvestFixture.setUserData("harvest_sensor");
-
-        harvestShape.dispose();
     }
 
     public void lookForPlayer() {

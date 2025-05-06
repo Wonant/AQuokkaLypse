@@ -329,7 +329,7 @@ public class LevelContactListener implements ContactListener {
                         dreamWalkerScene.performHarvest(harvestedEnemy);
 
                     }
-                    else if (harvestedEnemy instanceof MindMaintenance && dreamWalkerScene.getAvatar().isHarvesting()) {
+                    else {
                         dreamWalkerScene.performHarvest(harvestedEnemy);
                     }
 
@@ -347,7 +347,7 @@ public class LevelContactListener implements ContactListener {
                         dreamWalkerScene.performHarvest(harvestedEnemy);
 
                     }
-                    else if (harvestedEnemy instanceof MindMaintenance && dreamWalkerScene.getAvatar().isHarvesting()) {
+                    else {
                         dreamWalkerScene.performHarvest(harvestedEnemy);
                     }
 
