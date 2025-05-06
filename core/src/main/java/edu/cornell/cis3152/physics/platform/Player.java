@@ -1133,6 +1133,7 @@
             {
                 setFearMeter(fearMeter - 1);
                 takeDamageCooldown = takeDamageLimit;
+                setTakingDamage(false);
 
             } else {
                 takeDamageCooldown = Math.max(0, takeDamageCooldown - 1);

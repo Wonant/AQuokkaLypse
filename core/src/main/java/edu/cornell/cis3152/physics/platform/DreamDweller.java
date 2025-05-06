@@ -39,7 +39,7 @@ public class DreamDweller extends Enemy {
     private final Vector2 debugLookStart = new Vector2();
     private final Vector2 debugLookEnd = new Vector2();
 
-    private float susCooldown = 40;
+    private float susCooldown = 20;
     private float susCountdown = susCooldown;
 
     public DreamDweller(float units, JsonValue data, float[] points, PlatformScene scene) {
