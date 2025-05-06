@@ -126,7 +126,7 @@
         private boolean isGrounded;
         /** Whether our feet are on a shadowed tile*/
         private boolean isInShadow;
-
+        private boolean wasGrounded = false;
 
 
 
