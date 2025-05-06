@@ -1148,6 +1148,9 @@
 
             TextureRegion frame = new TextureRegion();
             float scale = 1f;
+            if (animationState == null) {
+                return;
+            }
             switch (animationState) {
                 case WALK:
                     frame = walkingSprite.getCurrentFrame(Gdx.graphics.getDeltaTime());

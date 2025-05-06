@@ -39,8 +39,8 @@ public class GDXRoot extends Game implements ScreenListener {
     private int current;
     /** Array of map keys for each level */
 
-    private String[] maps = {"level_select","tutorial1", "tutorial2", "easy1", "medium1", "hard1"};
-    private String[] tiled = {"maps/level_select.tmx", "maps/tutorial_1.tmx", "maps/tutorial_2.tmx", "maps/easy_level.tmx",
+    private String[] maps = {"tutorial1", "tutorial2", "level_select", "easy1", "medium1", "hard1"};
+    private String[] tiled = {"maps/tutorial_1.tmx", "maps/tutorial_2.tmx", "maps/level_select.tmx", "maps/easy_level.tmx",
                                 "maps/medium1.tmx", "maps/hard1.tmx"};
 
     /** Current map index for switching levels */
@@ -134,8 +134,11 @@ public class GDXRoot extends Game implements ScreenListener {
 
             // Create one Arena for each map key
             controllers = new PlatformScene[maps.length];
-            boolean isLevelSelect = true;
+            boolean isLevelSelect = false;
             for (int i = 0; i < maps.length; i++) {
+                if(i == 2){
+                    isLevelSelect = true;
+                }
                 controllers[i] = new PlatformScene(directory, maps[i], tiled[i], isLevelSelect);
                 controllers[i].setScreenListener(this);
                 controllers[i].setSpriteBatch(batch);
@@ -177,8 +180,13 @@ public class GDXRoot extends Game implements ScreenListener {
                 setScreen(controllers[current]);
             } else if (exitCode == PlatformScene.EXIT_LEVELSELECT)
             {
-                setScreen(controllers[0]);
-            } else if (exitCode == PlatformScene.EXIT_PAUSE) {
+                setScreen(controllers[2]);
+            }
+            else if (exitCode == PlatformScene.FROM_LEVELSELECT){
+                int dest = ((PlatformScene) screen).getDoorDestination();
+                setScreen(controllers[dest]);
+            }
+            else if (exitCode == PlatformScene.EXIT_PAUSE) {
                 if (screen instanceof PlatformScene) {
                     // Quit the application
 
