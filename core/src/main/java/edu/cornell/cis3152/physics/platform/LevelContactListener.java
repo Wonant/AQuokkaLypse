@@ -55,7 +55,7 @@ public class LevelContactListener implements ContactListener {
             handleShieldWallContact(bd1, bd2);
             handleDoorContact(bd1, bd2);
             handleDreamShardContact(bd1, bd2, fd1, fd2);
-            handleWalkSensorContact(bd1, bd2, fd1, fd2);
+            //handleWalkSensorContact(bd1, bd2, fd1, fd2);
             handleBulletCollision(bd1, bd2, fd1, fd2);
             handleSpearHitPlayer(bd1, bd2);
             handleGroundContact(bd1, bd2, fd1, fd2, fix1, fix2);
@@ -367,20 +367,16 @@ public class LevelContactListener implements ContactListener {
             (dreamWalkerScene.getAvatar().getScareSensorName().equals(fd2) && bd1 instanceof Enemy)) {
 
             Enemy harvestedEnemy;
-            // if the enemy is not a Mind Maintenance
-            if (!(bd2 instanceof MindMaintenance) && !(bd1 instanceof MindMaintenance)) {
-                if (dreamWalkerScene.getAvatar().getScareSensorName().equals(fd1) &&
-                    fd2 != "walk_sensor" && fd2 != "follow_sensor" && fd2 != "vision_sensor") {
-
-                    harvestedEnemy = (Enemy) bd2;
-                    dreamWalkerScene.removeHarvestedEnemy(harvestedEnemy);
-                } else if (dreamWalkerScene.getAvatar().getScareSensorName().equals(fd2) &&
-                    fd1 != "walk_sensor" && fd1 != "follow_sensor" && fd1 != "vision_sensor") {
-
-                    harvestedEnemy = (Enemy) bd1;
-                    dreamWalkerScene.removeHarvestedEnemy(harvestedEnemy);
-                }
+            if (dreamWalkerScene.getAvatar().getScareSensorName().equals(fd1) &&
+                fd2 != "walk_sensor" && fd2 != "follow_sensor" && fd2 != "vision_sensor") {
+                harvestedEnemy = (Enemy) bd2;
+                dreamWalkerScene.removeHarvestedEnemy(harvestedEnemy);
+            } else if (dreamWalkerScene.getAvatar().getScareSensorName().equals(fd2) &&
+                fd1 != "walk_sensor" && fd1 != "follow_sensor" && fd1 != "vision_sensor") {
+                harvestedEnemy = (Enemy) bd1;
+                dreamWalkerScene.removeHarvestedEnemy(harvestedEnemy);
             }
+
         }
     }
 

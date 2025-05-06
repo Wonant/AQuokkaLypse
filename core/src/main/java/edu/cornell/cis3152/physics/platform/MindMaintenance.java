@@ -635,6 +635,11 @@ public class MindMaintenance extends Enemy {
                 pos.x + rayLength * MathUtils.cos(angleToPlayer),
                 pos.y + rayLength * MathUtils.sin(angleToPlayer)
             );
+
+            boolean playerIsOnRight = player.getObstacle().getPosition().x > pos.x;
+            if ((facingRight && !playerIsOnRight) || (!facingRight && playerIsOnRight)) {
+                facingRight = playerIsOnRight;
+            }
         } else {
             // Player is outside the cone, no raycast
             setAwareOfPlayer(false);

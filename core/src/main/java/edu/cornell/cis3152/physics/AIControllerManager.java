@@ -200,6 +200,7 @@ public class AIControllerManager {
                 transitionMaintenanceState(data, MaintenanceFSM.IDLE_WALK);
             } else if (data.maintenance.isSeesWall() || !data.maintenance.isSafeToWalk()) {
                 transitionMaintenanceState(data, MaintenanceFSM.TURN);
+                System.out.println("Turn TRIGGERED");
             } else {
                 // Walk in a direction, will have already known if wall is in front
                 data.maintenance.setVisionAngle(data.movingRight ? 270 : 90);
@@ -254,6 +255,7 @@ public class AIControllerManager {
                 data.maintenance.getObstacle().setVX(0);
                 data.maintenance.setChasing(false);
                 transitionMaintenanceState(data, MaintenanceFSM.TURN);
+                System.out.println("Turn TRIGGERED");
             } else {
                 // Walk in a direction, will have already known if wall is in front
                 data.maintenance.setMovement(data.movingRight? 12 : -12);
