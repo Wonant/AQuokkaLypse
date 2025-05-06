@@ -258,7 +258,7 @@ public class PlatformScene implements Screen, Telegraph {
 
     private Animator teleportAnimator;
     private boolean isTeleporting = false;
-    private final float TELEPORT_SURFACE_BUFFER = 0.1f;
+    private final float TELEPORT_SURFACE_BUFFER = 0.5f;
 
     private float teleportAnimationTime = 0f;
     private Vector2 preTeleportPosition;
