@@ -13,17 +13,17 @@
     "restitution": 0.0
   },
   "goal" : {
-    "pos"       : [[21.0, 10.0], [29.0, 12.0], [57, 13]],
+    "pos"       : [[]],
     "size"      : 1.0,
     "density"   : 0.0,
     "friction"  : 0.0,
     "restitution": 0.0
   },
   "player" : {
-    "pos"       : [2.5, 7.0],
+    "pos"       : [10,10],
     "inner"     : [0.5, 1.45],
     "size"      : 1.5,
-    "force"     : 20.0,
+    "force"     : 15.0,
     "damping"   : 10.0,
     "density"   : 1.0,
     "friction"  : 0.5,
