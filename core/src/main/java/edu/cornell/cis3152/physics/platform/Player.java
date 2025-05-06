@@ -125,8 +125,11 @@
         private boolean didChangeDir = false;
         /** Whether our feet are on the ground */
         private boolean isGrounded;
+        private boolean wasGrounded = false;
         /** Whether our feet are on a shadowed tile*/
         private boolean isInShadow;
+
+
 
 
         /** The outline of the sensor obstacle */
@@ -159,6 +162,8 @@
         private Path2   fallSensorOutline;
         private String  fallSensorName;
         private boolean fallSensorContact = false;
+
+        private Path2 grabSensorOutline;
 
 
 
@@ -691,7 +696,7 @@
         public void createAnimators(Texture dreamwalker, Texture absorb) {
             walkingSprite = new Animator(dreamwalker, 11, 16, 0.033f, 176, 0, 15);
             idleSprite = new Animator(dreamwalker, 11, 16, 0.033f, 176, 37, 56);
-            jumpSprite = new Animator(dreamwalker, 11, 16, 0.066f, 176, 20, 26, false);
+            jumpSprite = new Animator(dreamwalker, 11, 16, 0.033f, 176, 20, 26, false);
             stairSprite = new Animator(dreamwalker, 11, 16, 0.033f, 176, 126, 133);
             fallSprite = new Animator(dreamwalker, 11, 16, 0.033f, 176, 134, 134);
             landingSprite = new Animator(dreamwalker, 11, 16, 0.033f, 176, 138, 156, false);
@@ -742,8 +747,6 @@
             PolygonShape sensorShape = new PolygonShape();
             sensorShape.setAsBox(w, h, sensorCenter, 0.0f);
             sensorDef.shape = sensorShape;
-
-
 
             // Ground sensor to represent our feet
             Body body = obstacle.getBody();
@@ -927,12 +930,34 @@
             debugRayEnd = end;
 
             world.rayCast(playerVisionRaycast, start, end);
+            Vector2 normal = playerVisionRaycast.getHitNormal();
+            if (normal != null) {
+                // build the tangent (perpendicular to the normal)
+                Vector2 tangent = new Vector2(normal.y, -normal.x).nor();
+                // downward ray direction
+                Vector2 rayDir  = new Vector2(0, -1);
+                // angle between ray and surface tangent (in degrees)
+                float dot = tangent.dot(rayDir);
+                dot = MathUtils.clamp(dot, -1f, 1f);
+                float angleDeg = (float)(Math.acos(dot) * MathUtils.radiansToDegrees);
+
+                // if this is *almost* 90°, it's a flat surface → skip snapping
+                if (Math.abs(angleDeg - 90f) < 1f) {
+                    isClimbing = false;
+                    playerVisionRaycast.reset();
+                    stairCooldown = FRAME_STAIR_COOLDOWN;
+                    return false;
+                }
+            }
 
             if (playerVisionRaycast.getHitFixture() == null) {
                 isClimbing = false;
                 return false;
             } else if (playerVisionRaycast.fixtureIsStair) {
                 Vector2 stairHit = new Vector2(playerVisionRaycast.getHitPoint());
+                playerVisionRaycast.reset();
+
+                stairCooldown = FRAME_STAIR_COOLDOWN;
                 if (isGrounded && Math.abs(movement) > 0) {
                     float targetCenterY = stairHit.y + height/2;
 
@@ -941,14 +966,13 @@
                     return true;
                 }
                 if (movement == 0 && !isJumping()) {
-                    float targetCenterY = stairHit.y + height/2;  // tiny offset to avoid re-trigger
+
+                    float targetCenterY = stairHit.y + height/2f;  // tiny offset to avoid re-trigger
                     body.setTransform(body.getPosition().x, targetCenterY, body.getAngle());
                 }
             }
 
-            playerVisionRaycast.reset();
 
-            stairCooldown = FRAME_STAIR_COOLDOWN;
 
             return false;
         }
@@ -962,6 +986,8 @@
          */
         @Override
         public void update(float dt) {
+            boolean prevGrounded = wasGrounded;
+            wasGrounded = isGrounded;
 
             World world = obstacle.getBody().getWorld();
             if (isPlatformStep(world, stepRayLength)) {
@@ -1001,17 +1027,27 @@
             }
 
 
-            if (isLanding && !isHarvesting()) {
-                landCounter++;
-                if (landCounter >= LAND_DURATION) {
-                    landCounter = 0;
-                    isLanding = false;
-                }
-                super.update(dt);
-                return;
+            if (!prevGrounded && isGrounded) {
+                isLanding    = true;
+                landCounter  = 0;
+                landingSprite.reset();
+                animationState = AnimationState.LAND;
             }
 
-
+            if (isLanding && !isHarvesting()) {
+                if (movement != 0) {
+                    isLanding = false;
+                } else {
+                    landCounter++;
+                    super.update(dt);
+                    if (landCounter >= LAND_DURATION) {
+                        landCounter = 0;
+                        isLanding = false;
+                    }
+                    super.update(dt);
+                    return;
+                }
+            }
 
 
             if (inStunAnimation) {
@@ -1048,16 +1084,7 @@
                     animationState = AnimationState.WALK;
                 }
             } else {
-                if (fallSensorContact && obstacle.getVY() < 0) {
-                    if (!isLanding) {
-                        isLanding = true;
-                        landCounter = 0;
-                        landingSprite.reset();
-                    }
-                    animationState = AnimationState.LAND;
-                    // next frame it animation locks
-                }
-                else if (obstacle.getVY() > 0) {
+                if (obstacle.getVY() > 0) {
                     // not grounded, in the state of moving up = jumping
                     animationState = AnimationState.JUMP;
                 } else {
@@ -1204,6 +1231,7 @@
             drawSensorDebug(batch, sensorOutline, sensorColor);
             drawSensorDebug(batch, sensorScareOutline, sensorScareColor);
             drawSensorDebug(batch, fallSensorOutline, Color.GREEN);
+            drawSensorDebug(batch, grabSensorOutline, Color.BLUE);
             drawTeleportRadius(batch);
             //drawRecastSensor(batch);
             drawRayDebug(batch);

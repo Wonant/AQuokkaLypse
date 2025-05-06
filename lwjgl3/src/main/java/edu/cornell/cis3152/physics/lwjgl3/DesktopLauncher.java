@@ -58,12 +58,14 @@ public class DesktopLauncher {
         // Use windowed mode
         config.fullscreen = false;
         config.resizable = false;
-        config.width = 1420;
-        config.height = 799;
+        config.width = 1280;
+        config.height = 720;
         config.rawHDPI = false;
 
         // Use OpenGLES 2.0
-        config.useGL30 = false;
+
+        // FOR SHADERS MUST BE TRUE? but setting to false just breaks game lol
+        config.useGL30 = true;
 
         // Window icons used by Windows (in Resources folder)
         config.iconList = "icons.txt";

@@ -20,7 +20,7 @@ public class BehaviorLoop<E> {
         this.step = step;
 
         //defaults
-        delay = 0.5f;
+        delay = 0.2f;
         runtime = 0;
     }
 

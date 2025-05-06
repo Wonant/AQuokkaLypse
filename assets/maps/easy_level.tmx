@@ -1,5 +1,5 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<map version="1.10" tiledversion="1.11.2" orientation="orthogonal" renderorder="right-down" width="40" height="25" tilewidth="32" tileheight="32" infinite="0" nextlayerid="9" nextobjectid="61">
+<map version="1.10" tiledversion="1.11.2" orientation="orthogonal" renderorder="right-down" width="40" height="25" tilewidth="32" tileheight="32" infinite="0" nextlayerid="9" nextobjectid="64">
  <tileset firstgid="1" source="../tilesets/Temple L1-2.tsx"/>
  <tileset firstgid="118" source="../tilesets/Temple Background.tsx"/>
  <tileset firstgid="1078" source="../tilesets/Temple L2-2.tsx"/>
@@ -150,45 +150,11 @@
     <property name="isStair" type="bool" value="false"/>
    </properties>
   </object>
-  <object id="33" x="930.5" y="255.792" width="30.0967" height="14.2388">
+  <object id="63" x="756.659" y="160.202">
    <properties>
     <property name="isStair" type="bool" value="true"/>
    </properties>
-  </object>
-  <object id="35" x="900.586" y="244.341" width="30.0967" height="14.2388">
-   <properties>
-    <property name="isStair" type="bool" value="true"/>
-   </properties>
-  </object>
-  <object id="36" x="870.205" y="231.721" width="30.0967" height="14.2388">
-   <properties>
-    <property name="isStair" type="bool" value="true"/>
-   </properties>
-  </object>
-  <object id="38" x="839.824" y="218.634" width="30.0967" height="14.2388">
-   <properties>
-    <property name="isStair" type="bool" value="true"/>
-   </properties>
-  </object>
-  <object id="39" x="811.78" y="204.612" width="30.0967" height="14.2388">
-   <properties>
-    <property name="isStair" type="bool" value="true"/>
-   </properties>
-  </object>
-  <object id="40" x="786.541" y="188.721" width="30.0967" height="14.2388">
-   <properties>
-    <property name="isStair" type="bool" value="true"/>
-   </properties>
-  </object>
-  <object id="41" x="762.703" y="175.634" width="30.0967" height="12.8366">
-   <properties>
-    <property name="isStair" type="bool" value="true"/>
-   </properties>
-  </object>
-  <object id="42" x="737.801" y="160.133" width="30.0967" height="15.7166">
-   <properties>
-    <property name="isStair" type="bool" value="true"/>
-   </properties>
+   <polygon points="0,0 203.752,97.3428 204.151,108.506 0.105409,8.64905"/>
   </object>
  </objectgroup>
  <objectgroup id="7" name="Spawn">
@@ -217,7 +183,7 @@
    <point/>
   </object>
  </objectgroup>
- <layer id="5" name="Foreground" width="40" height="25">
+ <layer id="5" name="Foreground" width="40" height="25" visible="0">
   <data encoding="csv">
 0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,
 0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,

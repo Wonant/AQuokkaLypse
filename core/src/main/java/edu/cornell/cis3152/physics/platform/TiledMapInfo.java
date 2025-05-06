@@ -19,28 +19,10 @@ public class TiledMapInfo {
 
     public TiledMapInfo(String fileName) {
         this.map = new TmxMapLoader().load(fileName);
-        this.mapRenderer = new OrthogonalTiledMapRenderer(map);
     }
 
     public TiledMap get() {
         return map;
-    }
-
-    public void renderDefault(OrthographicCamera camera) {
-        mapRenderer.setView(camera);
-        mapRenderer.render();
-    }
-
-    public void renderForeground(OrthographicCamera camera) {
-        int foreground = map.getLayers().getIndex("Foreground");
-        if (foreground != -1) {
-            mapRenderer.render(new int[]{foreground});
-        }
-    }
-
-    public void renderLayers(OrthographicCamera camera, int[] layers) {
-        mapRenderer.setView(camera);
-        mapRenderer.render(layers);
     }
 
     public void disposeMap() {

@@ -20,4 +20,4 @@ root
                 (fearMeterHigh) moveShard tolerance:1.0
                 (inFollowRange) stare followSpeed:2
         selector
-            idle speed:2 duration:0.3
+            idle speed:2 duration:2.0

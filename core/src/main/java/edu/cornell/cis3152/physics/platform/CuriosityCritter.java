@@ -179,7 +179,7 @@ public class CuriosityCritter extends Enemy {
 
 
 
-        obstacle.setDensity(data.getFloat("density", 0));
+        obstacle.setDensity(100000);
         obstacle.setFriction(data.getFloat("friction", 0));
         obstacle.setRestitution(data.getFloat("restitution", 0));
         obstacle.setFixedRotation(true);
@@ -416,16 +416,10 @@ public class CuriosityCritter extends Enemy {
             return false;
         } else {
             Vector2 stairHit = new Vector2(enemyVisionRaycast.getHitPoint());
-
+            debugRayEnd = stairHit;
             if (isGrounded && Math.abs(movement) > 0) {
-                float targetCenterY = stairHit.y + height/2;
-                Body body = obstacle.getBody();
-                Vector2 pos = body.getPosition();
-                body.setTransform(stairHit.x, targetCenterY, body.getAngle());
 
-                debugRayEnd = stairHit;
             }
-
         }
 
         enemyVisionRaycast.reset();
@@ -570,7 +564,7 @@ public class CuriosityCritter extends Enemy {
         float wallRayLength = width * 0.5f;
 
         debugGroundStart = (facingRight) ? new Vector2(pos.x + width * 1.5f, pos.y) :
-           new Vector2(pos.x - width * 1.5f, pos.y);
+            new Vector2(pos.x - width * 1.5f, pos.y);
         Vector2 wallStart = (facingRight) ? new Vector2(pos.x + width/2, pos.y) :
             new Vector2(pos.x - width/2, pos.y);
 

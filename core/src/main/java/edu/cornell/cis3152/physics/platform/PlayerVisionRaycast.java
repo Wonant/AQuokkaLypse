@@ -7,6 +7,7 @@ import com.badlogic.gdx.physics.box2d.RayCastCallback;
 public class PlayerVisionRaycast implements RayCastCallback {
     public enum VisionMode {STAIR_CHECK}
 
+    private Vector2 hitNormal = new Vector2();
     private VisionMode mode;
     private Fixture hitFixture = null;
     private Vector2 hitPoint = new Vector2();
@@ -31,7 +32,7 @@ public class PlayerVisionRaycast implements RayCastCallback {
                 Surface surface = (Surface) userData;
                 String name = surface.getObstacle().getName();
                 if (point.y - surface.getObstacle().getY() <= stepHeightThreshold && name.startsWith("stair")) {
-
+                    hitNormal.set(normal).nor();
                     posAboveStair.set(point).add(normal.cpy().nor());
                     hitFixture = fixture;
                     closestFraction = fraction;
@@ -52,6 +53,11 @@ public class PlayerVisionRaycast implements RayCastCallback {
         hitFixture = null;
         hitPoint.set(0, 0);
         closestFraction = 1f;
+        hitNormal.set(0,0);
+    }
+
+    public Vector2 getHitNormal() {
+        return hitNormal;
     }
 
     public Fixture getHitFixture() {

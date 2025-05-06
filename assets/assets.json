@@ -1,5 +1,11 @@
 {
 	"textures": {
+        "swirl-end" : "swirlAnimation/end_spritesheet.png",
+        "swirl-active" : "swirlAnimation/traveling_spritesheet.png",
+        "bullet-end" : "bullet/end_spritesheet.png",
+        "bullet-active" : "bullet/traveling_spritesheet.png",
+
+        "abstract-glassy" : "shaders/abstract_field.jpg",
         "shard":   "platform/shard.png",
         "maintenance-sprite-sheet" : "platform/maintenance.png",
         "player-sprite-sheet" : "platform/dreamwalker.png",
