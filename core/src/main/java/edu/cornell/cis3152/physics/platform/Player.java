@@ -82,7 +82,6 @@
         private boolean lastJumping;
         private int coyoteTimeFrames = 5;
         private int coyoteTimeCounter = 0;
-        private boolean wasGrounded = false;
 
         /** How long (in animation frames) the harvesting attack lasts  */
         private int harvestDuration;
@@ -127,7 +126,7 @@
         private boolean isGrounded;
         /** Whether our feet are on a shadowed tile*/
         private boolean isInShadow;
-
+        private boolean wasGrounded = false;
 
 
 

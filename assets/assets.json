@@ -5,6 +5,8 @@
         "bullet-end" : "bullet/end_spritesheet.png",
         "bullet-active" : "bullet/traveling_spritesheet.png",
 
+        "platform-spear-travel-sprite": "platform/traveling_spritesheet.png",
+        "platform-spear-end-sprite": "platform/end_spritesheet.png",
 
         "abstract-glassy" : "shaders/abstract_field.jpg",
         "shard":   "platform/shard.png",
