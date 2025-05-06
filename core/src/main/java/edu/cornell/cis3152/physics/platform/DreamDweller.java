@@ -36,7 +36,7 @@ public class DreamDweller extends Enemy {
     private int jumpCooldown;
     private boolean isJumping;
     private int shootCooldown;
-    private int shootLimit = 80;
+    private int shootLimit = 100;
     private boolean isGrounded;
     private boolean isShooting;
 
@@ -58,7 +58,7 @@ public class DreamDweller extends Enemy {
     private Vector2 debugLookEnd = new Vector2();
 
     // time before enemy resumes normal behavior after detecting player
-    private float susCooldown = 100;
+    private float susCooldown = 40;
     private float susCountdown = susCooldown;
     /** game logic stuff */
 
@@ -402,6 +402,9 @@ public class DreamDweller extends Enemy {
     public void update(float dt) {
         Player player = scene.getAvatar();
         lookForPlayer();
+        Vector2 playerPos = scene.getAvatar().getObstacle().getPosition();
+        Vector2 selfPos = obstacle.getPosition();
+        facingRight = playerPos.x >= selfPos.x;
         if (isAwareOfPlayer()) {
             updateFollowSensor(player);
             susCountdown = susCooldown;
@@ -445,8 +448,8 @@ public class DreamDweller extends Enemy {
             float u = obstacle.getPhysicsUnits();
 
             transform.idt();
-            transform.preScale(scaleFactor, scaleFactor); // Scale up sprite only
-            transform.preRotate((float) ((double) (a * 180.0F) / Math.PI));
+            transform.preScale(facingRight ? -1.4f : 1.4f, 1.4f);
+            transform.preRotate((float) (a * MathUtils.radiansToDegrees));
             transform.preTranslate(x * u, y * u);
 
             batch.setTextureRegion(sprite);

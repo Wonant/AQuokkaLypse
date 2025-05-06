@@ -58,6 +58,7 @@ public class LevelContactListener implements ContactListener {
             //handleWalkSensorContact(bd1, bd2, fd1, fd2);
             handleBulletCollision(bd1, bd2, fd1, fd2);
             handleSpearHitPlayer(bd1, bd2);
+            handleSpearHitSurface(bd1,bd2);
             handleGroundContact(bd1, bd2, fd1, fd2, fix1, fix2);
             handleHarvestingCollision(bd1, bd2, fd1, fd2);
             handleFallSensorContact(bd1, bd2, fd1, fd2);
@@ -437,15 +438,29 @@ public class LevelContactListener implements ContactListener {
 
             spear.getObstacle().markRemoved(true);
 
-            player.setFearMeter(Math.max(0, player.getFearMeter() - 1));
+            //  player.setFearMeter(Math.max(0, player.getFearMeter() - 1));
 
 
             spear.getObstacle().setVX(0);
             spear.getObstacle().setVY(0);
             player.setBlinded(true);
+            player.setBlindTimer(0);
 
             System.out.println("Spear hit Player: -1 fear, no push.");
 
+        }
+    }
+    private void handleSpearHitSurface(ObstacleSprite bd1, ObstacleSprite bd2) {
+        if ((bd1 instanceof Spear && bd2 instanceof Surface) || (bd2 instanceof Spear && bd1 instanceof Surface)) {
+            Spear spear = (bd1 instanceof Spear) ? (Spear) bd1 : (Spear) bd2;
+            Surface surface = (bd1 instanceof Surface) ? (Surface) bd1 : (Surface) bd2;
+
+            spear.getObstacle().markRemoved(true);
+
+            spear.getObstacle().setVX(0);
+            spear.getObstacle().setVY(0);
+
+            System.out.println("Spear hit Surface: removed spear.");
         }
     }
 }

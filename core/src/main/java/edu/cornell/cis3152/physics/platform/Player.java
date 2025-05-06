@@ -1300,5 +1300,8 @@
         public float getBlindProgress() {
             return MathUtils.clamp(blindTimer / MAX_BLIND_TIME, 0f, 1f);
         }
+        public void setBlindTimer(float time) {
+            this.blindTimer = time;
+        }
 
     }
