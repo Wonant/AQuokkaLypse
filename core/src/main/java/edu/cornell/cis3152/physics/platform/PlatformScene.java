@@ -1949,11 +1949,6 @@ public class PlatformScene implements Screen, Telegraph {
         } else {
             resumingFromPause = false; // Reset the flag
         }
-        camera.setToOrtho( false, width, height );
-
-        scale.x = 1;
-        scale.y = 1;
-        reset();
 
     }
 

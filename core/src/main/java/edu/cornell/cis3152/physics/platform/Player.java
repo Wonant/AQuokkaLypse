@@ -124,7 +124,6 @@
         private boolean didChangeDir = false;
         /** Whether our feet are on the ground */
         private boolean isGrounded;
-        private boolean wasGrounded = false;
         /** Whether our feet are on a shadowed tile*/
         private boolean isInShadow;
 
