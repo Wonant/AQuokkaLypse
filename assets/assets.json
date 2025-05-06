@@ -1,148 +1,26 @@
 {
 	"textures": {
-        "shared-shadow-test" : {
-          "file":  "shared/okay.png",
-          "wrapU": "repeated",
-          "wrapV": "repeated"
-        },
-        "shared-cloud" : {
-            "file":  "shared/cloud.png",
-            "wrapU": "repeated",
-            "wrapV": "repeated"
-        },
-        "shared-shadow-cloud" : {
-            "file":  "shared/earthtile.png",
-            "wrapU": "repeated",
-            "wrapV": "repeated"
-        },
-        "shared-goal":   "shared/shard.png",
-        "rocket-rocket": {
-            "file": "rocket/rocket.png",
-            "mipmaps": true,
-            "minfilter": "linear mipmap linear",
-            "magfilter": "linear mipmap linear"
-        },
-        "rocket-main":  {
-            "file" : "rocket/flames.png",
-            "mipmaps" : true,
-            "minfilter": "linear mipmap linear",
-            "magfilter": "linear mipmap linear",
-            "sprites" : {
-                "fire": {
-                    "rows": 1,
-                    "cols": 4
-                }
-            }
-        },
-        "rocket-left": {
-            "file" : "rocket/flames-left.png",
-            "mipmaps" : true,
-            "minfilter": "linear mipmap linear",
-            "magfilter": "linear mipmap linear",
-            "sprites" : {
-                "fire": {
-                    "rows": 1,
-                    "cols": 4
-                }
-            }
-        },
-        "rocket-right": {
-            "file" : "rocket/flames-right.png",
-            "mipmaps" : true,
-            "minfilter": "linear mipmap linear",
-            "magfilter": "linear mipmap linear",
-            "sprites" : {
-                "fire": {
-                    "rows": 1,
-                    "cols": 4
-                }
-            }
-        },
-        "rocket-crate01": {
-            "file": "rocket/crate01.png",
-            "mipmaps" : true,
-            "minfilter": "linear mipmap linear",
-            "magfilter": "linear mipmap linear"
-        },
-        "rocket-crate02": {
-            "file" : "rocket/crate02.png",
-            "mipmaps" : true,
-            "minfilter": "linear mipmap linear",
-            "magfilter": "linear mipmap linear"
-        },
-        "platf1" : "shared/platf1.png",
-        "platf" : "shared/platf1.png",
-
-        "player-walk" : "platform/walk.png",
-        "player-idle" : "platform/idle.png",
-        "player-jump" : "platform/jump.png",
-        "maintenance-sprite-sheet" : "platform/tall sprite sheet.png",
-        "maintenance-walk" : "platform/maintenance_walk.png",
-        "maintenance-turn" : "platform/maintenance_turn.png",
-        "player-stair" : "platform/stair.png",
+        "shard":   "platform/shard.png",
+        "maintenance-sprite-sheet" : "platform/maintenance.png",
         "player-sprite-sheet" : "platform/dreamwalker.png",
         "absorb-animation" : "platform/absorb.png",
         "fear-meter-sprite-sheet" : "platform/healthbar_spritesheet.png",
         "visibility-indicator" : "platform/v1.png",
-        "teleport-teleport" : "platform/teleport_sheet.png",
-        "background-proto" : "platform/dreamBackground.png",
+        "teleport" : "platform/teleport_sheet.png",
         "background-technical" : "shared/backgroundTemple.png",
         "curiosity-critter-active": "shared/CuriosityCritterActive.png",
         "curiosity-critter-inactive": "shared/CuriosityCritterInactive.png",
-        "mind-maintenance-active": "shared/MindMaintenanceActive.png" ,
-        "mind-maintenance-inactive": "shared/MindMaintenanceInactive.png",
         "dream-dweller-active": "shared/DreamDwellerActive.png",
         "dream-dweller-inactive": "shared/DreamDwellerInactive.png",
-        "vision_cone" : "shared/vision1.png",
         "fear-meter" : "platform/fearmeter_0.png",
-        "platform-traci"    : "platform/traci.png",
-        "platform-playerSprite": "platform/playerSprite.png",
-        "platform-barrier"  : "platform/barrier.png",
-        "platform-spear-travel-sprite"  : "platform/traveling_spritesheet.png",
-        "platform-spear-end-sprite"  : "platform/end_spritesheet.png",
+
+    "platform-spear"  : "platform/spear.png",
+        "platform-spear-right"  : "platform/spear-right.png",
+
         "platform-bullet"   : "platform/bullet.png",
-        "platform-teleporter" : "platform/teleport.png",
         "platform-scare-effect" : "platform/scare_effct.png",
-        "ragdoll-bubble"    : "ragdoll/bubble.png",
-        "ragdoll-crosshair" : "ragdoll/crosshair.png",
-        "ragdoll-foreground": "ragdoll/foreground.png",
-        "ragdoll-background": "ragdoll/background.png",
-        "ragdoll-torso" : {
-            "file" : "ragdoll/scuba_torso.png",
-            "mipmaps"   : true,
-            "minfilter" : "linear mipmap linear",
-            "magfilter" : "linear mipmap linear"
-        },
-        "ragdoll-head" : {
-            "file" : "ragdoll/scuba_head.png",
-            "mipmaps"   : true,
-            "minfilter" : "linear mipmap linear",
-            "magfilter" : "linear mipmap linear"
-        },
-        "ragdoll-thigh" : {
-            "file" : "ragdoll/scuba_thigh.png",
-            "mipmaps"   : true,
-            "minfilter" : "linear mipmap linear",
-            "magfilter" : "linear mipmap linear"
-        },
-        "ragdoll-shin": {
-            "file" :    "ragdoll/scuba_shin.png",
-            "mipmaps"   : true,
-            "minfilter" : "linear mipmap linear",
-            "magfilter" : "linear mipmap linear"
-        },
-        "ragdoll-arm": {
-            "file" : "ragdoll/scuba_arm.png",
-            "mipmaps"   : true,
-            "minfilter" : "linear mipmap linear",
-            "magfilter" : "linear mipmap linear"
-        },
-        "ragdoll-forearm": {
-            "file" : "ragdoll/scuba_forearm.png",
-            "mipmaps"   : true,
-            "minfilter" : "linear mipmap linear",
-            "magfilter" : "linear mipmap linear"
-        },
+        "crosshair" : "platform/crosshair.png",
+
         "background": {
             "file": "menu/background.png"
         },
@@ -221,22 +99,12 @@
         "tutorial2" : "levels/tutorial_2.json",
         "easy1" : "levels/easy1.json",
         "medium1" : "levels/medium1.json",
-        "hard1" : "levels/hard1.json",
-        "arena" : "arena/arena.json",
-        "arena1" : "arena/arena1.json"
+        "hard1" : "levels/hard1.json"
     },
     "soundfx" : {
-        "rocket-bump"       : "rocket/bump.wav",
-        "rocket-mainburn"   : "rocket/afterburner.wav",
-        "rocket-leftburn"   : "rocket/sideburner-left.wav",
-        "rocket-rightburn"  : "rocket/sideburner-right.wav",
         "platform-jump"     : "platform/jump.wav",
         "platform-pew"      : "platform/pew.wav",
-        "platform-plop"     : "platform/plop.wav",
-        "ragdoll-glub1"     : "ragdoll/bubble01.wav",
-        "ragdoll-glub2"     : "ragdoll/bubble02.wav",
-        "ragdoll-glub3"     : "ragdoll/bubble03.wav",
-        "ragdoll-glub4"     : "ragdoll/bubble04.wav"
+        "platform-plop"     : "platform/plop.wav"
     },
     "fonts": {
         "shared-retro": {

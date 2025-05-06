@@ -321,8 +321,7 @@ public class LevelContactListener implements ContactListener {
             || (dreamWalkerScene.getAvatar().getScareSensorName().equals(fd2) && bd1 instanceof Enemy) )){
             System.out.println("FD1: " + fd1 + " FD2: " + fd2);
             Enemy harvestedEnemy;
-                if (dreamWalkerScene.getAvatar().getScareSensorName().equals(fd1) && fd2 != "walk_sensor" && fd2 != "follow_sensor" && fd2 != "vision_sensor" )
-                {
+                if (dreamWalkerScene.getAvatar().getScareSensorName().equals(fd1)){
                     harvestedEnemy = (Enemy) bd2;
                     if (harvestedEnemy instanceof CuriosityCritter) {
                         CuriosityCritter critter = (CuriosityCritter) harvestedEnemy;
@@ -335,12 +334,12 @@ public class LevelContactListener implements ContactListener {
                         dreamWalkerScene.performHarvest(harvestedEnemy);
 
                     }
-                    else if (harvestedEnemy instanceof MindMaintenance && fd2 == "maintenance_sensor") {
+                    else if (harvestedEnemy instanceof MindMaintenance && dreamWalkerScene.getAvatar().isHarvesting()) {
                         dreamWalkerScene.performHarvest(harvestedEnemy);
                     }
 
-                } else if (dreamWalkerScene.getAvatar().getScareSensorName().equals(fd2) && fd1 != "walk_sensor" && fd1 != "follow_sensor" && fd1 != "vision_sensor")
-                {
+                }
+                else if (dreamWalkerScene.getAvatar().getScareSensorName().equals(fd2)) {
                     harvestedEnemy = (Enemy) bd1;
                     if (harvestedEnemy instanceof CuriosityCritter) {
                         CuriosityCritter critter = (CuriosityCritter) harvestedEnemy;
@@ -353,7 +352,7 @@ public class LevelContactListener implements ContactListener {
                         dreamWalkerScene.performHarvest(harvestedEnemy);
 
                     }
-                    else if (harvestedEnemy instanceof MindMaintenance && fd1 == "maintenance_sensor") {
+                    else if (harvestedEnemy instanceof MindMaintenance && dreamWalkerScene.getAvatar().isHarvesting()) {
                         dreamWalkerScene.performHarvest(harvestedEnemy);
                     }
 

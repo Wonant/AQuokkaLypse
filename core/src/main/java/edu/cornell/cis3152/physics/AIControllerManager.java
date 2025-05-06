@@ -50,8 +50,16 @@ public class AIControllerManager {
         ATTACK,
         /** mind maintenance is stunned, cannot move or see (do damage to player) */
         STUNNED,
+        /** mind maintenance chases player after it shoots */
         CHASING,
-        TURN
+        /** normal turn */
+        TURN,
+        /** mind maintenance is alerted when player is detected from behind */
+        ALERT,
+        /** faster turn when mind maintenance is sus */
+        ALERT_TURN,
+        /** faster walk when mind maintenance is sus */
+        ALERT_WALK
     }
 
     private enum DwellerFSM{
@@ -186,6 +194,11 @@ public class AIControllerManager {
         else if (seesPlayer && data.state != MaintenanceFSM.ATTACK){
             transitionMaintenanceState(data, MaintenanceFSM.ATTACK);
         }
+        else if (data.maintenance.isSus()){
+            data.maintenance.setSus(false);
+            data.maintenance.resetAttackSprite();
+            transitionMaintenanceState(data, MaintenanceFSM.TURN);
+        }
 
         if (data.state == MaintenanceFSM.START) {
             transitionMaintenanceState(data, MaintenanceFSM.IDLE_WALK);
@@ -277,7 +290,7 @@ public class AIControllerManager {
                 break;
 
             case ATTACK:
-                data.stateDuration = 1.68f;
+                data.stateDuration = 1.4f;
                 data.maintenance.setAttacking(true);
                 break;
 
@@ -290,6 +303,20 @@ public class AIControllerManager {
                 data.stateDuration = 3.0f;
                 data.horizontal = 0;
                 break;
+
+            case ALERT:
+                data.stateDuration = 3;
+                break;
+
+            case ALERT_TURN:
+                data.stateDuration = 1f;
+                break;
+
+            case ALERT_WALK:
+                data.stateDuration = 6;
+                data.maintenance.setChasing(true);
+                break;
+
         }
     }
 

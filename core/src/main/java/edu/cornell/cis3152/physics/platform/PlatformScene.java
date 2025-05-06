@@ -285,7 +285,6 @@ public class PlatformScene implements Screen, Telegraph {
     public void performHarvest(Enemy enemy)
     {
         queuedHarvestedEnemy.add(enemy);
-        //removeHarvestedEnemy(enemy);
     }
 
 
@@ -548,7 +547,7 @@ public class PlatformScene implements Screen, Telegraph {
         constants = directory.getEntry(mapkey,JsonValue.class);
         JsonValue defaults = constants.get("world");
 
-        crosshairTexture  = new TextureRegion(directory.getEntry( "ragdoll-crosshair", Texture.class ));
+        crosshairTexture  = new TextureRegion(directory.getEntry( "crosshair", Texture.class ));
         scareEffectTexture = new TextureRegion(directory.getEntry("platform-scare-effect", Texture.class));
 
         scale = new Vector2();
@@ -749,7 +748,7 @@ public class PlatformScene implements Screen, Telegraph {
 
 
         // dream shard creation from tiled layer
-        Texture texture = directory.getEntry( "shared-goal", Texture.class );
+        Texture texture = directory.getEntry( "shard", Texture.class );
         MapLayer shardLayer = tiledMap.get().getLayers().get("Shards");
         JsonValue goal = constants.get("goal");
 
@@ -845,19 +844,6 @@ public class PlatformScene implements Screen, Telegraph {
                 Surface platform = new Surface(worldX, worldY, worldHeight, worldWidth, TiledMapInfo.PIXELS_PER_WORLD_METER, constants.get("platforms"), true, rotationRad);
 
                 platform.setDebugColor(Color.BLUE);
-/*
-<<<<<<< HEAD
-                platform.getObstacle().setName("platform " + id);
-                /*
-                if (o.getProperties().get("isStair", Boolean.class)) {
-                    platform.getObstacle().setName("stair " + id);
-                } else {
-                    platform.getObstacle().setName("platform " + id);
-                }
-
-
-=======
-  */
                 platform.getObstacle().setName("platform " + id);
                 addSprite(platform);
                 platform.setFilter();
@@ -865,14 +851,6 @@ public class PlatformScene implements Screen, Telegraph {
             }
         }
 
-
-        texture = directory.getEntry( "shared-test", Texture.class );
-        Texture shadowedTexture = directory.getEntry("shared-shadow-test", Texture.class);
-
-
-
-        // Create Player
-        texture = directory.getEntry( "player-walk", Texture.class );
         avatar = new Player(units, constants.get("player"), playerSpawnPos, this);
 
         Texture dreamwalker = directory.getEntry("player-sprite-sheet", Texture.class);
@@ -1266,7 +1244,9 @@ public class PlatformScene implements Screen, Telegraph {
 
                 // Apply the teleport
                 avatar.getObstacle().setPosition(queuedTeleportPosition);
-                avatar.setFearMeter(Math.max(0, avatar.getFearMeter() - TELEPORT_COST));
+                if(!isLevelSelect){
+                    avatar.setFearMeter(Math.max(0, avatar.getFearMeter() - TELEPORT_COST));
+                }
                 queuedTeleportPosition = null;
             }
         }
@@ -1283,7 +1263,7 @@ public class PlatformScene implements Screen, Telegraph {
     }
 
     public void initTeleportAnimation() {
-        Texture teleportTexture = directory.getEntry("teleport-teleport", Texture.class);
+        Texture teleportTexture = directory.getEntry("teleport", Texture.class);
         teleportAnimator = new Animator(teleportTexture, 2, 10, 0.08f, 10, 0, 9, false);
     }
 

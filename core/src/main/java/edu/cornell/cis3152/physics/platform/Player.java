@@ -1001,9 +1001,8 @@
             }
 
 
-            if (isLanding) {
+            if (isLanding && !isHarvesting()) {
                 landCounter++;
-                super.update(dt);
                 if (landCounter >= LAND_DURATION) {
                     landCounter = 0;
                     isLanding = false;
@@ -1071,9 +1070,7 @@
             if(isGrounded)
             {
                 coyoteTimeCounter = coyoteTimeFrames;
-                System.out.println("Grounded! coyoteTimeCounter=" + coyoteTimeCounter);
             } else {
-                System.out.println("FALLING! coyoteTimeCounter=" + coyoteTimeCounter);
                 coyoteTimeCounter = Math.max(0, coyoteTimeCounter - 1);
             }
 
