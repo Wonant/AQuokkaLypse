@@ -710,7 +710,7 @@
                 Filter filter = fixture.getFilterData();
                 filter.categoryBits = CATEGORY_PLAYER;
                 // Player should collide with scenery but not with enemies.
-                filter.maskBits = CATEGORY_SCENERY;
+                filter.maskBits = CATEGORY_SCENERY| CATEGORY_ENEMY_PROJECTILE;
                 fixture.setFilterData(filter);
             }
         }
@@ -1296,6 +1296,12 @@
         }
         public float getBlindProgress() {
             return MathUtils.clamp(blindTimer / MAX_BLIND_TIME, 0f, 1f);
+        }
+        public void setBlindTimer(float time) {
+            this.blindTimer = time;
+        }
+        public int getTakeDamageCooldown() {
+            return takeDamageCooldown;
         }
 
     }

@@ -13,8 +13,10 @@
         "dream-dweller-active": "shared/DreamDwellerActive.png",
         "dream-dweller-inactive": "shared/DreamDwellerInactive.png",
         "fear-meter" : "platform/fearmeter_0.png",
-        "platform-spear"  : "platform/spear.png",
+
+    "platform-spear"  : "platform/spear.png",
         "platform-spear-right"  : "platform/spear-right.png",
+
         "platform-bullet"   : "platform/bullet.png",
         "platform-scare-effect" : "platform/scare_effct.png",
         "crosshair" : "platform/crosshair.png",

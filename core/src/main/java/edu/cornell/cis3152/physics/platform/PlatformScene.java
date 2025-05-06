@@ -258,6 +258,11 @@ public class PlatformScene implements Screen, Telegraph {
     /** Used to ensure scene doesn't reset when from pause scene*/
     private boolean resumingFromPause = false;
 
+    private Array<Spear> pendingSpears = new Array<>();
+    private float spearTimer = 0f;
+    private int spearIndex = 0;
+    private static final float SPEAR_FIRE_INTERVAL = 0.1f;
+
 
     /*==============================ContactListener Getters/Setters===============================*/
 
@@ -280,7 +285,6 @@ public class PlatformScene implements Screen, Telegraph {
     public void performHarvest(Enemy enemy)
     {
         queuedHarvestedEnemy.add(enemy);
-
     }
 
 
@@ -718,7 +722,6 @@ public class PlatformScene implements Screen, Telegraph {
                     // Have to do after body is created
                     dreamDweller.setFilter();
                     dreamDweller.createSensor();
-                    dreamDweller.createVisionSensor();
                     enemies.add(dreamDweller);
                     //aiManager.register(maintenance);
                     aiCManager.register(dreamDweller);
@@ -841,19 +844,6 @@ public class PlatformScene implements Screen, Telegraph {
                 Surface platform = new Surface(worldX, worldY, worldHeight, worldWidth, TiledMapInfo.PIXELS_PER_WORLD_METER, constants.get("platforms"), true, rotationRad);
 
                 platform.setDebugColor(Color.BLUE);
-/*
-<<<<<<< HEAD
-                platform.getObstacle().setName("platform " + id);
-                /*
-                if (o.getProperties().get("isStair", Boolean.class)) {
-                    platform.getObstacle().setName("stair " + id);
-                } else {
-                    platform.getObstacle().setName("platform " + id);
-                }
-
-
-=======
-  */
                 platform.getObstacle().setName("platform " + id);
                 addSprite(platform);
                 platform.setFilter();
@@ -924,7 +914,6 @@ public class PlatformScene implements Screen, Telegraph {
             // Have to do after body is created
             dreamDweller.setFilter();
             dreamDweller.createSensor();
-            dreamDweller.createVisionSensor();
             enemies.add(dreamDweller);
             //aiManager.register(maintenance);
             aiCManager.register(dreamDweller);
@@ -1058,25 +1047,51 @@ public class PlatformScene implements Screen, Telegraph {
                 wall.setTexture(texture);
                 addQueuedObject(wall);
             }
-            else  if (e instanceof DreamDweller && ((DreamDweller) e).isShooting()){
-
+            else if (e instanceof DreamDweller && ((DreamDweller) e).isShooting()) {
                 units = TiledMapInfo.PIXELS_PER_WORLD_METER;
                 Vector2 position = e.getObstacle().getPosition();
-                float direction = 1;
-                if (avatar.getObstacle().getPosition().x < position.x){
-                    direction = -1;
-                }
+                Vector2 playerPos = avatar.getObstacle().getPosition();
+
+                float speed = 11.5f;
                 JsonValue spearjv = constants.get("spear");
-                Texture texture = directory.getEntry("platform-spear", Texture.class);
-                Texture textureflip = directory.getEntry("platform-spear-right", Texture.class);
-                Spear spear = new Spear(units, spearjv, position, direction);
-                spears.add(spear);
-                if(direction < 0) {
-                    spear.setTexture(texture);
-                } else if (direction > 0) {
-                    spear.setTexture(textureflip);
+                Texture spearTravelTex = directory.getEntry("platform-spear-travel-sprite", Texture.class);
+                Texture spearEndTex    = directory.getEntry("platform-spear-end-sprite", Texture.class);
+
+                float[] rightAngles = new float[] { -8f, -3f, 3f, 8f };
+                float[] leftAngles  = new float[] { 188f, 183f, 177f, 172f };
+                float[] yOffsets = new float[] {-0.8f, -0.4f, 0.4f, 0.8f };
+
+                pendingSpears.clear();
+                spearTimer = 0f;
+                spearIndex = 0;
+
+                float direction = (playerPos.x < position.x) ? -1f : 1f;
+                float[] chosenAngles = (direction > 0) ? rightAngles : leftAngles;
+
+                for (int i = 0; i < chosenAngles.length; i++) {
+                    Vector2 spawnPos = new Vector2(position.x, position.y + yOffsets[i]);
+
+                    float angleDeg = chosenAngles[i];
+                    float angleRad = (float) Math.toRadians(angleDeg);
+
+                    Vector2 velocity = new Vector2(
+                        speed * (float) Math.cos(angleRad),
+                        speed * (float) Math.sin(angleRad)
+                    );
+
+                    Spear spear = new Spear(units, spearjv, spawnPos, velocity, spearTravelTex, spearEndTex);
+                    pendingSpears.add(spear);
                 }
+            }
+        }
+        if (pendingSpears.size > 0 && spearIndex < pendingSpears.size) {
+            spearTimer += dt;
+            if (spearTimer >= SPEAR_FIRE_INTERVAL) {
+                Spear spear = pendingSpears.get(pendingSpears.size - 1 - spearIndex);
+                spears.add(spear);
                 addQueuedObject(spear);
+                spearIndex++;
+                spearTimer = 0f;
             }
         }
 
@@ -1435,8 +1450,14 @@ public class PlatformScene implements Screen, Telegraph {
         }
         // Draw the meshes (images)
         for(ObstacleSprite obj : sprites) {
-            obj.draw(batch);
+            if (obj instanceof Spear) {
+                ((Spear) obj).drawOwnAnimation(batch);
+            } else {
+                obj.draw(batch);
+            }
         }
+
+
 
         if (debug) {
             // Draw the outlines
@@ -1662,7 +1683,7 @@ public class PlatformScene implements Screen, Telegraph {
         }
 
         if (avatar.isBlinded()) {
-            float alpha = MathUtils.clamp(1.2f - avatar.getBlindProgress(), 0f, 1.0f);
+            float alpha = MathUtils.clamp(1.8f * (float)Math.pow(0.5, avatar.getBlindProgress()*20), 0f, 1.0f);
             batch.setColor(1, 1, 1, alpha);
             batch.draw(Texture2D.getBlank(), 0, 0, width, height);
             batch.setColor(Color.WHITE);
