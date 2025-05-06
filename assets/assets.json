@@ -4,8 +4,10 @@
         "swirl-active" : "swirlAnimation/traveling_spritesheet.png",
         "bullet-end" : "bullet/end_spritesheet.png",
         "bullet-active" : "bullet/traveling_spritesheet.png",
+
         "platform-spear-travel-sprite": "platform/traveling_spritesheet.png",
         "platform-spear-end-sprite": "platform/end_spritesheet.png",
+
         "abstract-glassy" : "shaders/abstract_field.jpg",
         "shard":   "platform/shard.png",
         "maintenance-sprite-sheet" : "platform/maintenance.png",
@@ -102,6 +104,7 @@
         }
     },
     "jsons"  : {
+        "level-select" : "levels/level_select.json",
         "tutorial1" : "levels/tutorial_1.json",
         "tutorial2" : "levels/tutorial_2.json",
         "easy1" : "levels/easy1.json",

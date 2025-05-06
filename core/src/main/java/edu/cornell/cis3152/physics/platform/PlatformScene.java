@@ -1856,7 +1856,7 @@ public class PlatformScene implements Screen, Telegraph {
             // where to draw
 
             float meterX = 40;
-            float meterY = 600;
+            float meterY = 500;
 
             float meterWidth  = 7* meterFrame.getRegionWidth() / units;
             float meterHeight = 7*meterFrame.getRegionHeight() / units;
@@ -1871,8 +1871,8 @@ public class PlatformScene implements Screen, Telegraph {
                 float indicatorWidth  = visibilityIndicatorTexture.getWidth()  / units;
                 float indicatorHeight = visibilityIndicatorTexture.getHeight() / units;
 
-                float startX = meterX + 90;
-                float startY = meterY + 20;
+                float startX = meterX + 130;
+                float startY = meterY + 50;
 
                 for (int i = 0; i < enemiesAlerted; i++) {
                     float x = startX + i * (indicatorWidth + 10);  // 2px spacing
@@ -1899,7 +1899,7 @@ public class PlatformScene implements Screen, Telegraph {
             "\n Bounds: (" + bounds.width + ", " + bounds.height + ")" +
             "\n UICamera Pos: (" + uiCamera.position.x + ", " + uiCamera.position.y + ")" +
             "\n miniMapCamera Pos: (" + miniCam.position.x + ", " + miniCam.position.y + ")";
-        displayFont.draw(batch, cameraPositionText, 10, height - 100);
+        //displayFont.draw(batch, cameraPositionText, 10, height - 100);
 
         if (complete && !failed) {
             batch.drawText(goodMessage, width/2, height/2);
