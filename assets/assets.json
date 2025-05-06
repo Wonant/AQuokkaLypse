@@ -109,7 +109,9 @@
         "tutorial2" : "levels/tutorial_2.json",
         "easy1" : "levels/easy1.json",
         "medium1" : "levels/medium1.json",
-        "hard1" : "levels/hard1.json"
+        "hard1" : "levels/hard1.json",
+        "hard_1" : "levels/hard_1.json",
+        "medium_1" : "levels/medium_1.json"
     },
     "soundfx" : {
         "platform-jump"     : "platform/jump.wav",

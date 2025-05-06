@@ -812,6 +812,7 @@ public class PlatformScene implements Screen, Telegraph {
                 float mapPixelHeight = tiledMap.get().getProperties().get("height", Integer.class) * TiledMapInfo.PIXELS_PER_WORLD_METER;
                 float worldY = y / units;
                 float worldHeight = height / units;
+
                 if (o.getName().startsWith("door")) {
                     if(isLevelSelect) {
                         int destination = o.getProperties().get("level", Integer.class);
@@ -1127,9 +1128,9 @@ public class PlatformScene implements Screen, Telegraph {
                 reset();
             } else if (complete && !isLevelSelect) {
                 pause();
-                listener.exitScreen(this, EXIT_LEVELSELECT);
+                listener.exitScreen(this, EXIT_NEXT);
                 return false;
-            } else if (complete){
+            } else if (isLevelSelect && complete){
                 listener.exitScreen(this, FROM_LEVELSELECT);
             }
         }
