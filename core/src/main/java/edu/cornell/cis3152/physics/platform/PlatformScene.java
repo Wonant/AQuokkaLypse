@@ -1276,7 +1276,22 @@ public class PlatformScene implements Screen, Telegraph {
                         harvest_enemy.getObstacle().markRemoved(true);
                         enemies.remove(harvest_enemy);
                         avatar.setFearMeter(avatar.getFearMeter() + 3);
-                        harvest_enemy.dispatchHarvest();
+                        //BANDAID SLOW FIX
+                        if (harvest_enemy instanceof CuriosityCritter && ((CuriosityCritter) harvest_enemy).isAwareOfPlayer()) {
+                            enemiesAlerted--;
+                            crittersAlerted--;
+
+                            if (crittersAlerted <= 0) {
+                                crittersAlerted = 0; // Safety to prevent negative values
+                                lastCritterSawTime = -1f;
+                                if (playerSlowed) {
+                                    avatar.resetMaxSpeed();
+                                    playerSlowed = false;
+                                }
+                            }
+                        }
+                        //harvest_enemy.dispatchHarvest();
+                        // ^^^^ WAS ORIGINALLY CALLED OVER MY BIG PARAGRAPH
                     }
                     removeHarvestedEnemy(harvest_enemy);
                 }
