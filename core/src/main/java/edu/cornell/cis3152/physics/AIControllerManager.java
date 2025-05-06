@@ -186,6 +186,10 @@ public class AIControllerManager {
         else if (seesPlayer && data.state != MaintenanceFSM.ATTACK){
             transitionMaintenanceState(data, MaintenanceFSM.ATTACK);
         }
+        else if (data.maintenance.isSus()){
+            data.maintenance.setSus(false);
+            transitionMaintenanceState(data, MaintenanceFSM.TURN);
+        }
 
         if (data.state == MaintenanceFSM.START) {
             transitionMaintenanceState(data, MaintenanceFSM.IDLE_WALK);
@@ -275,7 +279,7 @@ public class AIControllerManager {
                 break;
 
             case ATTACK:
-                data.stateDuration = 1.68f;
+                data.stateDuration = 1.4f;
                 data.maintenance.setAttacking(true);
                 break;
 
