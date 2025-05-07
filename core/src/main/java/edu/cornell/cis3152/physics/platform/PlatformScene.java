@@ -1350,6 +1350,7 @@ public class PlatformScene implements Screen, Telegraph {
                 System.out.println("absorbing shard...");
                 t += dt;
                 if (t >= 3f) {
+                    avatar.setFearMeter(avatar.getFearMeter() + 3);
 
                     if (!s.getObstacle().isRemoved()) {
                         s.getObstacle().markRemoved(true);

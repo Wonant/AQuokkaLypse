@@ -1,5 +1,5 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<map version="1.10" tiledversion="1.11.2" orientation="orthogonal" renderorder="right-down" width="90" height="26" tilewidth="32" tileheight="32" infinite="0" nextlayerid="14" nextobjectid="59">
+<map version="1.10" tiledversion="1.11.2" orientation="orthogonal" renderorder="right-down" width="90" height="26" tilewidth="32" tileheight="32" infinite="0" nextlayerid="14" nextobjectid="75">
  <tileset firstgid="1" source="../tilesets/Temple L1-2.tsx"/>
  <tileset firstgid="118" source="../tilesets/Door.tsx"/>
  <tileset firstgid="235" source="../tilesets/Temple Background.tsx"/>
@@ -190,6 +190,36 @@
    </properties>
   </object>
   <object id="46" x="0" y="768" width="416" height="64"/>
+  <object id="59" x="1406.67" y="705.333" width="96" height="32">
+   <properties>
+    <property name="isStair" type="bool" value="false"/>
+   </properties>
+  </object>
+  <object id="60" x="1428.67" y="737.333" width="52" height="32">
+   <properties>
+    <property name="isStair" type="bool" value="false"/>
+   </properties>
+  </object>
+  <object id="71" x="639" y="640.75" width="64" height="32">
+   <properties>
+    <property name="isStair" type="bool" value="false"/>
+   </properties>
+  </object>
+  <object id="72" x="629" y="672.75" width="52" height="96">
+   <properties>
+    <property name="isStair" type="bool" value="false"/>
+   </properties>
+  </object>
+  <object id="73" x="1029" y="708.667" width="22" height="60">
+   <properties>
+    <property name="isStair" type="bool" value="false"/>
+   </properties>
+  </object>
+  <object id="74" x="2119.5" y="706" width="22" height="60">
+   <properties>
+    <property name="isStair" type="bool" value="false"/>
+   </properties>
+  </object>
  </objectgroup>
  <objectgroup id="4" name="Spawn">
   <object id="17" name="Player Spawn" x="81" y="736">
@@ -234,36 +264,6 @@
   </object>
   <object id="37" x="2472" y="736.33">
    <point/>
-  </object>
-  <object id="48" x="640" y="640" width="64" height="32">
-   <properties>
-    <property name="isStair" type="bool" value="false"/>
-   </properties>
-  </object>
-  <object id="49" x="630" y="672" width="52" height="96">
-   <properties>
-    <property name="isStair" type="bool" value="false"/>
-   </properties>
-  </object>
-  <object id="50" x="1029" y="708" width="22" height="60">
-   <properties>
-    <property name="isStair" type="bool" value="false"/>
-   </properties>
-  </object>
-  <object id="51" x="1408" y="704" width="96" height="32">
-   <properties>
-    <property name="isStair" type="bool" value="false"/>
-   </properties>
-  </object>
-  <object id="52" x="1430" y="736" width="52" height="32">
-   <properties>
-    <property name="isStair" type="bool" value="false"/>
-   </properties>
-  </object>
-  <object id="53" x="2117" y="708" width="22" height="60">
-   <properties>
-    <property name="isStair" type="bool" value="false"/>
-   </properties>
   </object>
  </objectgroup>
  <objectgroup id="11" name="text" visible="0">
