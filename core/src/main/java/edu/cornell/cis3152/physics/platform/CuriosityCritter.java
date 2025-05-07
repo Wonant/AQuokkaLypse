@@ -526,7 +526,6 @@ public class CuriosityCritter extends Enemy {
                 pos.x + rayLength * MathUtils.cos(clampedAngle),
                 pos.y + rayLength * MathUtils.sin(clampedAngle)
             );
-            System.out.println("Clamped MODE");
         }
 
         EnemyVisionRaycast playerRaycast = new EnemyVisionRaycast(EnemyVisionRaycast.VisionMode.PLAYER_CHECK, 4f);

@@ -216,8 +216,6 @@ public class LevelContactListener implements ContactListener {
             && !(dreamWalkerScene.getAvatar().getScareSensorName().equals(fd1) ||
             dreamWalkerScene.getAvatar().getScareSensorName().equals(fd2))) {
 
-            System.out.println("ENEMY SEES PLAYER !!!!!!");
-
             // Check if the vision sensor belongs to an "un-stunned" enemy, and if
             // so update the enemy's awareness and apply damage to player
             if ( bodyDataA instanceof Enemy && !((Enemy) bodyDataA).isStunned() ) {

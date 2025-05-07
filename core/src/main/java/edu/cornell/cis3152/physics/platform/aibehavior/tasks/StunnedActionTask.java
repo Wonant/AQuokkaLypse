@@ -43,7 +43,6 @@ public class StunnedActionTask extends LeafTask<Enemy> {
             // Track elapsed time
             float dt = GdxAI.getTimepiece().getDeltaTime();
             elapsed += dt;
-            System.out.println(elapsed);
 
             // If we've served our full stun sentence, clear it and succeed
             if (elapsed >= stunDuration) {
@@ -64,7 +63,6 @@ public class StunnedActionTask extends LeafTask<Enemy> {
                 // Track elapsed time
                 dt = GdxAI.getTimepiece().getDeltaTime();
                 elapsed += dt;
-                System.out.println(elapsed);
 
                 // If we've served our full stun sentence, clear it and succeed
                 if (elapsed >= stunDuration) {

@@ -38,7 +38,6 @@ public class TiledMapRenderer {
         PY *= layerPy;
         PX *= layerPx;
 
-        System.out.println("parallax: " + PX);
         if (layer instanceof MapGroupLayer) {
             for (MapLayer l : ((MapGroupLayer) layer).getLayers()) {
                 renderLayersHelper(l, camera, PX, PY);

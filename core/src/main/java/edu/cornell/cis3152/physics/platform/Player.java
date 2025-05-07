@@ -834,9 +834,11 @@
          * This method should be called after the force attribute is set.
          */
         public void applyForce(World world) {
-            if (!obstacle.isActive()) {
-                return;
-            }
+            System.out.println(isGrounded);
+
+            float direction = isFacingRight() ? 1 : -1;
+
+            if (!obstacle.isActive()) return;
 
             float maxUpwardVelocity = 10.0f;
             float maxFallingVelocity = -20.0f;
@@ -846,72 +848,70 @@
             float vy = obstacle.getVY();
             Body body = obstacle.getBody();
 
-
             // Velocity too high, clamp it
-            if (getMovement() == 0f) {
+            if (getMovement() == 0f && !isJumping()) {
                 obstacle.setVX(0);
-            }
-            else if (Math.abs(vx) >= getMaxSpeed()) {
-                obstacle.setVX(Math.signum(vx)*getMaxSpeed());
-            } else {
-                forceCache.set(getMovement(),0);
-                body.applyForce(forceCache,pos,true);
+            } else if (Math.abs(vx) >= getMaxSpeed()) {
+                obstacle.setVX(Math.signum(vx) * getMaxSpeed());
             }
 
+            // Horizontal movement logic
+            if (movement != 0) {
+                forceCache.set(getMovement(), 0);
+                body.applyForce(forceCache, pos, true);
+            }
 
+            // Dash logic
             if (startedHarvest && movement != 0){
-                float direction = -1;
-                if (isFacingRight()){
-                    direction = 1;
-                }
-                forceCache.set(direction * dash_force,0);
-                body.applyLinearImpulse(forceCache,pos,true);
+                forceCache.set(direction * dash_force, 0);
+                body.applyLinearImpulse(forceCache, pos, true);
             }
 
+            // Jumping logic
             if (isJumping()) {
+                body.setLinearDamping(0f); // Reset any climbing damping
                 jumpSprite.reset();
 
-                //Don't want gravity to be weakening the jump when coyote time
-                if (!isGrounded && coyoteTimeCounter > 0) {
+                // Don't want gravity to affect the jump if in coyote time
+                if ((!isGrounded && coyoteTimeCounter > 0) || isClimbing) {
                     float currentHorizontalVelocity = obstacle.getVX();
-                    obstacle.getBody().setLinearVelocity(currentHorizontalVelocity, 0);
+                    body.setLinearVelocity(currentHorizontalVelocity, 0);
                 }
 
                 forceCache.set(0, jump_force);
-                body.applyLinearImpulse(forceCache,pos,true);
+                body.applyLinearImpulse(forceCache, pos, true);
                 isClimbing = false;
-            } else if (isClimbing && isGrounded()) {
-                forceCache.set(new Vector2(14.7f, 0));
+            }
+
+            // Climbing logic
+            else if (isClimbing && isGrounded) {
+                forceCache.set(new Vector2(14.7f * direction, 0));
                 body.applyForce(forceCache, pos, true);
+
                 if (movement == 0) {
-                    body.setLinearDamping(100000f);
+                    body.setLinearDamping(100000f); // Prevent sliding
+                } else {
+                    body.setLinearDamping(0f);
                 }
             }
 
-            if (isFacingRight() && obstacle.getVX() < 0)
-            {
+            if (isFacingRight() && obstacle.getVX() < 0) {
                 System.out.println("VELOCITY RIGHT: " + getMovement() + " " + obstacle.getVX());
                 obstacle.setVX(0);
-            } else if (!isFacingRight() && obstacle.getVX() > 0){
+            } else if (!isFacingRight() && obstacle.getVX() > 0) {
                 System.out.println("VELOCITY LEFT: " + getMovement() + " " + obstacle.getVX());
                 obstacle.setVX(0);
             }
 
-            if (vy > maxUpwardVelocity)
-            {
+            // Clamp vertical velocity
+            if (vy > maxUpwardVelocity) {
                 obstacle.setVY(0);
                 System.out.println("Stopping extreme Upward velocity!");
-            }
-
-            if (vy < maxFallingVelocity)
-            {
+            } else if (vy < maxFallingVelocity) {
                 System.out.println("MAX FALLING REACHED!");
-                // Preserve the current X velocity while capping the Y velocity
-                Vector2 currentVelocity = obstacle.getBody().getLinearVelocity();
-                obstacle.getBody().setLinearVelocity(currentVelocity.x, maxFallingVelocity);
+                Vector2 currentVelocity = body.getLinearVelocity();
+                body.setLinearVelocity(currentVelocity.x, maxFallingVelocity);
             }
-
-
         }
 
         public boolean isPlatformStep(World world, float raylength) {
@@ -942,6 +942,7 @@
                 // if this is *almost* 90°, it's a flat surface → skip snapping
                 if (Math.abs(angleDeg - 90f) < 1f) {
                     isClimbing = false;
+                    body.setLinearDamping(0f);
                     playerVisionRaycast.reset();
                     stairCooldown = FRAME_STAIR_COOLDOWN;
                     return false;

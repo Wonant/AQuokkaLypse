@@ -1162,7 +1162,6 @@ public class PlatformScene implements Screen, Telegraph {
 
         for (Enemy e: enemies){
             if (e instanceof MindMaintenance && ((MindMaintenance) e).isShooting()){
-                System.out.println("MAINTENANCE IS SHOOTING");
                 units = TiledMapInfo.PIXELS_PER_WORLD_METER;
                 Vector2 position = e.getObstacle().getPosition();
                 float direction = maintenance.isFacingRight() ? 1 : -1;
@@ -1172,7 +1171,6 @@ public class PlatformScene implements Screen, Telegraph {
                 Texture texture = directory.getEntry("platform-bullet", Texture.class);
 
                 ShieldWall wall = new ShieldWall(units, bulletjv, position, direction);
-                System.out.println("ShieldWall shot at " + position);
                 shieldWalls.add(wall);
                 wall.setTexture(texture);
                 addQueuedObject(wall);
