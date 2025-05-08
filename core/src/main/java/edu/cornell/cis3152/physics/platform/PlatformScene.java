@@ -814,7 +814,7 @@ public class PlatformScene implements Screen, Telegraph {
                 float worldHeight = height / units;
 
                 if (o.getName().startsWith("door")) {
-                    if(isLevelSelect) {
+                    try {
                         int destination = o.getProperties().get("level", Integer.class);
                         Door door = new Door(units, worldX, worldY, worldWidth, worldHeight,
                             destination);
@@ -822,7 +822,7 @@ public class PlatformScene implements Screen, Telegraph {
                         addSprite(door);
                         door.setFilter();
                     }
-                    else{
+                    catch(Exception e){
                         Door door = new Door(units, worldX, worldY, worldWidth, worldHeight,
                             level + 1);
                         doors.add(door);
@@ -1128,9 +1128,11 @@ public class PlatformScene implements Screen, Telegraph {
                 reset();
             } else if (complete && !isLevelSelect) {
                 pause();
-                listener.exitScreen(this, EXIT_NEXT);
+                System.out.println("Going to level: " + nextIndex);
+                listener.exitScreen(this, FROM_LEVELSELECT);
                 return false;
             } else if (isLevelSelect && complete){
+                System.out.println("Going to level: " + nextIndex);
                 listener.exitScreen(this, FROM_LEVELSELECT);
             }
         }

@@ -170,7 +170,7 @@
   </object>
   <object id="56" name="door" x="69.51" y="98" width="52.1453" height="60.3787">
    <properties>
-    <property name="level" type="int" value="2"/>
+    <property name="level" type="int" value="4"/>
    </properties>
   </object>
   <object id="60" name="curiosity critter" x="290" y="137">

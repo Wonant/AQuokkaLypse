@@ -834,8 +834,6 @@
          * This method should be called after the force attribute is set.
          */
         public void applyForce(World world) {
-            System.out.println(isGrounded);
-
             float direction = isFacingRight() ? 1 : -1;
 
             if (!obstacle.isActive()) return;

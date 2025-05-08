@@ -292,12 +292,12 @@
   </object>
   <object id="54" name="door" x="772.667" y="724.67" width="54" height="74">
    <properties>
-    <property name="level" type="int" value="8"/>
+    <property name="level" type="int" value="2"/>
    </properties>
   </object>
   <object id="55" name="door" x="612.333" y="726.333" width="54" height="74">
    <properties>
-    <property name="level" type="int" value="7"/>
+    <property name="level" type="int" value="2"/>
    </properties>
   </object>
   <object id="56" name="door" x="452" y="726" width="54" height="74">
@@ -307,32 +307,32 @@
   </object>
   <object id="57" name="door" x="452.333" y="565.333" width="54" height="74">
    <properties>
-    <property name="level" type="int" value="9"/>
+    <property name="level" type="int" value="2"/>
    </properties>
   </object>
   <object id="58" name="door" x="612" y="564.667" width="54" height="74">
    <properties>
-    <property name="level" type="int" value="10"/>
+    <property name="level" type="int" value="2"/>
    </properties>
   </object>
   <object id="59" name="door" x="772.333" y="564.667" width="54" height="74">
    <properties>
-    <property name="level" type="int" value="11"/>
+    <property name="level" type="int" value="2"/>
    </properties>
   </object>
   <object id="60" name="door" x="773" y="405.667" width="54" height="74">
    <properties>
-    <property name="level" type="int" value="14"/>
+    <property name="level" type="int" value="2"/>
    </properties>
   </object>
   <object id="61" name="door" x="613.333" y="405" width="54" height="74">
    <properties>
-    <property name="level" type="int" value="13"/>
+    <property name="level" type="int" value="2"/>
    </properties>
   </object>
   <object id="62" name="door" x="453" y="405.667" width="54" height="74">
    <properties>
-    <property name="level" type="int" value="12"/>
+    <property name="level" type="int" value="2"/>
    </properties>
   </object>
  </objectgroup>
