@@ -11,19 +11,17 @@ Controls:
 
 W : Jump
 
-S : Take Door (Must be in front of door)
-
 A : Move Left
 
 D : Move Right
 
-Hold E : Pick up Dream Shard
+E : Interact: HOLD to Pick up Dream Shard, PRESS to take door
 
-Space Bar : Harvest Dash (used to defeat and drain fear meter from enemies). 0 cost to use. +3 if player successfully harvested an enemy.
+Space Bar : Harvest (used to defeat and drain fear meter from enemies). When moving in a direction will dash, otherwise will stay in place. 0 cost to use. +3 if player successfully harvested an enemy.
 
 Left Click : Teleport to where your mouse is (resticted to a limited radius around the player). -2 fear to teleport.
 
-Shift : Shoot a projectile that will stun enemies (aimed with mouse). -1 to shoot each projectile.
+Shift + Left Click : Shoot a projectile that will stun enemies (aimed with mouse). -1 to shoot each projectile.
 
 R : Restart Level
 
@@ -31,7 +29,7 @@ N : Next Level
 
 P : Previous Level
 
-ESC : Quit
+ESC : Pause Menu
 
 B : Debug Mode
 
