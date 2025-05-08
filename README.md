@@ -3,7 +3,13 @@
 
 Game Name: "Dreamwalker"
 
-Gameplay Prototype:
+Golden Master:
+
+Launch Notes: If on Mac, you may need to run the following commands to get "permission" to run the game:
+
+sudo chmod +x /PATH_TO_APP/DreamWalker.app/Contents/MacOS/DreamWalker
+
+xattr -c DreamWalker.app
 
 Upon launching the game, the goal is for the player to reach the red "dream shard" without depleting their "fear meter," which serves as both a health bar and player action resource bar. If the player's fear meter is completely depleted or if the player falls off the map, the player will lose the level. 
 
@@ -25,7 +31,7 @@ Shift + Left Click : Shoot a projectile that will stun enemies (aimed with mouse
 
 R : Restart Level
 
-N : Next Level
+N : Next Level (Use to navigate between levels in case of Door/LevelSelect bugs)
 
 P : Previous Level
 
