@@ -63,6 +63,8 @@ public class Bullet extends ObstacleSprite {
         // Create a circular obstacle
         obstacle = new WheelObstacle( pos.x + v_offset.x, pos.y + v_offset.y, s/2 );
         obstacle.setDensity(0);
+        obstacle.setFriction(0);
+        obstacle.setRestitution(0);
         obstacle.setPhysicsUnits( units );
         obstacle.setBullet( true );
         obstacle.setGravityScale( 0 );

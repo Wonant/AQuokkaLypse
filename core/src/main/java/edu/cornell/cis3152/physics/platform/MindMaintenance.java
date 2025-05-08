@@ -232,7 +232,8 @@ public class MindMaintenance extends Enemy {
         JsonValue debugInfo = data.get("debug");
         ((CapsuleObstacle)obstacle).setTolerance( debugInfo.getFloat("tolerance", 0.5f) );
 
-        obstacle.setDensity(data.getFloat("density", 0));
+        //obstacle.setDensity(data.getFloat("density", 0));
+        obstacle.setDensity(100000);
         obstacle.setFriction(data.getFloat("friction", 0));
         obstacle.setRestitution(data.getFloat("restitution", 0));
         obstacle.setFixedRotation(true);
@@ -483,6 +484,16 @@ public class MindMaintenance extends Enemy {
         lookForPlayer();
 
         if (isStunned()) {
+            setMovement(0);
+            if (obstacle.isActive()) {
+                obstacle.setVX(0);
+                obstacle.setVY(0);
+            }
+            Body body = obstacle.getBody();
+            if (body != null) {
+                body.setLinearVelocity(0, 0);
+                body.setAngularVelocity(0);
+            }
             animationState = AnimationState.STUN;
             super.update(dt);
             return;
