@@ -32,15 +32,3 @@ P : Previous Level
 ESC : Pause Menu
 
 B : Debug Mode
-
-Enemy AI Guide:
-
-Curiosity Critter:
-![Alt text](./assets/shared/curiositycritter.png?raw=true "Title")
-
-If the player has a high "fear meter," the Curiosity Critter will get scared and run away from the player.
-
-If the player has a low "fear meter," the Curiosity Critter will stand still and continuously track the player's movement.
-
-Walking or standing in the Curiosity Critter's vision will cause the player to take damage. The player has frames of invincibility after taking damage.
-
