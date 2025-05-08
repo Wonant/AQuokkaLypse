@@ -49,5 +49,8 @@ void main() {
     float brightness = dot(finalCol, vec3(0.2126, 0.7152, 0.0722));
     if (brightness > DISCARD_BR || brightness < 0.05) discard;
 
-    fragColor = vec4(finalCol, 1.0);
+    // invert maybe
+    vec3 invCol = vec3(1.0) - finalCol;
+
+    fragColor = vec4(invCol, 1.0);
 }
