@@ -3,7 +3,13 @@
 
 Game Name: "Dreamwalker"
 
-Gameplay Prototype:
+Golden Master:
+
+Launch Notes: If on Mac, you may need to run the following commands to get "permission" to run the game:
+
+sudo chmod +x /PATH_TO_APP/DreamWalker.app/Contents/MacOS/DreamWalker
+
+xattr -c DreamWalker.app
 
 Upon launching the game, the goal is for the player to reach the red "dream shard" without depleting their "fear meter," which serves as both a health bar and player action resource bar. If the player's fear meter is completely depleted or if the player falls off the map, the player will lose the level. 
 
@@ -11,38 +17,24 @@ Controls:
 
 W : Jump
 
-S : Take Door (Must be in front of door)
-
 A : Move Left
 
 D : Move Right
 
-Hold E : Pick up Dream Shard
+E : Interact: HOLD to Pick up Dream Shard, PRESS to take door
 
-Space Bar : Harvest Dash (used to defeat and drain fear meter from enemies). 0 cost to use. +3 if player successfully harvested an enemy.
+Space Bar : Harvest (used to defeat and drain fear meter from enemies). When moving in a direction will dash, otherwise will stay in place. 0 cost to use. +3 if player successfully harvested an enemy.
 
 Left Click : Teleport to where your mouse is (resticted to a limited radius around the player). -2 fear to teleport.
 
-Shift : Shoot a projectile that will stun enemies (aimed with mouse). -1 to shoot each projectile.
+Shift + Left Click : Shoot a projectile that will stun enemies (aimed with mouse). -1 to shoot each projectile.
 
 R : Restart Level
 
-N : Next Level
+N : Next Level (Use to navigate between levels in case of Door/LevelSelect bugs)
 
 P : Previous Level
 
-ESC : Quit
+ESC : Pause Menu
 
 B : Debug Mode
-
-Enemy AI Guide:
-
-Curiosity Critter:
-![Alt text](./assets/shared/curiositycritter.png?raw=true "Title")
-
-If the player has a high "fear meter," the Curiosity Critter will get scared and run away from the player.
-
-If the player has a low "fear meter," the Curiosity Critter will stand still and continuously track the player's movement.
-
-Walking or standing in the Curiosity Critter's vision will cause the player to take damage. The player has frames of invincibility after taking damage.
-
