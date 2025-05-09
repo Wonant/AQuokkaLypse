@@ -109,6 +109,7 @@ public class EnemyVisionRaycast implements RayCastCallback {
                 }
             }
         }
+
         else if (mode == VisionMode.FALL_CHECK) {
             if (fixture.isSensor()) return 1;
             if (fixture.getBody().getUserData() instanceof Surface) {
@@ -118,11 +119,11 @@ public class EnemyVisionRaycast implements RayCastCallback {
             }
             return 1;
         }
+
         else if (mode == VisionMode.WALL_CHECK) {
             if (fixture.isSensor()) return 1;
             Object userData = fixture.getBody().getUserData();
-            if (fixture.getBody().getUserData() instanceof Surface) {
-                // If the y component of the normal is small, the collision is nearly horizontal,
+            if (userData instanceof Surface) {
                 Surface surface = (Surface) userData;
                 if (!surface.getObstacle().getName().startsWith("stair")) {
                     hitFixture = fixture;
@@ -133,58 +134,42 @@ public class EnemyVisionRaycast implements RayCastCallback {
             }
             return 1;
         }
+
         else if (mode == VisionMode.PLAYER_CHECK) {
             if (fixture.isSensor()) return 1;
             Object userData = fixture.getBody().getUserData();
-            if (fixture.getBody().getUserData() instanceof Surface) {
-                //stop looking, don't really need to do much with the surface
-                hitPoint = point;
+            if (userData instanceof Surface) {
                 hitFixture = fixture;
+                hitPoint.set(point);
                 return 0;
-            } else if (fixture.getBody().getUserData() instanceof Player) {
+            } else if (userData instanceof Player) {
                 Player player = (Player) userData;
                 hitPlayer = player;
                 hitPlayerPosition = player.getObstacle().getPosition();
-                hitPoint = point;
-                return 0;
+                hitFixture = fixture;
+                hitPoint.set(point);
+                closestFraction = fraction;
+
+                return fraction;
             }
         }
 
         else {
-            // Skip sensors as they don't block vision
-            if (fixture.isSensor()) {
-                return 1; // Continue checking
-            }
-
-            // Skip the source body (the one casting the ray)
-            if (fixture.getBody() == sourceBody) {
-                return 1; // Continue checking
-            }
-
-            // Skip the target body (the one we're checking visibility for)
-            if (fixture.getBody() == targetBody) {
-                return 1; // Continue checking
-            }
-
-            // Skip any additional bodies that should be ignored
+            if (fixture.isSensor()) return 1;
+            if (fixture.getBody() == sourceBody || fixture.getBody() == targetBody) return 1;
             for (Body body : ignoreBodies) {
-                if (fixture.getBody() == body) {
-                    return 1; // Continue checking
-                }
+                if (fixture.getBody() == body) return 1;
             }
-
-            // Skip fixtures with specific user data (e.g., "player" or other special tags)
             if (fixture.getUserData() != null) {
                 String userData = fixture.getUserData().toString();
                 if (userData.contains("player") || userData.contains("ignore_vision")) {
-                    return 1; // Continue checking
+                    return 1;
                 }
             }
-
-            // If we hit something else (like a wall), vision is blocked
             blocked = true;
-            return 0; // Stop checking
+            return 0;
         }
+
         return 1f;
     }
 
