@@ -5,8 +5,8 @@ Game Name: "Dreamwalker"
 
 Golden Master:
 
-Launch Notes: If on Mac, you may need to run the following commands to get "permission" to run the game:
-
+**Launch Notes: If on Mac, you may need to run the following commands to get "permission" to run the game:
+**
 sudo chmod +x /PATH_TO_APP/DreamWalker.app/Contents/MacOS/DreamWalker
 
 xattr -c DreamWalker.app
