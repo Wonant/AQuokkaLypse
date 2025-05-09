@@ -131,28 +131,43 @@ public class DreamDweller extends Enemy {
 
         Vector2 pos = obstacle.getPosition();
         float rayLength = 10f;
+
+        // 计算射线角度（指向玩家）
         float angle = MathUtils.atan2(
             player.getObstacle().getY() - pos.y,
             player.getObstacle().getX() - pos.x
         );
 
+        // 起点在 Dweller 头部，终点朝玩家方向延申
         Vector2 start = new Vector2(pos.x + (facingRight ? width / 2 : -width / 2), pos.y + height / 4);
         Vector2 end = new Vector2(
             pos.x + rayLength * MathUtils.cos(angle),
             pos.y + rayLength * MathUtils.sin(angle)
         );
 
-        EnemyVisionRaycast playerRaycast = new EnemyVisionRaycast(EnemyVisionRaycast.VisionMode.PLAYER_CHECK, 4f);
+        // Step 1: 玩家检测
+        EnemyVisionRaycast playerRaycast = new EnemyVisionRaycast(EnemyVisionRaycast.VisionMode.PLAYER_CHECK, 0f);
         world.rayCast(playerRaycast, start, end);
         boolean hitPlayer = playerRaycast.getHitPlayer() != null;
+        float playerFraction = playerRaycast.getClosestFraction();
 
+        // Step 2: 墙体遮挡检测
         boolean blocked = false;
         if (hitPlayer) {
             EnemyVisionRaycast wallRaycast = new EnemyVisionRaycast(EnemyVisionRaycast.VisionMode.WALL_CHECK, 0f);
             world.rayCast(wallRaycast, start, end);
-            blocked = wallRaycast.getHitFixture() != null;
+
+            Fixture wallHit = wallRaycast.getHitFixture();
+            if (wallHit != null) {
+                float wallFraction = wallRaycast.getClosestFraction();
+                if (wallFraction < playerFraction) {
+                    blocked = true;
+                    System.out.println("Blocked by Surface");
+                }
+            }
         }
 
+        // Step 3: 设置可视状态 + 调试线条
         debugLookStart.set(start);
         debugLookEnd.set(hitPlayer ? playerRaycast.getHitPoint() : end);
 
@@ -164,7 +179,7 @@ public class DreamDweller extends Enemy {
         }
 
         playerRaycast.reset();
-    }
+}
 
 
     @Override

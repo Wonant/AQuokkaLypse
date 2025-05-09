@@ -124,10 +124,11 @@ public class EnemyVisionRaycast implements RayCastCallback {
             if (fixture.getBody().getUserData() instanceof Surface) {
                 // If the y component of the normal is small, the collision is nearly horizontal,
                 Surface surface = (Surface) userData;
-                if (Math.abs(normal.y) < 0.5f && !surface.getObstacle().getName().startsWith("stair")) {
+                if (!surface.getObstacle().getName().startsWith("stair")) {
                     hitFixture = fixture;
                     hitPoint.set(point);
-                    return 0; // Stop the ray; wall found.
+                    closestFraction = fraction;
+                    return 0;
                 }
             }
             return 1;
