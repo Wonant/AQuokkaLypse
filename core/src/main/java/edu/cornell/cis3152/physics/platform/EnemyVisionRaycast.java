@@ -129,7 +129,7 @@ public class EnemyVisionRaycast implements RayCastCallback {
                     hitFixture = fixture;
                     hitPoint.set(point);
                     closestFraction = fraction;
-                    return 0;
+                    return fraction;
                 }
             }
             return 1;
