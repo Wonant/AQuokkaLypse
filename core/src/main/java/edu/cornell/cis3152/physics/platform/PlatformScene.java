@@ -1166,7 +1166,7 @@ public class PlatformScene implements Screen, Telegraph {
             if (e instanceof MindMaintenance && ((MindMaintenance) e).isShooting()){
                 units = TiledMapInfo.PIXELS_PER_WORLD_METER;
                 Vector2 position = e.getObstacle().getPosition();
-                float direction = maintenance.isFacingRight() ? 1 : -1;
+                float direction = ((MindMaintenance) e).isFacingRight() ? 1 : -1;
                 float spawnOffset = 0.1f;
                 position.set(position.x , position.y);
                 JsonValue bulletjv = constants.get("bullet");
