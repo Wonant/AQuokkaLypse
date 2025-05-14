@@ -675,7 +675,7 @@
             maxFearMeter = data.getInt("maxfear", 0);
             fearMeter = maxFearMeter;
 
-            teleportRangeRadius = 200;
+            teleportRangeRadius = 210;
 
             // Create a rectangular mesh for Player. This is the same as for door,
             // since Player is a rectangular image. But note that the capsule is

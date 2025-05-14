@@ -1,140 +1,161 @@
 package edu.cornell.cis3152.physics.platform;
 
+import com.badlogic.gdx.Gdx;
+import com.badlogic.gdx.graphics.Color;
 import com.badlogic.gdx.graphics.g2d.TextureRegion;
 import com.badlogic.gdx.math.Vector2;
 import com.badlogic.gdx.physics.box2d.Filter;
 import com.badlogic.gdx.physics.box2d.Fixture;
 import com.badlogic.gdx.utils.JsonValue;
+import edu.cornell.gdiac.assets.ParserUtils;
+import edu.cornell.gdiac.graphics.SpriteBatch;
 import edu.cornell.gdiac.physics2.ObstacleSprite;
 import edu.cornell.gdiac.physics2.PolygonObstacle;
 import edu.cornell.gdiac.math.Poly2;
 import com.badlogic.gdx.graphics.Texture;
+import edu.cornell.gdiac.physics2.WheelObstacle;
 
 import static edu.cornell.cis3152.physics.platform.CollisionFiltering.*;
 
 public class Spear extends ObstacleSprite {
 
-    private boolean filterActivated;
-    private float timeAlive;
-    private float maxAge = 2.0f;
+    private boolean filterActivated = false;
+    private float timeAlive = 0f;
+    private float delayTimer = 0f;
+
+    private final float launchDelay = 0.25f; // Delay before launch
+    private final float maxAge = 2.0f;
+
     private boolean dead = false;
-    private float direction; // -1 for left, 1 for right
+    private boolean notLaunched = true;
+
+    private Vector2 angle;
+    private float speed;
+    private float direction; // Optional usage if you want to mirror things
+
     private TextureRegion currentFrame;
-    private Animator travelAnimator;
+    private Animator travelSprite;
     private Animator endAnimator;
 
-    public Spear(float units, JsonValue settings, Vector2 pos, Vector2 velocity, Texture travelTex, Texture endTex) {
-        timeAlive = 0f;
-        this.direction = velocity.x >= 0 ? 1 : -1;
+    public Spear(float units, JsonValue settings, Vector2 pos, Vector2 angle, Texture travelTex, Texture endTex) {
+        float s = settings.getFloat("size");
+        float radius = s * units / 2.0f;
+        this.angle = angle;
 
-        float width = 1.0f;
-        float height = 0.2f;
-
-        if (direction > 0) {
-            width = 0.7f;
-            height = 0.23f;
-        }
-
-        float halfW = units * width / 10;
-        float halfH = units * height / 25;
-
-        Poly2 p;
-        float bodyOffsetX = 0f;
-        p = new Poly2(-halfW, -halfH, halfW, halfH);
-        float hitboxOffsetX = (direction > 0) ? halfW * 2f : 0f;
-
-        obstacle = new PolygonObstacle(p, pos.x+ hitboxOffsetX, pos.y);
-        obstacle.setDensity(8.0f);
+        // Create a circular physics obstacle
+        obstacle = new WheelObstacle(pos.x + angle.x * 3, pos.y + angle.y * 3, s / 8);
+        obstacle.setDensity(0);
+        obstacle.setFriction(0);
+        obstacle.setRestitution(0);
         obstacle.setPhysicsUnits(units);
         obstacle.setBullet(true);
         obstacle.setGravityScale(0);
         obstacle.setUserData(this);
         obstacle.setName("spear");
-        obstacle.setFixedRotation(true);
-        obstacle.setVX(velocity.x);
-        obstacle.setVY(velocity.y);
 
-        // 用于调试渲染 mesh 边界（可选）
-        mesh.set(-halfW * 32, -halfH * 28, 2 * halfW * 16, 2 * halfH * 16);
+        // Start with zero velocity
+        obstacle.setVX(0);
+        obstacle.setVY(0);
 
-        travelAnimator = new Animator(travelTex, 1, 5, 0.2f, 5, 0, 4, true);
-        endAnimator = new Animator(endTex, 1, 5, 0.2f, 5, 0, 4, false);
+        debug = ParserUtils.parseColor(settings.get("debug"), Color.WHITE);
+        mesh.set(-radius, -radius, 2 * radius, 2 * radius);
+
+        travelSprite = new Animator(travelTex, 1, 5, 0.15f, 5, 0, 4, true);
+        endAnimator = new Animator(endTex, 1, 5, 0.15f, 5, 0, 4, false);
+
+        speed = 15;
     }
 
     public void update(float dt) {
+        if (dead) return;
+
         if (timeAlive > maxAge) {
             dead = true;
+            return;
+        }
+
+        if (!filterActivated && obstacle.getBody() != null) {
+            setFilter();
         }
 
         if (filterActivated) {
             timeAlive += dt;
-            obstacle.setVX(obstacle.getVX() * 0.99f);
-            if (timeAlive < maxAge / 2f) {
-                currentFrame = travelAnimator.getCurrentFrame(dt);
-            } else {
-                if (endAnimator.isAnimationFinished()) {
-                    currentFrame = endAnimator.getLastFrame();
-                } else {
-                    currentFrame = endAnimator.getCurrentFrame(dt);
+            System.out.println("Spear velocity: " + obstacle.getVX() + ", " + obstacle.getVY());
+            if (notLaunched) {
+                delayTimer += dt;
+                obstacle.setVX(0);
+                obstacle.setVY(0);
+
+                if (delayTimer >= launchDelay) {
+                    notLaunched = false;
+                    float vx = speed * angle.x;
+                    float vy = speed * angle.y;
+                    System.out.println(vx);
+                    System.out.println(vy);
+                    System.out.println("Right before spear shot velocity: " + obstacle.getVX() + ", " + obstacle.getVY());
+                    obstacle.setVY(vy);
+                    obstacle.setVX(vx);
+                    System.out.println("Shot spear velocity: " + obstacle.getVX() + ", " + obstacle.getVY());
+
                 }
+            } else {
+
             }
-        } else if (obstacle.getBody() != null) {
-            setFilter();
-        }
 
-        Vector2 vel = new Vector2(obstacle.getVX(), obstacle.getVY());
-        if (vel.len2() > 0.01f) {
-            float angle = (vel.angleDeg() + 180f) % 360f;
-            obstacle.setAngle((float) Math.toRadians(angle));
+            // Animation frame update
+            if (timeAlive < maxAge / 2f) {
+                currentFrame = travelSprite.getCurrentFrame(dt);
+            } else {
+                currentFrame = endAnimator.isAnimationFinished() ? endAnimator.getLastFrame() : endAnimator.getCurrentFrame(dt);
+            }
         }
-    }
-
-    public float getDirection() {
-        return direction;
     }
 
     public void setFilter() {
         for (Fixture fixture : obstacle.getBody().getFixtureList()) {
-            filterActivated = true;
             Object ud = fixture.getUserData();
-            if (ud != null && ud.equals("player_sensor")) {
-                continue;
-            }
+            if (ud != null && ud.equals("player_sensor")) continue;
+
             Filter filter = fixture.getFilterData();
             filter.categoryBits = CATEGORY_ENEMY_PROJECTILE;
             filter.maskBits = CATEGORY_PLAYER | CATEGORY_SCENERY;
             fixture.setFilterData(filter);
         }
+        filterActivated = true;
     }
 
     public boolean isDead() {
         return dead;
     }
 
-    public void drawOwnAnimation(edu.cornell.gdiac.graphics.SpriteBatch batch) {
-        if (currentFrame == null) return;
+    public float getDirection() {
+        return direction;
+    }
+    @Override
+    public void draw(SpriteBatch batch) {
+
+        TextureRegion frame = currentFrame;
 
         float u = obstacle.getPhysicsUnits();
-        float drawX = obstacle.getX() * u;
-        float drawY = obstacle.getY() * u;
-        float scale = 0.25f;
+        float posX = obstacle.getX() * u;
+        float posY = obstacle.getY() * u;
+        float drawWidth = frame.getRegionWidth()/5;
+        float drawHeight = frame.getRegionHeight()/5;
+        frame.flip(true,false);
 
-        float width = currentFrame.getRegionWidth() * scale;
-        float height = currentFrame.getRegionHeight() * scale;
+        float originX = drawWidth / 1.3f;
+        float originY = drawHeight / 2f;
 
-        // Flip only visually
-        if (direction > 0 && !currentFrame.isFlipX()) {
-            currentFrame.flip(true, false);
-        } else if (direction < 0 && currentFrame.isFlipX()) {
-            currentFrame.flip(true, false);
-        }
-
-
-        batch.draw(currentFrame,
-            drawX - width / 2,
-            drawY - height / 2,
-            width,
-            height
+        batch.draw(frame,
+            posX - originX, // lower-left x position
+            posY - originY, // lower-left y position
+            posX,        // originX used for scaling and rotation
+            posY,        // originY
+            drawWidth,      // width
+            drawHeight,     // height
+            1f,             // scaleX
+            1f,             // scaleY
+            (float) Math.toDegrees(Math.atan2(angle.y, angle.x))
         );
     }
 }

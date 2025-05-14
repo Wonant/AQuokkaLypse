@@ -35,11 +35,9 @@ import static edu.cornell.cis3152.physics.platform.CollisionFiltering.*;
 public class Bullet extends ObstacleSprite {
 
     private Animator bulletSprite;
-    private Animator bulletEndSprite;
     public Vector2 angle;
     private float timeAlive;
     private float speed;
-    private Vector2 direction;
     private float width, height;
 
     /**
@@ -53,7 +51,7 @@ public class Bullet extends ObstacleSprite {
      * @param settings  The bullet physics constants
      * @param pos       Traci's position
      */
-    public Bullet(float units, JsonValue settings, Vector2 pos, Vector2 angle, Texture animation, Texture endAnimation) {
+    public Bullet(float units, JsonValue settings, Vector2 pos, Vector2 angle, Texture animation) {
         float offset = settings.getFloat( "offset", 0 );
         Vector2 v_offset = angle.scl(offset);
         float s = settings.getFloat( "size" );
@@ -90,9 +88,7 @@ public class Bullet extends ObstacleSprite {
         width = radius;
         height = radius;
         bulletSprite = new Animator(animation, 1, 5, 0.1f, 5, 0, 4);
-        bulletEndSprite = new Animator(endAnimation, 1, 3, 0.01f, 3, 0, 2, false);
         timeAlive = 0;
-        this.direction   = angle.cpy();
     }
 
     public float getTimeAlive() {

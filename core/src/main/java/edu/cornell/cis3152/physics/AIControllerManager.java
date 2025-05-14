@@ -212,7 +212,6 @@ public class AIControllerManager {
                 System.out.println("Turn TRIGGERED");
             } else {
                 // Walk in a direction, will have already known if wall is in front
-                data.maintenance.setVisionAngle(data.movingRight ? 270 : 90);
                 data.maintenance.setMovement(data.movingRight? 2 : -2);
                 data.maintenance.applyForce();
             }
