@@ -34,6 +34,7 @@ public class Enemy extends ObstacleSprite {
     protected float movement;
     protected boolean facingRight;
     protected boolean isGrounded;
+    private int health = 2;
 
     protected float stepRayLength;
     protected EnemyVisionRaycast enemyVisionRaycast;
@@ -88,7 +89,16 @@ public class Enemy extends ObstacleSprite {
             facingRight = true;
         }
     }
+    public void takeDamage(){
+        health = Math.max(health-1, 0);
+    }
+    public int getHealth(){
+        return health;
+    }
 
+    public boolean isDead(){
+        return health == 0;
+    }
     public boolean isGrounded() {
         return isGrounded;
     }

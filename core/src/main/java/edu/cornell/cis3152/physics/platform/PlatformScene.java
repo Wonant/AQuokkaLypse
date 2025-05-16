@@ -320,7 +320,12 @@ public class PlatformScene implements Screen, Telegraph {
     //CHANGE: QUEUE OF ENEMIES ADDED EACH COLLISION. HARVEST SHOULD REMOVE ALL IN QUEUE.
     public void performHarvest(Enemy enemy)
     {
-        queuedHarvestedEnemy.add(enemy);
+        System.out.println("ATTACKED ENEMY " + enemy.getHealth());
+        enemy.takeDamage();
+        if(enemy.isDead()) {
+            System.out.println("Enemy took damage");
+            queuedHarvestedEnemy.add(enemy);
+        }
     }
 
 
@@ -2098,7 +2103,7 @@ public class PlatformScene implements Screen, Telegraph {
                     camera.position.set(position);
                 }
 
-                camera.zoom = 0.5f;
+                camera.zoom = 0.7f;
                 clampCamera();
                 camera.update();
             }
