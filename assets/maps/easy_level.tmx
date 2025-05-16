@@ -1,5 +1,7 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<map version="1.10" tiledversion="1.11.2" orientation="orthogonal" renderorder="right-down" width="40" height="25" tilewidth="32" tileheight="32" infinite="0" nextlayerid="9" nextobjectid="66">
+
+<map version="1.10" tiledversion="1.11.2" orientation="orthogonal" renderorder="right-down" width="40" height="25" tilewidth="32" tileheight="32" infinite="0" nextlayerid="9" nextobjectid="63">
+
  <tileset firstgid="1" source="../tilesets/Temple L1-2.tsx"/>
  <tileset firstgid="118" source="../tilesets/Temple Background.tsx"/>
  <tileset firstgid="1078" source="../tilesets/Temple L2-2.tsx"/>
@@ -186,6 +188,9 @@
    </properties>
   </object>
   <object id="60" name="curiosity critter" x="290" y="137">
+   <point/>
+  </object>
+  <object id="62" name="dream dweller" x="697.373" y="523.492">
    <point/>
   </object>
  </objectgroup>

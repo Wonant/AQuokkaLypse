@@ -1529,5 +1529,8 @@
         public int getTakeDamageCooldown() {
             return takeDamageCooldown;
         }
+        public float getHeight() {
+            return height;
+        }
 
     }

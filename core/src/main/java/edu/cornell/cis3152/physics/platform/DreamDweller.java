@@ -128,50 +128,75 @@ public class DreamDweller extends Enemy {
     public void lookForPlayer() {
         World world = obstacle.getBody().getWorld();
         Player player = scene.getAvatar();
-
         Vector2 pos = obstacle.getPosition();
         float rayLength = 10f;
-        float angle = MathUtils.atan2(
-            player.getObstacle().getY() - pos.y,
-            player.getObstacle().getX() - pos.x
-        );
 
-        Vector2 start = new Vector2(pos.x + (facingRight ? width / 2 : -width / 2), pos.y + height / 4);
-        Vector2 end = new Vector2(
-            pos.x + rayLength * MathUtils.cos(angle),
-            pos.y + rayLength * MathUtils.sin(angle)
-        );
+        // 设置起点（dweller 的眼睛）
+        Vector2 start = new Vector2(pos.x + (facingRight ? width / 2 : -width / 2), pos.y + height / 8);
 
-        EnemyVisionRaycast playerRaycast = new EnemyVisionRaycast(EnemyVisionRaycast.VisionMode.PLAYER_CHECK, 4f);
-        world.rayCast(playerRaycast, start, end);
-        boolean hitPlayer = playerRaycast.getHitPlayer() != null;
+        // 玩家位置多点检测：中、上、下
+        Vector2 playerPos = player.getObstacle().getPosition();
+        float pHeight = player.getHeight();
+        Vector2[] targets = new Vector2[] {
+            new Vector2(playerPos.x, playerPos.y),                   // 中心
+            new Vector2(playerPos.x, playerPos.y + pHeight * 0.3f),  // 肩膀
+            new Vector2(playerPos.x, playerPos.y - pHeight * 0.3f)   // 腿部
+        };
 
-        boolean blocked = false;
-        if (hitPlayer) {
-            EnemyVisionRaycast wallRaycast = new EnemyVisionRaycast(EnemyVisionRaycast.VisionMode.WALL_CHECK, 0f);
-            world.rayCast(wallRaycast, start, end);
-            blocked = wallRaycast.getHitFixture() != null;
+        boolean seen = false;
+        Vector2 chosenEnd = null;
+
+        for (Vector2 target : targets) {
+            float angle = MathUtils.atan2(target.y - start.y, target.x - start.x);
+            Vector2 end = new Vector2(start.x + rayLength * MathUtils.cos(angle), start.y + rayLength * MathUtils.sin(angle));
+
+            // 1. Player check
+            EnemyVisionRaycast playerRay = new EnemyVisionRaycast(EnemyVisionRaycast.VisionMode.PLAYER_CHECK, 0f);
+            world.rayCast(playerRay, start, end);
+            boolean hitPlayer = playerRay.getHitPlayer() != null;
+            float playerFraction = playerRay.getClosestFraction();
+
+            if (!hitPlayer) continue;
+
+            // 2. Wall check
+            EnemyVisionRaycast wallRay = new EnemyVisionRaycast(EnemyVisionRaycast.VisionMode.WALL_CHECK, 0f);
+            world.rayCast(wallRay, start, end);
+            Fixture wallHit = wallRay.getHitFixture();
+
+            boolean blocked = false;
+            if (wallHit != null) {
+                float wallFraction = wallRay.getClosestFraction();
+                if (wallFraction + 0.01f < playerFraction) {
+                    blocked = true;
+                }
+            }
+
+            if (!blocked) {
+                seen = true;
+                chosenEnd = playerRay.getHitPoint().cpy();
+                break;
+            }
         }
 
+        // Debug 可视化（选用命中的那条射线）
         debugLookStart.set(start);
-        debugLookEnd.set(hitPlayer ? playerRaycast.getHitPoint() : end);
+        debugLookEnd.set(seen && chosenEnd != null ? chosenEnd : start.cpy().add(10f, 0f)); // 默认向右画条线
 
-        if (hitPlayer && !blocked) {
-            setAwareOfPlayer(true);
-            System.out.println("Seen the player");
-        } else {
-            setAwareOfPlayer(false);
+        setAwareOfPlayer(seen);
+        if (seen) {
+            System.out.println("✅ Seen the player");
         }
-
-        playerRaycast.reset();
-    }
+}
 
 
     @Override
     public void update(float dt) {
         lookForPlayer();
 
-        // 设置 sprite 朝向
+        if (obstacle != null && obstacle.getBody() != null) {
+            obstacle.getBody().setGravityScale(0);
+        }
+
         Vector2 playerPos = scene.getAvatar().getObstacle().getPosition();
         Vector2 selfPos = obstacle.getPosition();
         facingRight = playerPos.x >= selfPos.x;
