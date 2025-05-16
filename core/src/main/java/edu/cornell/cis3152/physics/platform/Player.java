@@ -692,7 +692,7 @@
             damping = 0;
             force = data.getFloat("force", 0);
             jump_force = data.getFloat( "jump_force", 0 );
-            jump_force *= 1.55f;
+            jump_force *= 1.1;
             dash_force = data.getFloat("dash_force", 0);
             jumpLimit = data.getInt( "jump_cool", 0 );
             harvestLimit = 60;
@@ -1528,9 +1528,6 @@
         }
         public int getTakeDamageCooldown() {
             return takeDamageCooldown;
-        }
-        public float getHeight() {
-            return height;
         }
 
     }

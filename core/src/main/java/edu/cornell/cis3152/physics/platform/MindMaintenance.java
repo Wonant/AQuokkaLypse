@@ -29,7 +29,6 @@ public class MindMaintenance extends Enemy {
     /** physics stuff */
     private float width;
     private float height;
-
     private float force;
     private float damping;
     private float max_speed;
