@@ -189,6 +189,11 @@ public class DreamDweller extends Enemy {
     public void update(float dt) {
         lookForPlayer();
 
+
+        if (obstacle != null && obstacle.getBody() != null) {
+            obstacle.getBody().setGravityScale(0);
+        }
+
         Vector2 playerPos = scene.getAvatar().getObstacle().getPosition();
         Vector2 selfPos = obstacle.getPosition();
         facingRight = playerPos.x >= selfPos.x;

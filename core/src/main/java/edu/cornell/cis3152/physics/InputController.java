@@ -64,6 +64,7 @@ public class InputController {
     /** Whether the primary action button was pressed. */
     private boolean primePressed;
     private boolean primePrevious;
+    private boolean primaryHeld;
     /** Whether the secondary action button was pressed. */
     private boolean secondPressed;
     private boolean secondPrevious;
@@ -82,6 +83,7 @@ public class InputController {
 
     /** Whether the stun action button was pressed. */
     private boolean shiftPressed;
+    private boolean prevShiftPressed;
     /** Whether the teleport button was pressed */
 
     private boolean m1Pressed;
@@ -205,6 +207,10 @@ public class InputController {
         return primePressed && !primePrevious;
     }
 
+    public boolean isPrimaryHeld() {
+        return primaryHeld;
+    }
+
     /**
      * Returns true if the secondary action button was pressed.
      *
@@ -267,8 +273,10 @@ public class InputController {
      *
      * @return true if the stun modifier button was pressed
      */
-    public boolean inStunMode() {
-        return shiftPressed;
+
+
+    public boolean didLShift() {
+        return shiftPressed && !prevShiftPressed;
     }
     /**
      * Returns true if the create teleport button was pressed
@@ -348,6 +356,7 @@ public class InputController {
         nextPrevious = nextPressed;
         prevPrevious = prevPressed;
         mapPrevious = mapPressed;
+        prevShiftPressed = shiftPressed;
 
         teleportPrevious = m1Pressed;
 
@@ -393,6 +402,7 @@ public class InputController {
 
         // Move the crosshairs with the right stick.
         shiftPressed = xbox.getA();
+        primaryHeld   = xbox.getA();
         crosscache.set(xbox.getLeftX(), xbox.getLeftY());
         if (crosscache.len2() > GP_THRESHOLD) {
             momentum += GP_ACCELERATE;
@@ -422,6 +432,7 @@ public class InputController {
         takeDoorPressed = (secondary && takeDoorPressed) || (Gdx.input.isKeyPressed(Input.Keys.E));
         debugPressed = (secondary && debugPressed) || (Gdx.input.isKeyPressed(Input.Keys.B));
         primePressed = (secondary && primePressed) || (Gdx.input.isKeyPressed(Input.Keys.W));
+        primaryHeld   = Gdx.input.isKeyPressed(Input.Keys.W);
         secondPressed = (secondary && secondPressed) || (Gdx.input.isKeyPressed(Input.Keys.SPACE));
         prevPressed = (secondary && prevPressed) || (Gdx.input.isKeyPressed(Input.Keys.P));
         nextPressed = (secondary && nextPressed) || (Gdx.input.isKeyPressed(Input.Keys.N));

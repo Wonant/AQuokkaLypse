@@ -1,31 +1,16 @@
-    /*
-     * Player.java
-     *
-     * This is the class for Player Nathans-Kelly cartoon avatar. WHile it is also
-     * an ObstacleSprite, this class is much more than an organizational tool. This
-     * class has all sorts of logic, like the whether Player can jump or whether
-     * Player can fire a bullet.
-     *
-     * You SHOULD NOT need to modify this file. However, you may learn valuable
-     * lessons for the rest of the lab by looking at it.
-     *
-     * Based on the original PhysicsDemo Lab by Don Holden, 2007
-     *
-     * Author:  Walker M. White
-     * Version: 2/8/2025
-     */
-    package edu.cornell.cis3152.physics.platform;
+ package edu.cornell.cis3152.physics.platform;
 
     import com.badlogic.gdx.Gdx;
     import com.badlogic.gdx.ai.msg.MessageDispatcher;
     import com.badlogic.gdx.graphics.g2d.TextureRegion;
+    import com.badlogic.gdx.graphics.glutils.ShaderProgram;
     import com.badlogic.gdx.math.*;
     import com.badlogic.gdx.graphics.*;
     import com.badlogic.gdx.physics.box2d.*;
 
     import com.badlogic.gdx.utils.JsonValue;
-    import edu.cornell.cis3152.physics.InputController;
     import edu.cornell.gdiac.assets.ParserUtils;
+    import edu.cornell.gdiac.graphics.Shader;
     import edu.cornell.gdiac.graphics.SpriteBatch;
     import edu.cornell.gdiac.graphics.Texture2D;
     import edu.cornell.gdiac.math.Path2;
@@ -34,21 +19,7 @@
 
     import static edu.cornell.cis3152.physics.platform.CollisionFiltering.*;
 
-    /**
-     * Player's avatar for the platform game.
-     *
-     * An ObstacleSprite is a sprite (specifically a textured mesh) that is
-     * connected to a obstacle. It is designed to be the same size as the
-     * physics object, and it tracks the physics object, matching its position
-     * and angle at all times.
-     *
-     * Note that unlike a traditional ObstacleSprite, this attaches some additional
-     * information to the obstacle. In particular, we add a sensor fixture. This
-     * sensor is used to prevent double-jumping. However, we only have one mesh,
-     * the mesh for Player. The sensor is invisible and only shows up in debug mode.
-     * While we could have made the fixture a separate obstacle, we want it to be a
-     * simple fixture so that we can attach it to the obstacle WITHOUT using joints.
-     */
+
     public class Player extends ObstacleSprite {
 
         private PlatformScene scene;
@@ -67,6 +38,10 @@
         /** The maximum character speed */
         private float maxspeed;
         private float defaultMaxSpeed;
+
+        private boolean slowed = false;
+        private float slowTime = 0f;
+        private float slowAlpha = 1f;
         /** The impulse for the character jump */
         private float jump_force;
         /** The impulse for the character dash */
@@ -82,6 +57,16 @@
         private boolean lastJumping;
         private int coyoteTimeFrames = 5;
         private int coyoteTimeCounter = 0;
+
+        private int jumpAnimFrames = 0;
+        private static final int MIN_JUMP_ANIM_FRAMES = 10;
+
+        // hold jumping controls
+        private boolean jumpHeld = false;
+        private int jumpHoldFrames = 0;
+        private final int MIN_JUMP_HOLD_FRAMES = 10; // Minimum frames to hold for full jump
+        private boolean jumpReleased = false;
+
 
         /** How long (in animation frames) the harvesting attack lasts  */
         private int harvestDuration;
@@ -156,6 +141,8 @@
         /** The name of the sensor fixture */
         private String sensorScareName;
 
+        private Fixture scareSensorFixture;
+
         // falling
         private Path2   fallSensorOutline;
         private String  fallSensorName;
@@ -186,6 +173,10 @@
         private Animator absorbSprite;
         private AnimationState animationState;
 
+        private boolean shroudMode;
+        public float shroudModeTime = 0f;
+        private float shroudAlpha = 1.0f;
+
         // animation constants/variables //
         private boolean isClimbing = false;
         private int climbCounter = 0;
@@ -214,8 +205,19 @@
         private float blindTimer = 0f;
         private static final float MAX_BLIND_TIME = 2.0f;
 
+        // knockback settings
+        private boolean knockback;
+        private boolean knockbackDmg;
+        private int knockbackTimer;
+        private static final int KNOCKBACK_DURATION = 20;
+        private Vector2 knockbackCache = new Vector2();
+
         // message dispatcher for telegraphing player state to platform scene
         private final MessageDispatcher dispatcher = new MessageDispatcher();
+
+        // SHADERS
+        private Shader playerShroudShader, playerSlowShader;
+
 
 
         private enum AnimationState {
@@ -232,6 +234,10 @@
 
         public float getWidth() {
             return width;
+        }
+
+        public float getHeight() {
+            return height;
         }
 
         public void setBlinded(boolean blinded) {
@@ -344,6 +350,7 @@
             }
         }
 
+
         /** Sets maxFearMeter to value
          *
          * @param value
@@ -375,7 +382,7 @@
          * @param value whether Player is actively firing.
          */
         public void tryStartHarvesting(boolean value) {
-            startedHarvest = value && harvestCooldown <= 0;
+            startedHarvest = (value && harvestCooldown <= 0);
         }
 
         /**
@@ -420,7 +427,7 @@
          */
         public boolean isTeleporting() {
             dispatcher.dispatchMessage(null, scene, MessageType.CRITTER_LOST_PLAYER);
-            return isTeleporting && teleportCooldown <= 0;
+            return isTeleporting && shroudMode && teleportCooldown <= 0;
 
         }
 
@@ -452,6 +459,19 @@
             isTakingDamage = value;
         }
 
+        public boolean isKnockedBack() {
+            return knockback;
+        }
+
+        public void setKnockingBack(boolean value, Vector2 knockOrigin) {
+            knockback = value;
+            if (value) {
+                knockbackDmg = true;
+                knockbackCache.set(knockOrigin);
+                this.knockbackTimer = 0;
+            }
+        }
+
         /**
          * Returns true if Player is actively taking door.
          *
@@ -477,6 +497,18 @@
          */
         public boolean isJumping() {
             return isJumping && (isGrounded || coyoteTimeCounter > 0) && jumpCooldown <= 0;
+        }
+
+        /**
+         * Sets whether the jump button is being held down.
+         *
+         * @param value whether jump is being held
+         */
+        public void setJumpHeld(boolean value) {
+            if (jumpHeld && !value) {
+                jumpReleased = true;
+            }
+            jumpHeld = value;
         }
 
         /**
@@ -594,9 +626,21 @@
         public void setMaxSpeed(float s) {
             this.maxspeed = s;
         }
+
+        public void setSlowed(boolean value) {
+            slowed = value;
+        }
         /** Restores the original max speed from JSON. */
         public void resetMaxSpeed() {
             this.maxspeed = defaultMaxSpeed;
+        }
+
+        public void setShroudMode(boolean value) {
+            shroudMode = value;
+        }
+
+        public boolean getShroudMode() {
+            return shroudMode;
         }
 
 
@@ -648,6 +692,7 @@
             damping = 0;
             force = data.getFloat("force", 0);
             jump_force = data.getFloat( "jump_force", 0 );
+            jump_force *= 1.55f;
             dash_force = data.getFloat("dash_force", 0);
             jumpLimit = data.getInt( "jump_cool", 0 );
             harvestLimit = 60;
@@ -655,6 +700,7 @@
             stunLimit = data.getInt( "shot_cool", 0 );
             teleportLimit = 30;
             takeDamageLimit = 120;
+            shroudMode = false;
 
             // Gameplay attributes
             isGrounded = false;
@@ -671,8 +717,10 @@
             jumpCooldown = 0;
             takeDamageCooldown = 0;
 
+            sensorScareName = "scare_sensor";
 
-            maxFearMeter = data.getInt("maxfear", 0);
+
+            maxFearMeter = 20;
             fearMeter = maxFearMeter;
 
             teleportRangeRadius = 210;
@@ -688,7 +736,8 @@
             playerVisionRaycast = new PlayerVisionRaycast(PlayerVisionRaycast.VisionMode.STAIR_CHECK, stepRayLength * units);
 
             scene = scene;
-
+            playerShroudShader = new Shader(Gdx.files.internal("shaders/shroud.vert"), Gdx.files.internal("shaders/shroud.frag"));
+            playerSlowShader = new Shader(Gdx.files.internal("shaders/shroud.vert"), Gdx.files.internal("shaders/pink.frag"));
         }
 
         public void createAnimators(Texture dreamwalker, Texture absorb) {
@@ -696,7 +745,7 @@
             idleSprite = new Animator(dreamwalker, 11, 16, 0.033f, 176, 37, 56);
             jumpSprite = new Animator(dreamwalker, 11, 16, 0.033f, 176, 20, 26, false);
             stairSprite = new Animator(dreamwalker, 11, 16, 0.033f, 176, 126, 133);
-            fallSprite = new Animator(dreamwalker, 11, 16, 0.033f, 176, 134, 134);
+            fallSprite = new Animator(dreamwalker, 11, 16, 0.033f, 176, 26, 26, false);
             landingSprite = new Animator(dreamwalker, 11, 16, 0.033f, 176, 138, 156, false);
             stunningSprite = new Animator(dreamwalker, 11, 16, 0.033f, 176, 157, 174, false);
             interactingSprite = new Animator(absorb, 5, 5, 0.033f, 23, 0, 22, false);
@@ -713,7 +762,7 @@
                 Filter filter = fixture.getFilterData();
                 filter.categoryBits = CATEGORY_PLAYER;
                 // Player should collide with scenery but not with enemies.
-                filter.maskBits = CATEGORY_SCENERY| CATEGORY_ENEMY_PROJECTILE;
+                filter.maskBits = CATEGORY_SCENERY | CATEGORY_ENEMY_PROJECTILE;
                 fixture.setFilterData(filter);
             }
         }
@@ -802,7 +851,7 @@
         }
 
         public void createScareSensor(){
-
+            if (scareSensorFixture != null) return;
             Vector2 sensorScareCenter = new Vector2(0, 0);
             FixtureDef scareSensorDef = new FixtureDef();
             scareSensorDef.density = 0;
@@ -816,9 +865,11 @@
             scareSensorDef.shape = sensorScareShape;
 
             Body body = obstacle.getBody();
-            Fixture ScareSensorFixture = body.createFixture( scareSensorDef );
+            scareSensorFixture = body.createFixture( scareSensorDef );
             sensorScareName = "scare_sensor";
-            ScareSensorFixture.setUserData(sensorScareName);
+            scareSensorFixture.setUserData(sensorScareName);
+
+            sensorScareShape.dispose();
 
             float u = obstacle.getPhysicsUnits();
             PathFactory factory = new PathFactory();
@@ -838,13 +889,17 @@
 
             if (!obstacle.isActive()) return;
 
-            float maxUpwardVelocity = 10.0f;
+
+
+            float maxUpwardVelocity = 15.0f;
             float maxFallingVelocity = -20.0f;
 
             Vector2 pos = obstacle.getPosition();
             float vx = obstacle.getVX();
             float vy = obstacle.getVY();
             Body body = obstacle.getBody();
+
+
 
             // Velocity too high, clamp it
             if (getMovement() == 0f && !isJumping()) {
@@ -866,7 +921,7 @@
             }
 
             // Jumping logic
-            if (isJumping()) {
+            if (/*!shroudMode &&*/ isJumping()) {
                 body.setLinearDamping(0f); // Reset any climbing damping
                 jumpSprite.reset();
 
@@ -880,6 +935,14 @@
                 body.applyLinearImpulse(forceCache, pos, true);
                 isClimbing = false;
             }
+//                jumpHoldFrames = 0; // initiated a jump
+//                jumpReleased = false;
+//            } else if (jumpReleased && vy > 0 && jumpHoldFrames < MIN_JUMP_HOLD_FRAMES) {
+//                // Cut the jump short by reducing upward velocity
+//                float reducedVelocity = vy * 0.2f; // Cut velocity in half
+//                body.setLinearVelocity(body.getLinearVelocity().x, reducedVelocity);
+//                jumpReleased = false;
+//            }
 
             // Climbing logic
             else if (isClimbing && isGrounded) {
@@ -900,6 +963,36 @@
                 System.out.println("VELOCITY LEFT: " + getMovement() + " " + obstacle.getVX());
                 obstacle.setVX(0);
             }
+
+            if (isKnockedBack()) {
+                Vector2 dir = pos.cpy().sub(knockbackCache);
+                if (dir.isZero()) { dir.set(0,1); }  // fallback up
+                dir.nor();
+
+                float strength = 1f / (float) (1 - Math.pow((Math.E), -.05 * (knockbackTimer + 1)));
+                strength *= 1.5f;
+                dir.scl(strength);
+                System.out.println("knockback" + dir);
+                obstacle.setLinearVelocity(dir);
+                knockbackTimer++;
+                if (knockbackTimer >= KNOCKBACK_DURATION) {
+                    // end the leap
+                    knockback = false;
+                    knockbackTimer = 0;
+                }
+                return;
+            }
+
+            // fast falling
+            if (shroudMode && vy < 0) {
+                obstacle.setGravityScale(1.75f);
+            } else if (vy < 0) {
+                obstacle.setGravityScale(1.75f);
+            } else {
+                obstacle.setGravityScale(1);
+            }
+
+            if (shroudMode && !isGrounded) obstacle.setLinearVelocity(obstacle.getLinearVelocity().scl(1f));
 
             // Clamp vertical velocity
             if (vy > maxUpwardVelocity) {
@@ -986,6 +1079,7 @@
             boolean prevGrounded = wasGrounded;
             wasGrounded = isGrounded;
 
+
             World world = obstacle.getBody().getWorld();
             if (isPlatformStep(world, stepRayLength)) {
                 System.out.println("seen a step");
@@ -993,6 +1087,101 @@
             } else {
                 seenAStep = false;
             }
+
+            if (slowed) {
+                slowTime += dt;
+            } else {
+                slowTime = 0;
+            }
+
+            if (slowed) {
+                slowAlpha = Math.min(1f,
+                    1f/ (float) (1 + 7 * Math.pow((Math.E), -8.6 * (slowTime))) );
+            } else {
+                slowAlpha = 0f;
+            }
+
+            if (shroudMode) {
+                shroudModeTime += dt;
+            }
+            if (!shroudMode) {
+                shroudModeTime = 0;
+            }
+
+            if (shroudMode) {
+                shroudAlpha = Math.min(0.75f,
+                    1f/ (float) (1 + 7 * Math.pow((Math.E), -6.6 * (shroudModeTime))) );
+            } else {
+                shroudAlpha = 0f; // or fade out if you want
+            }
+
+            if (wasGrounded && !isGrounded) {
+                // we just left the ground
+                jumpAnimFrames = 0;
+            }
+
+            if (isKnockedBack()) {
+
+                if (knockbackDmg) {
+                    setFearMeter(getFearMeter() - 2);
+                    System.out.println("TAKEN KNOCKBACK DMG");
+                    knockbackDmg = false;
+                }
+            }
+
+
+
+            // Apply cooldowns
+
+            if (harvestDurationCounter <= 0 && scareSensorFixture != null) {
+                Body body = obstacle.getBody();
+                body.destroyFixture(scareSensorFixture);
+
+                // Clear out our references (so we can re-create next time)
+                scareSensorFixture = null;
+                sensorScareOutline = null;
+            }
+
+
+            if (isJumping()) {
+                jumpCooldown = jumpLimit;
+            } else {
+                jumpCooldown = Math.max(0, jumpCooldown - 1);
+            }
+
+            if (startedHarvest) {
+                harvestCooldown = harvestLimit;
+                harvestDurationCounter = harvestDuration;
+                if (scareSensorFixture == null) {
+                    createScareSensor();
+                }
+            } else {
+                harvestCooldown = Math.max(0, harvestCooldown - 1);
+                harvestDurationCounter = Math.max(0, harvestDurationCounter - 1);
+            }
+
+            if (isStunning()) {
+                stunCooldown = stunLimit;
+            } else {
+                stunCooldown = Math.max(0, stunCooldown - 1);
+            }
+
+            if (isTeleporting()) {
+                teleportCooldown = teleportLimit;
+            } else {
+                teleportCooldown = Math.max(0, teleportCooldown - 1);
+            }
+
+            if (isTakingDamage())
+            {
+                setFearMeter(fearMeter - 1);
+                takeDamageCooldown = takeDamageLimit;
+                setTakingDamage(false);
+
+            } else {
+                takeDamageCooldown = Math.max(0, takeDamageCooldown - 1);
+            }
+            updateBlind(dt);
 
             // animation locks
             if (absorbing) {
@@ -1024,26 +1213,32 @@
             }
 
 
+
+            if (jumpHeld && !isGrounded && obstacle.getVY() > 0) {
+                jumpHoldFrames++;
+            }
+
             if (!prevGrounded && isGrounded) {
                 isLanding    = true;
                 landCounter  = 0;
                 landingSprite.reset();
                 animationState = AnimationState.LAND;
+                jumpHoldFrames = 0;
+                jumpReleased = false;
             }
 
+
+
             if (isLanding && !isHarvesting()) {
-                if (movement != 0) {
+
+                landCounter++;
+                super.update(dt);
+                if (landCounter >= LAND_DURATION) {
+                    landCounter = 0;
                     isLanding = false;
-                } else {
-                    landCounter++;
-                    super.update(dt);
-                    if (landCounter >= LAND_DURATION) {
-                        landCounter = 0;
-                        isLanding = false;
-                    }
-                    super.update(dt);
-                    return;
                 }
+                super.update(dt);
+                return;
             }
 
 
@@ -1057,6 +1252,8 @@
                 super.update(dt);
                 return;
             }
+
+
 
             if (isInteracting && isGrounded) {
                 if (!inInteractAnimation) {
@@ -1081,7 +1278,8 @@
                     animationState = AnimationState.WALK;
                 }
             } else {
-                if (obstacle.getVY() > 0) {
+                jumpAnimFrames++;
+                if (obstacle.getVY() > 0 || jumpAnimFrames < MIN_JUMP_ANIM_FRAMES) {
                     // not grounded, in the state of moving up = jumping
                     animationState = AnimationState.JUMP;
                 } else {
@@ -1098,46 +1296,7 @@
                 coyoteTimeCounter = Math.max(0, coyoteTimeCounter - 1);
             }
 
-            // Apply cooldowns
-            if (isJumping()) {
-                jumpCooldown = jumpLimit;
-            } else {
-                jumpCooldown = Math.max(0, jumpCooldown - 1);
-            }
 
-            if (startedHarvest) {
-                harvestCooldown = harvestLimit;
-                harvestDurationCounter = harvestDuration;
-
-            } else {
-                harvestCooldown = Math.max(0, harvestCooldown - 1);
-                harvestDurationCounter = Math.max(0, harvestDurationCounter - 1);
-            }
-
-            if (isStunning()) {
-                stunCooldown = stunLimit;
-            } else {
-                stunCooldown = Math.max(0, stunCooldown - 1);
-            }
-
-            if (isTeleporting()) {
-                teleportCooldown = teleportLimit;
-            } else {
-                teleportCooldown = Math.max(0, teleportCooldown - 1);
-            }
-
-
-
-            if (isTakingDamage())
-            {
-                setFearMeter(fearMeter - 1);
-                takeDamageCooldown = takeDamageLimit;
-                setTakingDamage(false);
-
-            } else {
-                takeDamageCooldown = Math.max(0, takeDamageCooldown - 1);
-            }
-            updateBlind(dt);
             super.update(dt);
 
         }
@@ -1146,43 +1305,47 @@
         public void draw(SpriteBatch batch) {
 
             TextureRegion frame = new TextureRegion();
-            float scale = 1f;
+            float scale = 1.05f;
+            float dt = Gdx.graphics.getDeltaTime();
+            if (slowed) {
+                dt /= 2;
+            }
             if (animationState == null) {
                 return;
             }
             switch (animationState) {
                 case WALK:
-                    frame = walkingSprite.getCurrentFrame(Gdx.graphics.getDeltaTime());
+                    frame = walkingSprite.getCurrentFrame(dt);
                     break;
                 case IDLE:
-                    frame = idleSprite.getCurrentFrame(Gdx.graphics.getDeltaTime());
+                    frame = idleSprite.getCurrentFrame(dt);
                     break;
                 case JUMP:
                     if (!lastJumping && isJumping()) {
                         jumpSprite.reset();
                     }
-                    frame = jumpSprite.getCurrentFrame(Gdx.graphics.getDeltaTime());
+                    frame = jumpSprite.getCurrentFrame(dt);
                     break;
                 case STAIR:
-                    frame = walkingSprite.getCurrentFrame(Gdx.graphics.getDeltaTime());
+                    frame = walkingSprite.getCurrentFrame(dt);
                     break;
                 case FALL:
-                    frame = fallSprite.getCurrentFrame(Gdx.graphics.getDeltaTime());
+                    frame = fallSprite.getCurrentFrame(dt);
                     break;
                 case LAND:
-                    frame = landingSprite.getCurrentFrame(Gdx.graphics.getDeltaTime());
+                    frame = landingSprite.getCurrentFrame(dt);
                     break;
                 case STUN:
-                    frame = stunningSprite.getCurrentFrame(Gdx.graphics.getDeltaTime());
+                    frame = stunningSprite.getCurrentFrame(dt);
                     break;
                 case INTERACT:
-                    frame = interactingSprite.getCurrentFrame(Gdx.graphics.getDeltaTime());
+                    frame = interactingSprite.getCurrentFrame(dt);
                     break;
                 case ABSORB:
-                    frame = absorbSprite.getCurrentFrame(Gdx.graphics.getDeltaTime());
+                    frame = absorbSprite.getCurrentFrame(dt);
                     break;
                 default:
-                    frame = idleSprite.getCurrentFrame(Gdx.graphics.getDeltaTime());
+                    frame = idleSprite.getCurrentFrame(dt);
                     break;
             }
 
@@ -1195,12 +1358,41 @@
             float drawHeight = height * u * scale * 1.25f;
 
             float originX = (faceRight) ? drawWidth / 2.0f : drawWidth / 1.75f;
-            float originY = drawHeight / 1.8f;
+            float originY = drawHeight / 1.92f;
+            if (animationState == AnimationState.FALL || animationState == AnimationState.JUMP) {
+                originY = drawHeight/1.3f;
+            }
 
             if (faceRight) {
 
             } else {
                 frame.flip(true, false);
+            }
+
+            ShaderProgram prev = batch.getShader();
+            if (shroudMode) {
+                batch.end();
+
+                batch.setShader(playerShroudShader);
+                batch.setColor(1,1,1,shroudAlpha);
+
+                playerShroudShader.setUniformf("iTime", shroudModeTime);
+                System.out.println("shroud time " + shroudModeTime);
+                playerShroudShader.setUniformf("iResolution", drawWidth, drawHeight);
+
+                batch.begin();
+            }
+            if (slowed) {
+                batch.end();
+
+                batch.setShader(playerSlowShader);
+                batch.setColor(1,1,1,shroudAlpha);
+
+                playerSlowShader.setUniformf("iTime", slowTime);
+                System.out.println("slow time " + slowTime);
+                playerSlowShader.setUniformf("iResolution", drawWidth, drawHeight);
+
+                batch.begin();
             }
 
             // Draw the current frame centered on the player's position.
@@ -1215,6 +1407,7 @@
                 1f,             // scaleY
                 0f              // rotation (in degrees)
             );
+            batch.setColor(Color.WHITE);
 
 //            if (faceRight) {
 //                flipCache.setToScaling( 1,1 );
@@ -1222,7 +1415,11 @@
 //                flipCache.setToScaling( -1,1 );
 //            }
 //            super.draw(batch,flipCache);
-
+            if ((shroudMode || slowed) && prev != null) {
+                batch.end();
+                batch.setShader(prev);
+                batch.begin();
+            }
         }
 
         @Override

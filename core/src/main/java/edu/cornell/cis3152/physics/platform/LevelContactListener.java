@@ -1,5 +1,6 @@
 package edu.cornell.cis3152.physics.platform;
 
+import com.badlogic.gdx.math.Vector2;
 import com.badlogic.gdx.physics.box2d.Body;
 import com.badlogic.gdx.physics.box2d.Contact;
 import com.badlogic.gdx.physics.box2d.ContactImpulse;
@@ -57,7 +58,7 @@ public class LevelContactListener implements ContactListener {
             handleGroundContact(bd1, bd2, fd1, fd2, fix1, fix2);
             handleHarvestingCollision(bd1, bd2, fd1, fd2);
             handleFallSensorContact(bd1, bd2, fd1, fd2);
-
+            handleSpikeContact(bd1, bd2, fd2, fd2);
         } catch (Exception e) {
             e.printStackTrace();
         }
@@ -431,6 +432,18 @@ public class LevelContactListener implements ContactListener {
             spear.getObstacle().setVY(0);
 
             System.out.println("Spear hit Surface: removed spear.");
+        }
+    }
+
+    private void handleSpikeContact(ObstacleSprite bd1, ObstacleSprite bd2, Object fd1, Object fd2) {
+        if ((bd1 instanceof DayglowSpike && bd2 instanceof Player && !dreamWalkerScene.getAvatar().getSensorName().equals(fd2)) ||
+            (bd2 instanceof DayglowSpike && bd1 instanceof Player && !dreamWalkerScene.getAvatar().getSensorName().equals(fd1))){
+
+            System.out.println(fd1 + " " + fd2);
+            DayglowSpike spike = (bd1 instanceof DayglowSpike) ? (DayglowSpike) bd1 : (DayglowSpike) bd2;
+            Player player = (bd1 instanceof Player) ? (Player) bd1 : (Player) bd2;
+
+            player.setKnockingBack(true, spike.getObstacle().getPosition());
         }
     }
 }

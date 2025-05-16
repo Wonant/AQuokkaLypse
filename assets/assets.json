@@ -8,7 +8,7 @@
         "wall-end-sprite": "platform/end_wall_spritesheet.png",
         "spear-travel-sprite": "platform/traveling_spear_spritesheet.png",
         "spear-end-sprite": "platform/end_spear_spritesheet.png",
-
+        "dayglow-spike" : "platform/poop.jpg",
         "abstract-glassy" : "shaders/abstract_field.jpg",
         "shard":   "platform/shard.png",
         "maintenance-sprite-sheet" : "platform/maintenance.png",
@@ -23,13 +23,14 @@
         "dream-dweller-active": "shared/DreamDwellerActive.png",
         "dream-dweller-inactive": "shared/DreamDwellerInactive.png",
         "fear-meter" : "platform/fearmeter_0.png",
+        "background1" : "platform/background.png",
 
     "platform-spear"  : "platform/spear.png",
         "platform-spear-right"  : "platform/spear-right.png",
 
         "platform-bullet"   : "platform/bullet.png",
         "platform-scare-effect" : "platform/scare_effct.png",
-        "crosshair" : "platform/crosshair.png",
+        "crosshair" : "platform/portalxhair.png",
 
         "background": {
             "file": "menu/background.png"
