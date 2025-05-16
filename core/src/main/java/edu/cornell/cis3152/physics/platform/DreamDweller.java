@@ -25,7 +25,7 @@ public class DreamDweller extends Enemy {
     private float jump_force;
     private int jumpCooldown;
     private int shootCooldown;
-    private int shootLimit = 80;
+    private int shootLimit = 100;
     private boolean isGrounded;
     private boolean isJumping;
     private boolean isShooting;
@@ -122,25 +122,22 @@ public class DreamDweller extends Enemy {
         sensorOutline = new Path2();
         factory.makeRect((sensorCenter.x - w / 2) * u, (sensorCenter.y - h / 2) * u, w * u, h * u, sensorOutline);
         sensorShape.dispose();
-
     }
 
     public void lookForPlayer() {
         World world = obstacle.getBody().getWorld();
         Player player = scene.getAvatar();
         Vector2 pos = obstacle.getPosition();
-        float rayLength = 10f;
+        float rayLength = 20f;
 
-        // 设置起点（dweller 的眼睛）
         Vector2 start = new Vector2(pos.x + (facingRight ? width / 2 : -width / 2), pos.y + height / 8);
 
-        // 玩家位置多点检测：中、上、下
         Vector2 playerPos = player.getObstacle().getPosition();
         float pHeight = player.getHeight();
         Vector2[] targets = new Vector2[] {
-            new Vector2(playerPos.x, playerPos.y),                   // 中心
-            new Vector2(playerPos.x, playerPos.y + pHeight * 0.3f),  // 肩膀
-            new Vector2(playerPos.x, playerPos.y - pHeight * 0.3f)   // 腿部
+            new Vector2(playerPos.x, playerPos.y),
+            new Vector2(playerPos.x, playerPos.y + pHeight * 0.3f),
+            new Vector2(playerPos.x, playerPos.y - pHeight * 0.3f)
         };
 
         boolean seen = false;
@@ -178,13 +175,12 @@ public class DreamDweller extends Enemy {
             }
         }
 
-        // Debug 可视化（选用命中的那条射线）
         debugLookStart.set(start);
-        debugLookEnd.set(seen && chosenEnd != null ? chosenEnd : start.cpy().add(10f, 0f)); // 默认向右画条线
+        debugLookEnd.set(seen && chosenEnd != null ? chosenEnd : start.cpy().add(10f, 0f));
 
         setAwareOfPlayer(seen);
         if (seen) {
-            System.out.println("✅ Seen the player");
+            System.out.println("Seen the player");
         }
 }
 
@@ -192,6 +188,7 @@ public class DreamDweller extends Enemy {
     @Override
     public void update(float dt) {
         lookForPlayer();
+
 
         if (obstacle != null && obstacle.getBody() != null) {
             obstacle.getBody().setGravityScale(0);

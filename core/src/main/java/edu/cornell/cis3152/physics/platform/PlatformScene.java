@@ -136,7 +136,10 @@ public class PlatformScene implements Screen, Telegraph {
     /** Used to slightly modify the PlatformScene for Level Select usage */
     private boolean isLevelSelect;
 
+    // Audio
 
+    /** The sound effect manager that is used to play sounds  */
+    SoundEffectManager soundManager = SoundEffectManager.getInstance();
     /** The jump sound. We only want to play once. */
     private SoundEffect jumpSound;
     /** The weapon fire sound. We only want to play once. */
@@ -287,7 +290,7 @@ public class PlatformScene implements Screen, Telegraph {
     private Array<Spear> pendingSpears = new Array<>();
     private float spearTimer = 0f;
     private int spearIndex = 0;
-    private static final float SPEAR_FIRE_INTERVAL = 0.1f;
+    private static final float SPEAR_FIRE_INTERVAL = 0.3f;
 
     // FADE CONSTANTS
     private float fadeAlpha = 0f;
@@ -873,7 +876,6 @@ public class PlatformScene implements Screen, Telegraph {
                     maintenance.createAnimators(texture);
                     maintenance.setFilter();
                     maintenance.createSensor();
-                    maintenance.createVisionSensor();
                     enemies.add(maintenance);
                     //aiManager.register(maintenance);
                     aiCManager.register(maintenance);
@@ -1043,7 +1045,6 @@ public class PlatformScene implements Screen, Telegraph {
             // Have to do after body is created
             maintenance.setFilter();
             maintenance.createSensor();
-            maintenance.createVisionSensor();
             enemies.add(maintenance);
             //aiManager.register(maintenance);
             aiCManager.register(maintenance);
@@ -1191,14 +1192,14 @@ public class PlatformScene implements Screen, Telegraph {
                 units = TiledMapInfo.PIXELS_PER_WORLD_METER;
                 Vector2 position = e.getObstacle().getPosition();
                 float direction = ((MindMaintenance) e).isFacingRight() ? 1 : -1;
-                float spawnOffset = 0.1f;
                 position.set(position.x , position.y);
                 JsonValue bulletjv = constants.get("bullet");
-                Texture texture = directory.getEntry("platform-bullet", Texture.class);
+                Texture travelTex = directory.getEntry("wall-travel-sprite", Texture.class);
+                Texture endTex = directory.getEntry("wall-end-sprite", Texture.class);
 
-                ShieldWall wall = new ShieldWall(units, bulletjv, position, direction);
+
+                ShieldWall wall = new ShieldWall(units, bulletjv, position, direction, travelTex, endTex);
                 shieldWalls.add(wall);
-                wall.setTexture(texture);
                 addQueuedObject(wall);
             }
             else if (e instanceof DreamDweller && ((DreamDweller) e).isShooting()) {
@@ -1208,34 +1209,24 @@ public class PlatformScene implements Screen, Telegraph {
 
                 float speed = 11.5f;
                 JsonValue spearjv = constants.get("spear");
-                Texture spearTravelTex = directory.getEntry("platform-spear-travel-sprite", Texture.class);
-                Texture spearEndTex    = directory.getEntry("platform-spear-end-sprite", Texture.class);
+                Texture spearTravelTex = directory.getEntry("spear-travel-sprite", Texture.class);
+                Texture spearEndTex    = directory.getEntry("spear-end-sprite", Texture.class);
 
-                float[] rightAngles = new float[] { -8f, -3f, 3f, 8f };
-                float[] leftAngles  = new float[] { 188f, 183f, 177f, 172f };
-                float[] yOffsets = new float[] {-0.8f, -0.4f, 0.4f, 0.8f };
+                float[] angleOffsets = new float[] { -8f, -3f, 3f, 8f };
 
                 pendingSpears.clear();
                 spearTimer = 0f;
                 spearIndex = 0;
 
-                float direction = (playerPos.x < position.x) ? -1f : 1f;
-                float[] chosenAngles = (direction > 0) ? rightAngles : leftAngles;
-
-                for (int i = 0; i < chosenAngles.length; i++) {
-                    Vector2 spawnPos = new Vector2(position.x, position.y + yOffsets[i]);
-
-                    float angleDeg = chosenAngles[i];
-                    float angleRad = (float) Math.toRadians(angleDeg);
-
-                    Vector2 velocity = new Vector2(
-                        speed * (float) Math.cos(angleRad),
-                        speed * (float) Math.sin(angleRad)
-                    );
-
-                    Spear spear = new Spear(units, spearjv, spawnPos, velocity, spearTravelTex, spearEndTex);
+                for (int i = 0; i < angleOffsets.length; i++) {
+                    Vector2 spawnPos = new Vector2(position.x, position.y + 1);
+                    Vector2 toPlayer = new Vector2(playerPos.x - spawnPos.x, playerPos.y - spawnPos.y).nor();
+                    toPlayer.rotateDeg(angleOffsets[i]);
+                    Spear spear = new Spear(units, spearjv, spawnPos, toPlayer, spearTravelTex, spearEndTex);
                     pendingSpears.add(spear);
                 }
+
+
             }
         }
         if (pendingSpears.size > 0 && spearIndex < pendingSpears.size) {
@@ -1425,7 +1416,7 @@ public class PlatformScene implements Screen, Telegraph {
             }
         }
 
-        if (avatar.isTeleporting() && avatar.getFearMeter() > TELEPORT_COST && !isTeleporting) {
+        if (avatar.isTeleporting() && avatar.getFearMeter() > TELEPORT_COST /*&& !isTeleporting*/) {
             // Calculate teleport position
             teleport();
             teleportDirectionRight = avatar.isFacingRight();
@@ -1542,11 +1533,9 @@ public class PlatformScene implements Screen, Telegraph {
         shootAngle.nor();
 
         Texture texture = directory.getEntry("bullet-active", Texture.class);
-        Texture texture2 = directory.getEntry("bullet-end", Texture.class);
 
-        Bullet bullet = new Bullet(units, bulletjv, player.getPosition(), shootAngle.nor(), texture, texture2);
+        Bullet bullet = new Bullet(units, bulletjv, player.getPosition(), shootAngle.nor(), texture);
         addQueuedObject(bullet);
-        SoundEffectManager sounds = SoundEffectManager.getInstance();
         //sounds.play("fire", fireSound, volume);
     }
 
@@ -1652,12 +1641,7 @@ public class PlatformScene implements Screen, Telegraph {
 
 
         for(ObstacleSprite obj : sprites) {
-            if (obj instanceof Spear) {
-                ((Spear) obj).drawOwnAnimation(batch);
-            }
-            else {
-                obj.draw(batch);
-            }
+            obj.draw(batch);
         }
 
 

@@ -698,7 +698,7 @@
             harvestLimit = 60;
             harvestDuration = 20;
             stunLimit = data.getInt( "shot_cool", 0 );
-            teleportLimit = data.getInt( "shot_cool", 0 );
+            teleportLimit = 30;
             takeDamageLimit = 120;
             shroudMode = false;
 
@@ -723,7 +723,7 @@
             maxFearMeter = 20;
             fearMeter = maxFearMeter;
 
-            teleportRangeRadius = 200;
+            teleportRangeRadius = 210;
 
             // Create a rectangular mesh for Player. This is the same as for door,
             // since Player is a rectangular image. But note that the capsule is

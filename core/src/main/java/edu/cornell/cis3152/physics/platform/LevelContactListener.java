@@ -12,10 +12,7 @@ import edu.cornell.gdiac.physics2.ObstacleSprite;
 public class LevelContactListener implements ContactListener {
 
     private final PlatformScene dreamWalkerScene;
-
-
-    private boolean playerSlowed = false;
-    private float originalPlayerMovement;
+    private boolean playerHitShieldWall = false;
 
     public LevelContactListener(PlatformScene scene) {
         this.dreamWalkerScene = scene;
@@ -42,10 +39,6 @@ public class LevelContactListener implements ContactListener {
 
         Object fd1 = fix1.getUserData();
         Object fd2 = fix2.getUserData();
-
-
-        Object bodyDataA = fix1.getBody().getUserData();
-        Object bodyDataB = fix2.getBody().getUserData();
 
 
         try {
@@ -117,15 +110,19 @@ public class LevelContactListener implements ContactListener {
     private void handleShieldWallContact(ObstacleSprite bd1, ObstacleSprite bd2) {
         if ((bd1 instanceof ShieldWall || bd2 instanceof ShieldWall) &&
             (bd1 instanceof Player || bd2 instanceof Player)){
-            dreamWalkerScene.getAvatar().setTakingDamage(true);
+            if(!playerHitShieldWall) {
+                Player player = dreamWalkerScene.getAvatar();
+                player.setFearMeter(Math.max(0, player.getFearMeter() - 1));
+                playerHitShieldWall = true;
+                System.out.println("ShieldWall hit Player: DAMAGE TAKEN");
+            }
         }
     }
-
     /** Handle collision between ShieldWall and Player */
     private void handleShieldWallEndContact(ObstacleSprite bd1, ObstacleSprite bd2) {
         if ((bd1 instanceof ShieldWall || bd2 instanceof ShieldWall) &&
             (bd1 instanceof Player || bd2 instanceof Player)){
-            dreamWalkerScene.getAvatar().setTakingDamage(false);
+            playerHitShieldWall = false;
         }
     }
 
@@ -206,28 +203,6 @@ public class LevelContactListener implements ContactListener {
 
             if (e != null) {
                 e.setSeesWall(true);
-            }
-        }
-    }
-
-    private void handleVisionSensorContact(ObstacleSprite bodyDataA, ObstacleSprite bodyDataB, Object fd1, Object fd2) {
-        // If there is a collision between a vision sensor and the player
-        if ( ("vision_sensor".equals(fd1) || "vision_sensor".equals(fd2))
-            && (bodyDataA instanceof Player || bodyDataB instanceof Player)
-            && !(dreamWalkerScene.getAvatar().getScareSensorName().equals(fd1) ||
-            dreamWalkerScene.getAvatar().getScareSensorName().equals(fd2))) {
-
-            // Check if the vision sensor belongs to an "un-stunned" enemy, and if
-            // so update the enemy's awareness and apply damage to player
-            if ( bodyDataA instanceof Enemy && !((Enemy) bodyDataA).isStunned() ) {
-                ((Enemy) bodyDataA).setAwareOfPlayer(true);
-                System.out.println(bodyDataA.getClass() + " saw player!");
-                dreamWalkerScene.getAvatar().setTakingDamage(true);
-            }
-            else if ( bodyDataB instanceof Enemy && !((Enemy) bodyDataB).isStunned() )  {
-                System.out.println(bodyDataB.getClass() + " saw player!");
-                ((Enemy) bodyDataB).setAwareOfPlayer(true);
-                dreamWalkerScene.getAvatar().setTakingDamage(true);
             }
         }
     }
@@ -351,29 +326,8 @@ public class LevelContactListener implements ContactListener {
                     }
 
                 }
-
-            //dreamWalkerScene.getAvatar().setHarvesting(true);
-
         }
     }
-
-    private void handleWalkSensorEndContact(Object bd1, Object bd2, Object fd1, Object fd2) {
-        if (("walk_sensor".equals(fd1) && bd2 instanceof Surface) ||
-            ("walk_sensor".equals(fd2) && bd1 instanceof Surface)) {
-
-            CuriosityCritter critter = (bd1 instanceof CuriosityCritter) ? (CuriosityCritter) bd1
-                : (bd2 instanceof CuriosityCritter) ? (CuriosityCritter) bd2
-                    : null;
-
-            if (critter != null) {
-                critter.setSeesWall(false);
-                System.out.println("Critter stopped seeing wall");
-            } else {
-                System.out.println("WARNING: Walk sensor end contact detected but Critter reference is null.");
-            }
-        }
-    }
-
 
     private void handleHarvestingEndContact(Object bd1, Object bd2, Object fd1, Object fd2) {
         if ((dreamWalkerScene.getAvatar().getScareSensorName().equals(fd1) && bd2 instanceof Enemy) ||
@@ -460,14 +414,9 @@ public class LevelContactListener implements ContactListener {
             player.setBlinded(true);
             player.setBlindTimer(0);
 
-            if (player.getTakeDamageCooldown() <= 0) {
-                player.setTakingDamage(true);
-                System.out.println("Spear hit Player: DAMAGE TAKEN");
-            } else {
-                System.out.println("Spear hit Player: blinded but no damage (cooldown)");
-            }
+            player.setFearMeter(Math.max(0,player.getFearMeter() - 1));
+            System.out.println("Spear hit Player: DAMAGE TAKEN");
 
-            // 矛消失
             spear.getObstacle().markRemoved(true);
             spear.getObstacle().setVX(0);
             spear.getObstacle().setVY(0);
@@ -476,7 +425,6 @@ public class LevelContactListener implements ContactListener {
     private void handleSpearHitSurface(ObstacleSprite bd1, ObstacleSprite bd2) {
         if ((bd1 instanceof Spear && bd2 instanceof Surface) || (bd2 instanceof Spear && bd1 instanceof Surface)) {
             Spear spear = (bd1 instanceof Spear) ? (Spear) bd1 : (Spear) bd2;
-            Surface surface = (bd1 instanceof Surface) ? (Surface) bd1 : (Surface) bd2;
 
             spear.getObstacle().markRemoved(true);
 

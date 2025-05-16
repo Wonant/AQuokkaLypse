@@ -70,9 +70,6 @@ public class MindMaintenance extends Enemy {
 
     /** game logic stuff */
 
-    // where the maintenance is looking, 0 is relative down of the critter's central location, iterates clockwise
-    private float visionAngle;
-
     // should be seconds in how long it takes for the critter to reset from aware of player to idle
     private float awarenessCooldown;
 
@@ -84,7 +81,6 @@ public class MindMaintenance extends Enemy {
     private boolean safeToWalk;
 
     /** animation */
-    private Animator idleSprite;
     private Animator walkingSprite;
     private Animator turnSprite;
     private Animator alertSprite;
@@ -93,9 +89,6 @@ public class MindMaintenance extends Enemy {
     private Animator stunnedSprite;
     private MindMaintenance.AnimationState animationState;
 
-    private final int TURN_FRAME_DURATION = 24;
-    private final int ATTACK_FRAME_DURATION = 29;
-    private final int STUN_FRAME_DURATION   = 20;
     private boolean inAttackAnimation = false;
     private boolean inChasingAnimation = false;
     private int     attackFrameCounter = 0;
@@ -107,16 +100,13 @@ public class MindMaintenance extends Enemy {
 
     private enum AnimationState {
         WALK,
-        IDLE,
         TURN,
-        STAIR,
         ALERT,
         ATTACK,
         STUN
     }
 
     public void createAnimators(Texture mindmaintenance) {
-        //idleSprite = new Animator();
         walkingSprite = new Animator(mindmaintenance, 10, 13, 0.06f, 130, 0,15);
         turnSprite = new Animator(mindmaintenance, 10, 13, 0.06f, 130, 16,39);
         alertSprite = new Animator(mindmaintenance, 10, 13, 0.08f, 130, 40,64);
@@ -137,15 +127,6 @@ public class MindMaintenance extends Enemy {
         } else if (movement > 0) {
             facingRight = true;
         }
-    }
-
-    public float getVisionAngle() {
-        return visionAngle;
-    }
-
-    public void setVisionAngle(float theta) {
-        float desiredAngle = theta * MathUtils.degreesToRadians; // Convert to radians
-        headBody.setTransform(headBody.getPosition(), desiredAngle);
     }
 
     public boolean isSafeToWalk(){return safeToWalk;}
@@ -255,8 +236,6 @@ public class MindMaintenance extends Enemy {
         isJumping   = false;
         facingRight   = true;
         jumpCooldown = 0;
-        //deg
-        visionAngle = 0;
 
         stepRayLength = height;
         enemyVisionRaycast = new EnemyVisionRaycast(EnemyVisionRaycast.VisionMode.STAIR_CHECK, stepRayLength);
@@ -296,40 +275,6 @@ public class MindMaintenance extends Enemy {
         factory.makeRect((sensorCenter.x - w / 2) * u, (sensorCenter.y - h / 2) * u, w * u, h * u, sensorOutline);
         sensorShape.dispose();
 
-    }
-
-    public void createHeadBody() {
-        BodyDef bdef = new BodyDef();
-        bdef.type = BodyDef.BodyType.DynamicBody;
-        Vector2 pos = obstacle.getPosition().cpy().add(0, height / 2); // Head above body
-        bdef.position.set(pos);
-
-        headBody = obstacle.getBody().getWorld().createBody(bdef);
-        CircleShape headShape = new CircleShape();
-        headShape.setRadius(width / 3);
-
-        FixtureDef fdef = new FixtureDef();
-        fdef.shape = headShape;
-        fdef.density = 0.1f;
-        fdef.isSensor = true; // Prevent physical collisions
-        headBody.createFixture(fdef);
-        headBody.setUserData(this);
-
-        headShape.dispose();
-    }
-
-    public void attachHead() {
-        RevoluteJointDef jointDef = new RevoluteJointDef();
-        jointDef.initialize(obstacle.getBody(), headBody, obstacle.getBody().getWorldCenter().add(0, height / 2));
-        jointDef.enableMotor = true;
-        jointDef.motorSpeed = 0;
-        jointDef.maxMotorTorque = 100;
-        headJoint = (RevoluteJoint) obstacle.getBody().getWorld().createJoint(jointDef);
-    }
-
-    public void createVisionSensor() {
-        createHeadBody();
-        attachHead();
     }
 
     public boolean isPlatformStep(World world, float raylength) {
@@ -372,7 +317,7 @@ public class MindMaintenance extends Enemy {
         World world = obstacle.getBody().getWorld();
         Vector2 pos = obstacle.getPosition();
 
-        float groundRayLength = stepRayLength * 4.5f;
+        float groundRayLength = stepRayLength;
         float wallRayLength = width * 0.5f;
 
         debugGroundStart = (facingRight) ? new Vector2(pos.x + width * 1.5f, pos.y) :
@@ -737,40 +682,7 @@ public class MindMaintenance extends Enemy {
 
             batch.outline(sensorOutline, transform);
         }
-        /*
-        if (walkSensorOutline != null) {
-            batch.setTexture(Texture2D.getBlank());
-            batch.setColor(Color.RED);
 
-            Vector2 headPos = headBody.getPosition();
-            float headAngleDeg = headBody.getAngle() * MathUtils.radiansToDegrees;
-            float u = obstacle.getPhysicsUnits();
-
-            transform.idt();
-            transform.preRotate(headAngleDeg);
-            transform.preTranslate(headPos.x * u, headPos.y * u);
-
-            batch.outline(walkSensorOutline, transform);
-            batch.setColor(Color.WHITE);
-        }
-        if (harvestOutline != null) {
-            batch.setTexture(Texture2D.getBlank());
-            batch.setColor(Color.BLUE);
-
-            Vector2 p = obstacle.getPosition();
-            float a = obstacle.getAngle();
-            float u = obstacle.getPhysicsUnits();
-
-            transform.idt();
-            transform.preRotate((float)(a * 180.0f / Math.PI));
-            transform.preTranslate(p.x * u, p.y * u);
-
-            batch.outline(harvestOutline, transform);
-
-            batch.setColor(Color.WHITE);
-        }
-
-         */
         batch.setColor(Color.PURPLE);
         drawRayDebug(batch, debugRayStart, debugRayEnd);
         if (isAwareOfPlayer()) {

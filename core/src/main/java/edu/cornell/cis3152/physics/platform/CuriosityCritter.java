@@ -449,7 +449,6 @@ public class CuriosityCritter extends Enemy {
 
         Vector2 start = (facingRight) ? new Vector2(pos.x + width/2, pos.y + height/4) :
             new Vector2(pos.x - width/2, pos.y + height/4);
-        //Vector2 end = (facingRight) ? new Vector2(pos.x + width + rayLength, pos.y + height/4) :
         new Vector2(pos.x - width - rayLength, pos.y + height/4);
         Vector2 end = new Vector2(
             pos.x + rayLength * MathUtils.cos(followSensorAngle),
@@ -612,14 +611,6 @@ public class CuriosityCritter extends Enemy {
         heldShard = null;
         return s;
     }
-
-
-    public void targetShard() {
-        // just take closest vector2?
-    }
-
-
-
 
 
     @Override
