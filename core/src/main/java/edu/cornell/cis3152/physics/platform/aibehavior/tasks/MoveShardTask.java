@@ -32,6 +32,7 @@ public class MoveShardTask extends LeafTask<Enemy> {
         float bestDist = Float.MAX_VALUE;
         for (int i = 0; i < critter.getScene().getTotalShards(); i++) {
             Vector2 p = critter.getScene().getShardPos(i);
+            System.out.println(p);
 
             float d = critter.getObstacle().getPosition().dst(p);
             if (d < bestDist) {
@@ -39,9 +40,10 @@ public class MoveShardTask extends LeafTask<Enemy> {
                 pickupTarget = new Vector2(p);
             }
         }
-        critter.setMovement((critter.getObstacle().getX() < pickupTarget.x) ? -2f : 2f);
+        critter.setMovement((critter.getObstacle().getX() < pickupTarget.x) ? 2f : -2f);
         critter.applyForce();
         critter.inMoveTask = true;
+        System.out.println("pickup target" + pickupTarget);
     }
 
     @Override
@@ -56,7 +58,12 @@ public class MoveShardTask extends LeafTask<Enemy> {
                 System.out.println("got shard");
                 hasShard = true;
                 dropTarget = critter.getWorldTarget(); // computed by the give function
-                System.out.println("hi" + dropTarget);
+
+                if (dropTarget == null) {
+                    return Status.FAILED;
+                }
+
+
                 // reverse direction
                 critter.setMovement((critter.getObstacle().getX() < dropTarget.x) ? 2f : -2f);
                 critter.applyForce();

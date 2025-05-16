@@ -78,11 +78,14 @@ void main() {
     // 2) radial fade from 1.0 at center → 0.0 at maxDist
     float radial = 1.0 - smoothstep(0.0, maxDist, dist);
 
-    // 3) time fade from 0 at iTime=0 → 1 at iTime=0.5
-    float timeFade = smoothstep(0.0, 0.5, iTime);
+    // 3) time fade from 0 at iTime=0 → 1 at iTime=0.5, and reverse from =2.5 to =3.0
+    float fadeIn = smoothstep(0.0, 0.5, iTime);
+    float fadeOut = 1.0 - smoothstep(2.5, 3.0, iTime);
+
+    float fade = fadeIn * fadeOut;
 
     // 4) combined alpha
-    float a = radial * timeFade;
+    float a = radial * fade;
     col.a = a;
 
     // 5) discard fully‐transparent fragments

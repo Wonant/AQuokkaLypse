@@ -1,5 +1,5 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<map version="1.10" tiledversion="1.11.2" orientation="orthogonal" renderorder="right-down" width="80" height="40" tilewidth="32" tileheight="32" infinite="0" nextlayerid="7" nextobjectid="55">
+<map version="1.10" tiledversion="1.11.2" orientation="orthogonal" renderorder="right-down" width="80" height="40" tilewidth="32" tileheight="32" infinite="0" nextlayerid="7" nextobjectid="56">
  <tileset firstgid="1" name="dreamwalker_alpha_demo" tilewidth="32" tileheight="32" tilecount="152" columns="19">
   <image source="../tilesets/temple assets 1.png" width="608" height="256"/>
  </tileset>
@@ -208,12 +208,6 @@
    </properties>
    <polygon points="0,0 23.7092,-16.6842 26.3435,6.14682 29.856,9.65929 29.856,14.928 -1.75623,16.6842 -2.63435,9.65929"/>
   </object>
-  <object id="21" x="901.522" y="703.846">
-   <properties>
-    <property name="isStair" type="bool" value="false"/>
-   </properties>
-   <polygon points="0,0 22.7627,17.3715 21.5646,53.9116 28.1538,62.2978 -5.99018,63.4959 -1.79705,49.1194"/>
-  </object>
   <object id="22" x="2537.38" y="673.332">
    <properties>
     <property name="isStair" type="bool" value="false"/>
@@ -241,6 +235,7 @@
    </properties>
    <polygon points="0,0 -285.381,-129.998 -285.389,-116.171 -0.0195258,13.1095"/>
   </object>
+  <object id="55" x="900.379" y="707.526" width="23.9569" height="60.6908"/>
  </objectgroup>
  <objectgroup id="5" name="Shards">
   <properties>
