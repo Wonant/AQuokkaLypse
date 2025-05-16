@@ -19,18 +19,14 @@ import com.badlogic.gdx.ai.msg.Telegraph;
 import com.badlogic.gdx.graphics.g2d.Sprite;
 import com.badlogic.gdx.graphics.glutils.FrameBuffer;
 import com.badlogic.gdx.graphics.glutils.ShaderProgram;
-import com.badlogic.gdx.graphics.glutils.ShapeRenderer;
 import com.badlogic.gdx.maps.MapLayer;
 import com.badlogic.gdx.maps.MapObject;
 import com.badlogic.gdx.maps.objects.PolygonMapObject;
 import com.badlogic.gdx.maps.objects.RectangleMapObject;
-import com.badlogic.gdx.scenes.scene2d.Stage;
-import com.badlogic.gdx.utils.viewport.ScreenViewport;
 import edu.cornell.cis3152.physics.AIControllerManager;
 import edu.cornell.cis3152.physics.ObstacleGroup;
 
 import java.util.*;
-import java.util.stream.Collectors;
 
 import com.badlogic.gdx.*;
 import com.badlogic.gdx.graphics.*;
@@ -87,6 +83,7 @@ public class PlatformScene implements Screen, Telegraph {
     protected OrthographicCamera camera;
     protected OrthographicCamera uiCamera;
     protected OrthographicCamera miniCam;
+    private Vector3 defaultMiniCamPos;
     private Matrix4       mainProj;
     /** Reference to the sprite batch */
     protected SpriteBatch batch;
@@ -216,8 +213,9 @@ public class PlatformScene implements Screen, Telegraph {
 
     private Animator swirlSprite;
 
-    /** if stun mode is on, which changes player m1 to an attack rather than a teleport */
-    private boolean stunModeOn;
+    /** if shadow mode is on, which changes player m1 to a teleport rather than an attack */
+    private boolean shadowMode;
+    private float lastLShiftTime;
 
     /** How many enemies are aware of player in level (akin to GTA star system) */
     private int enemiesAlerted;
@@ -251,7 +249,7 @@ public class PlatformScene implements Screen, Telegraph {
     /** have we already slowed the player? */
     private boolean playerSlowed = false;
     /** how slow they go (half speed here) */
-    private float slowSpeedFactor = 0.2f;
+    private float slowSpeedFactor = 0.4f;
 
 
     // global game units
@@ -271,10 +269,12 @@ public class PlatformScene implements Screen, Telegraph {
     // Shaders
     private Shader vortexShader, tendrilShader, rippleShader;
     private Shader rayShader, blurShader;
+
     private FrameBuffer sceneBuffer;
     private Texture blankTexture, screenTexture;
     private Sprite blankSprite;
     private Texture abstractGlassyTexture;
+
 
     private VertexBuffer bulletVB;
     private Shader glowShader;
@@ -658,6 +658,8 @@ public class PlatformScene implements Screen, Telegraph {
         miniCam = new OrthographicCamera(sw/2, sh/2);
         miniCam.setToOrtho(false, sw, sh);
         miniCam.zoom = 3f;
+        defaultMiniCamPos = miniCam.position.cpy();
+
 
 
         // is this not supposed to be removed?
@@ -684,6 +686,7 @@ public class PlatformScene implements Screen, Telegraph {
         rayShader = new Shader(Gdx.files.internal("shaders/screen.vert"), Gdx.files.internal("shaders/fallingrays.frag"));
         glowShader = new Shader(Gdx.files.internal("shaders/star_pulse.vert"), Gdx.files.internal("shaders/star_pulse.frag"));
         blurShader = new Shader(Gdx.files.internal("shaders/screen_blur.vert"), Gdx.files.internal("shaders/screen_blur.frag"));
+
         if (!glowShader.isCompiled()) {
             System.out.println("Swirl shader compile error: " + vortexShader.getLog());
         }
@@ -902,7 +905,7 @@ public class PlatformScene implements Screen, Telegraph {
                 }
                 if (o.getName() == null) {
                     Shard goalShard = new Shard(units, goal, worldX, worldY, shardID);
-                    shardPos.add(shardID, new Vector2(x, y));
+                    shardPos.add(shardID, new Vector2(worldX, worldY));
                     goalShard.setTexture(texture);
                     goalShard.getObstacle().setName("goal_" + shardID);
                     addSprite(goalShard);
@@ -943,7 +946,8 @@ public class PlatformScene implements Screen, Telegraph {
                 );
 
                 surface.setDebugColor(Color.BLUE);
-                if (o.getProperties().get("isStair", Boolean.class)) {
+                Boolean isStair = o.getProperties().get("isStair", Boolean.class);
+                if (isStair != null) {
                     surface.getObstacle().setName("stair " + id);
                 } else {
                     surface.getObstacle().setName("platform " + id);
@@ -972,14 +976,34 @@ public class PlatformScene implements Screen, Telegraph {
                 float worldHeight = height / units;
                 float rotationDeg = o.getProperties().get("rotation", 0f, Float.class);
                 float rotationRad = (float)Math.toRadians(rotationDeg);
+                if (o.getName() != null) {
+                    if (o.getName().toLowerCase().startsWith("spike")) {
+                        if (o.getProperties().get("direction", Integer.class) != null && o.getProperties().get("laser", Boolean.class) != null) {
+                            DayglowSpike.Direction dir;
+                            switch (o.getProperties().get("direction", Integer.class)) {
+                                case 0:  dir = DayglowSpike.Direction.UP;    break;
+                                case 1:  dir = DayglowSpike.Direction.RIGHT; break;
+                                case 2:  dir = DayglowSpike.Direction.DOWN;  break;
+                                case 3:  dir = DayglowSpike.Direction.LEFT;  break;
+                                default: dir = DayglowSpike.Direction.UP;    break;
+                            }
+                            DayglowSpike spike = new DayglowSpike(units, worldX, worldY, worldWidth, worldHeight,
+                                o.getProperties().get("laser", Boolean.class), dir);
+                            spike.setTexture(directory.getEntry("dayglow-spike", Texture.class));
+                            addSprite(spike);
+                            spike.setFilter();
+                            spike.setWorld(world);
+                        }
+                    }
+                } else {
+                    Surface platform = new Surface(worldX, worldY, worldHeight, worldWidth, TiledMapInfo.PIXELS_PER_WORLD_METER, constants.get("platforms"), true, rotationRad);
 
-                Surface platform = new Surface(worldX, worldY, worldHeight, worldWidth, TiledMapInfo.PIXELS_PER_WORLD_METER, constants.get("platforms"), true, rotationRad);
-
-                platform.setDebugColor(Color.BLUE);
-                platform.getObstacle().setName("platform " + id);
-                addSprite(platform);
-                platform.setFilter();
-                id++;
+                    platform.setDebugColor(Color.BLUE);
+                    platform.getObstacle().setName("platform " + id);
+                    addSprite(platform);
+                    platform.setFilter();
+                    id++;
+                }
             }
         }
 
@@ -996,8 +1020,8 @@ public class PlatformScene implements Screen, Telegraph {
         avatar.setFilter();
 
         avatar.createSensor();
-        avatar.createScareSensor();
-        avatar.createFallSensor();
+        //avatar.createScareSensor();
+        //avatar.createFallSensor();
         aiManager.setPlayer(avatar);
 
 
@@ -1260,20 +1284,30 @@ public class PlatformScene implements Screen, Telegraph {
             playerSlowed = true;
         }
 
+        avatar.setSlowed(playerSlowed);
 
         avatar.setTakingDoor(input.didTakeDoor());
         avatar.setMovement(input.getHorizontal() *avatar.getForce());
 
-        avatar.setJumping(input.didPrimary());
+        boolean jumpKeyPressed = input.didPrimary();
+        avatar.setJumping(jumpKeyPressed); // Triggers the initial jump
+        avatar.setJumpHeld(input.isPrimaryHeld());
 
         avatar.tryStartHarvesting(input.didSecondary());
-        if (input.inStunMode()) {
-            stunModeOn = true;
-            avatar.setStunning(input.didM1());
 
-        } else {
-            stunModeOn = false;
+
+        if (input.didLShift()) {
+            shadowMode = !shadowMode;
+
+            avatar.setShroudMode(shadowMode);
+
+        }
+
+        if (shadowMode) {
+
             avatar.setTeleporting(input.didM1());
+        } else {
+            avatar.setStunning(input.didM1());
         }
 
         // player damage
@@ -1588,13 +1622,7 @@ public class PlatformScene implements Screen, Telegraph {
 
         batch.begin(camera);
 
-        background = directory.getEntry("background-technical", Texture.class);
-        float parallaxFactor = 0.4f;
 
-        float bgX = camera.position.x * parallaxFactor - background.getWidth() / 2f;
-        float bgY = camera.position.y * parallaxFactor - background.getHeight() / 2f;
-
-        //batch.draw(background, bgX, bgY, background.getWidth(), background.getHeight() * 2);
 
         dreamShardCountText.setText("Dream Shards: " + (totalShards - collectedShards));
         dreamShardCountText.layout();
@@ -1624,12 +1652,7 @@ public class PlatformScene implements Screen, Telegraph {
 
 
         for(ObstacleSprite obj : sprites) {
-            if (obj instanceof Player && playerSlowed) {
-                batch.setColor(Color.BLUE);
-                obj.draw(batch);
-                batch.setColor(Color.WHITE);
-            }
-            else if (obj instanceof Spear) {
+            if (obj instanceof Spear) {
                 ((Spear) obj).drawOwnAnimation(batch);
             }
             else {
@@ -1755,8 +1778,23 @@ public class PlatformScene implements Screen, Telegraph {
         batch.setShader(prev);
 
         batch.begin();
+
+        float fadeStart = 2.5f, fadeDur = 0.5f;
+        float alpha = (sTime <= fadeStart)
+            ? 1f
+            : MathUtils.clamp(1f - (sTime - fadeStart) / fadeDur, 0f, 1f);
+
+        batch.setColor(1f, 1f, 1f, alpha);
+
         TextureRegion frame = swirlSprite.getCurrentFrame(dt);
-        batch.draw(frame, cx - radius / 4, cy - radius / 4, radius/2, radius/2);
+        batch.draw(
+            frame,
+            cx - radius/4f, cy - radius/4f,
+            radius/2f, radius/2f
+        );
+
+
+        batch.setColor(1f, 1f, 1f, 1f);
         batch.end();
     }
 
@@ -1859,10 +1897,8 @@ public class PlatformScene implements Screen, Telegraph {
         float crossX = mouseX - scaledWidth/2;
         float crossY = mouseY - scaledHeight/2;
 
-        if (stunModeOn) {
-            batch.setColor(Color.BLUE);
+        if (!shadowMode) {
             batch.draw(crosshairTexture, crossX, crossY, scaledWidth, scaledHeight);
-            batch.setColor(Color.WHITE);
         } else {
             boolean canTeleport = false;
             final boolean[] isInsideSurface = {false};
@@ -2078,7 +2114,7 @@ public class PlatformScene implements Screen, Telegraph {
                     camera.position.set(position);
                 }
 
-                camera.zoom = 0.7f;
+                camera.zoom = 0.5f;
                 clampCamera();
                 camera.update();
             }
@@ -2102,8 +2138,23 @@ public class PlatformScene implements Screen, Telegraph {
             if (input.didToggleMap()) {
                 miniMapActive = !miniMapActive;
                 if (miniMapActive) miniMapTime = 0f;
+                miniCam.position.set(defaultMiniCamPos);
             }
 
+            Texture background1 = directory.getEntry("background1", Texture.class);
+
+            float parallaxFactor = 0.9f;
+            float scale = 0.7f;
+            float scaledWidth = background1.getWidth() * scale;
+            float scaledHeight = background1.getHeight() * scale;
+
+            float bgX = camera.position.x * parallaxFactor - scaledWidth / 2f;
+            float bgY = camera.position.y * parallaxFactor - scaledHeight / 2f;
+
+            batch.begin(camera);
+            batch.draw(background1, bgX, bgY, scaledWidth, scaledHeight);
+
+            batch.end();
 
 
             if (miniMapActive) {
@@ -2150,6 +2201,30 @@ public class PlatformScene implements Screen, Telegraph {
                 batch.setShader(prevShader);
                 batch.setProjectionMatrix(prevProj);
                 batch.setTransformMatrix(prevTrans);
+
+                Vector3 worldMouse = new Vector3(Gdx.input.getX(), Gdx.input.getY(), 0);
+                miniCam.unproject(worldMouse);
+
+                // Compute the difference between the mouse and camera center.
+                float dx = worldMouse.x - miniCam.position.x;
+                float dy = worldMouse.y - miniCam.position.y;
+
+                float thresholdX = miniCam.viewportWidth * 0.9f;
+                float thresholdY = miniCam.viewportHeight * 0.9f;
+
+                float moveX = 0, moveY = 0;
+                if (Math.abs(dx) > thresholdX) {
+                    moveX = dx - thresholdX;
+                }
+                if (Math.abs(dy) > thresholdY) {
+                    moveY = dy - thresholdY;
+                }
+
+                miniCam.position.x += moveX * 0.01f;
+                miniCam.position.y += moveY * 0.01f;
+
+
+                miniCam.update();
 
                 minimapRenderer.render(p, miniCam, miniMapTime);
                 miniMapTime += delta;                 // advance the shader clock
@@ -2233,7 +2308,7 @@ public class PlatformScene implements Screen, Telegraph {
         );
 
         // set up the sprite
-        newShard.setTexture(directory.getEntry("shared-goal", Texture.class));
+        newShard.setTexture(directory.getEntry("shard", Texture.class));
         newShard.getObstacle().setName("goal_" + newShard.id);
         addSprite(newShard);
         newShard.setFilter();

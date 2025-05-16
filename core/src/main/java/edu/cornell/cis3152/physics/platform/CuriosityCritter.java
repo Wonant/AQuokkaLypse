@@ -591,7 +591,9 @@ public class CuriosityCritter extends Enemy {
 
 
     public void setTarget() {
+
         worldTarget = scene.getPossibleShardSpots().get(heldShard.id);
+        System.out.println(worldTarget);
     }
 
     public void giveShard(Shard shard) {
