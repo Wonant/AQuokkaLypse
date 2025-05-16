@@ -1170,11 +1170,12 @@ public class PlatformScene implements Screen, Telegraph {
                 float direction = ((MindMaintenance) e).isFacingRight() ? 1 : -1;
                 position.set(position.x , position.y);
                 JsonValue bulletjv = constants.get("bullet");
-                Texture texture = directory.getEntry("platform-bullet", Texture.class);
+                Texture travelTex = directory.getEntry("wall-travel-sprite", Texture.class);
+                Texture endTex = directory.getEntry("wall-end-sprite", Texture.class);
 
-                ShieldWall wall = new ShieldWall(units, bulletjv, position, direction);
+
+                ShieldWall wall = new ShieldWall(units, bulletjv, position, direction, travelTex, endTex);
                 shieldWalls.add(wall);
-                wall.setTexture(texture);
                 addQueuedObject(wall);
             }
             else if (e instanceof DreamDweller && ((DreamDweller) e).isShooting()) {
@@ -1184,8 +1185,8 @@ public class PlatformScene implements Screen, Telegraph {
 
                 float speed = 11.5f;
                 JsonValue spearjv = constants.get("spear");
-                Texture spearTravelTex = directory.getEntry("platform-spear-travel-sprite", Texture.class);
-                Texture spearEndTex    = directory.getEntry("platform-spear-end-sprite", Texture.class);
+                Texture spearTravelTex = directory.getEntry("spear-travel-sprite", Texture.class);
+                Texture spearEndTex    = directory.getEntry("spear-end-sprite", Texture.class);
 
                 float[] angleOffsets = new float[] { -8f, -3f, 3f, 8f };
 
@@ -1381,7 +1382,7 @@ public class PlatformScene implements Screen, Telegraph {
             }
         }
 
-        if (avatar.isTeleporting() && avatar.getFearMeter() > TELEPORT_COST && !isTeleporting) {
+        if (avatar.isTeleporting() && avatar.getFearMeter() > TELEPORT_COST /*&& !isTeleporting*/) {
             // Calculate teleport position
             teleport();
             teleportDirectionRight = avatar.isFacingRight();

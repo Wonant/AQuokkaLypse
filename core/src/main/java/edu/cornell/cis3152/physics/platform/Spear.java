@@ -80,7 +80,6 @@ public class Spear extends ObstacleSprite {
 
         if (filterActivated) {
             timeAlive += dt;
-            System.out.println("Spear velocity: " + obstacle.getVX() + ", " + obstacle.getVY());
             if (notLaunched) {
                 delayTimer += dt;
                 obstacle.setVX(0);
@@ -90,12 +89,8 @@ public class Spear extends ObstacleSprite {
                     notLaunched = false;
                     float vx = speed * angle.x;
                     float vy = speed * angle.y;
-                    System.out.println(vx);
-                    System.out.println(vy);
-                    System.out.println("Right before spear shot velocity: " + obstacle.getVX() + ", " + obstacle.getVY());
                     obstacle.setVY(vy);
                     obstacle.setVX(vx);
-                    System.out.println("Shot spear velocity: " + obstacle.getVX() + ", " + obstacle.getVY());
 
                 }
             } else {
@@ -128,9 +123,6 @@ public class Spear extends ObstacleSprite {
         return dead;
     }
 
-    public float getDirection() {
-        return direction;
-    }
     @Override
     public void draw(SpriteBatch batch) {
 

@@ -653,7 +653,7 @@
             harvestLimit = 60;
             harvestDuration = 20;
             stunLimit = data.getInt( "shot_cool", 0 );
-            teleportLimit = data.getInt( "shot_cool", 0 );
+            teleportLimit = 30;
             takeDamageLimit = 120;
 
             // Gameplay attributes
