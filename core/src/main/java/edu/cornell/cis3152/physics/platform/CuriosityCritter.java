@@ -123,12 +123,11 @@ public class CuriosityCritter extends Enemy {
     }
 
     public void createAnimators(Texture texture) {
-        walkSprite       = new Animator(texture, 8, 20, 0.06f, 154, 0, 14);       // Walk
-        turnSprite       = new Animator(texture, 8, 20, 0.06f, 154, 15, 50);      // Turn
-        alertSprite      = new Animator(texture, 8, 20, 0.06f, 154, 51, 82);      // Alert
-        attackSprite     = new Animator(texture, 8, 20, 0.06f, 154, 83, 111);     // Attack Start
-        shardWalkSprite  = new Animator(texture, 8, 20, 0.06f, 154, 112, 129);// Walk with shard
-        stunnedSprite = new Animator(texture, 8, 20, 0.06f, 154, 130, 153);
+        walkSprite       = new Animator(texture, 8, 20, 0.06f, 149, 0, 14);       // Walk
+        alertSprite      = new Animator(texture, 8, 20, 0.06f, 149, 51, 82);      // Alert
+        attackSprite     = new Animator(texture, 8, 20, 0.06f, 149, 83, 111);     // Attack Start
+        shardWalkSprite  = new Animator(texture, 8, 20, 0.06f, 149, 109, 124);// Walk with shard
+        stunnedSprite = new Animator(texture, 8, 20, 0.06f, 149, 125, 148, false);
     }
 
     public CuriosityCritter(float units, JsonValue data, float[] points, PlatformScene scene, MessageDispatcher dispatcher) {
@@ -228,35 +227,6 @@ public class CuriosityCritter extends Enemy {
 
     }
 
-    public void createHeadBody() {
-        BodyDef bdef = new BodyDef();
-        bdef.type = BodyDef.BodyType.DynamicBody;
-        Vector2 pos = obstacle.getPosition().cpy().add(0, height / 2); // Head above body
-        bdef.position.set(pos);
-
-        headBody = obstacle.getBody().getWorld().createBody(bdef);
-        CircleShape headShape = new CircleShape();
-        headShape.setRadius(width / 3);
-
-        FixtureDef fdef = new FixtureDef();
-        fdef.shape = headShape;
-        fdef.density = 0.1f;
-        fdef.isSensor = true; // Prevent physical collisions
-        headBody.createFixture(fdef);
-        headBody.setUserData(this);
-
-        headShape.dispose();
-    }
-
-    public void attachHead() {
-        RevoluteJointDef jointDef = new RevoluteJointDef();
-        jointDef.initialize(obstacle.getBody(), headBody, obstacle.getBody().getWorldCenter().add(0, height / 2));
-        jointDef.enableMotor = true;
-        jointDef.motorSpeed = 0;
-        jointDef.maxMotorTorque = 100;
-        headJoint = (RevoluteJoint) obstacle.getBody().getWorld().createJoint(jointDef);
-    }
-
     public void setHorizontalVelocity() {
         if (!obstacle.isActive()) {
             return;
@@ -292,9 +262,6 @@ public class CuriosityCritter extends Enemy {
             return;
         }
 
-        World world = getObstacle().getBody().getWorld();
-
-        Vector2 pos = obstacle.getPosition();
         float vx = obstacle.getVX();
         Body body = obstacle.getBody();
 
@@ -512,15 +479,6 @@ public class CuriosityCritter extends Enemy {
 
     @Override
     public void update(float dt) {
-        if (turnCooldown > 0) turnCooldown -= dt;
-        boolean desiredFacing = (movement > 0) ? true : (movement < 0) ? false : facingRight;
-        if (desiredFacing != facingRight && turnCooldown <= 0f) {
-            inTurnAnimation = true;
-            turnSprite.reset();
-            turnCooldown = TURN_COOLDOWN_TIME;
-        }
-        facingRight = desiredFacing;
-
         lookForPlayer();
         if (isPlatformStep(scene.world, stepRayLength)) {
             System.out.println("Critter's seen a step");
@@ -528,8 +486,6 @@ public class CuriosityCritter extends Enemy {
 
         if (!canContinue()) {
             safeToWalk = false;
-            setMovement(0);
-            applyForce();
         } else {
             safeToWalk = true;
         }
@@ -557,17 +513,12 @@ public class CuriosityCritter extends Enemy {
 
         if (inStunAnimation) {
             animationState = AnimationState.STUN;
-        } else if (inTurnAnimation) {
-            animationState = AnimationState.TURN;
-            if (turnSprite.isAnimationFinished()) {
-                inTurnAnimation = false;
-            }
         }else if (hasShard) {
             animationState = AnimationState.SHARD_WALK;
         } else if (inAttackAnimation) {
-            animationState = AnimationState.ATTACK;
+            animationState = AnimationState.SHARD_WALK;
         } else if (isChasing) {
-            animationState = AnimationState.ALERT;
+            animationState = AnimationState.SHARD_WALK;
         } else {
             animationState = AnimationState.WALK;
             super.update(dt);
@@ -593,12 +544,6 @@ public class CuriosityCritter extends Enemy {
             case TURN:
                 frame = turnSprite.getCurrentFrame(Gdx.graphics.getDeltaTime());
                 break;
-            case ALERT:
-                frame = alertSprite.getCurrentFrame(Gdx.graphics.getDeltaTime());
-                break;
-            case ATTACK:
-                frame = attackSprite.getCurrentFrame(Gdx.graphics.getDeltaTime());
-                break;
             case SHARD_WALK:
                 frame = shardWalkSprite.getCurrentFrame(Gdx.graphics.getDeltaTime());
                 break;
@@ -609,7 +554,10 @@ public class CuriosityCritter extends Enemy {
                 frame = walkSprite.getCurrentFrame(Gdx.graphics.getDeltaTime());
         }
 
-        if (frame.isFlipX() != facingRight) {
+        if (facingRight ) {
+            frame.flip(true, false);
+        }
+        if (animationState == AnimationState.TURN){
             frame.flip(true, false);
         }
 
@@ -617,10 +565,10 @@ public class CuriosityCritter extends Enemy {
         float posX = obstacle.getX() * u;
         float posY = obstacle.getY() * u;
         float drawWidth = width * u * 4f;
-        float drawHeight = height * u * 1.15f;
+        float drawHeight = height * u * 1.25f;
 
         batch.draw(frame,
-            posX - drawWidth / 2f, posY - drawHeight / 2f,
+            posX + (facingRight ? -0.25f : -1) * 2 * drawWidth / 3f, posY - drawHeight / 2f,
             drawWidth / 2f, drawHeight / 2f,
             drawWidth, drawHeight,
             1f, 1f, 0f);
@@ -712,6 +660,7 @@ public class CuriosityCritter extends Enemy {
     }
     public void getStunned() {
         if (!inStunAnimation) {
+            stunnedSprite.reset();
             inStunAnimation = true;
             setMovement(0);
             applyForce();

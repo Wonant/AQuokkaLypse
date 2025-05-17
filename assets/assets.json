@@ -135,9 +135,8 @@
         "medium_1" : "levels/medium_1.json"
     },
     "soundfx" : {
-        "platform-jump"     : "platform/jump.wav",
-        "platform-pew"      : "platform/pew.wav",
-        "platform-plop"     : "platform/plop.wav"
+        "teleport-sound"     : "platform/teleport.wav",
+        "scare-sound"      : "platform/scare.wav",
     },
     "fonts": {
         "shared-retro": {

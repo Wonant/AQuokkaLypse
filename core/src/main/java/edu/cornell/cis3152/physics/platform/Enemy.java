@@ -21,6 +21,7 @@ import javax.swing.*;
 import static edu.cornell.cis3152.physics.platform.CollisionFiltering.*;
 
 public class Enemy extends ObstacleSprite {
+
     // for easy reference to some world objects
     protected PlatformScene scene;
 
@@ -45,33 +46,40 @@ public class Enemy extends ObstacleSprite {
 
     protected float shardAwareness;
 
-    /** event dispatcher */
+    /**
+     * event dispatcher
+     */
     protected final MessageDispatcher dispatcher;
 
 
-
-    public Enemy(MessageDispatcher dispatcher){
+    public Enemy(MessageDispatcher dispatcher) {
         shardAwareness = 4.0f;
         this.awareOfPlayer = false;
         this.stunned = false;
         this.seesWall = false;
         this.dispatcher = dispatcher;
     }
-    public boolean isAwareOfPlayer(){
+
+    public boolean isAwareOfPlayer() {
         return awareOfPlayer;
     }
-    public void setAwareOfPlayer(boolean awareness){
+
+    public void setAwareOfPlayer(boolean awareness) {
         this.awareOfPlayer = awareness;
     }
+
     public void setStunned(boolean value) {
         stunned = value;
     }
+
     public boolean isStunned() {
         return stunned;
     }
+
     public boolean isSeesWall() {
         return seesWall;
     }
+
     public void setSeesWall(boolean b) {
         seesWall = b;
     }
@@ -79,6 +87,7 @@ public class Enemy extends ObstacleSprite {
     public float getMovement() {
         return movement;
     }
+
 
     public void setMovement(float value) {
         movement = value;
@@ -89,16 +98,19 @@ public class Enemy extends ObstacleSprite {
             facingRight = true;
         }
     }
-    public void takeDamage(){
-        health = Math.max(health-1, 0);
+
+    public void takeDamage() {
+        health = Math.max(health - 1, 0);
     }
-    public int getHealth(){
+
+    public int getHealth() {
         return health;
     }
 
-    public boolean isDead(){
+    public boolean isDead() {
         return health == 0;
     }
+
     public boolean isGrounded() {
         return isGrounded;
     }
@@ -128,32 +140,9 @@ public class Enemy extends ObstacleSprite {
         return false;
     }
 
-    public void removeFromWorld(World world) {
-        // If we have a headBody, destroy it
-        if (headBody != null) {
-            // Also destroy the joint if it exists
-            if (headJoint != null) {
-                world.destroyJoint(headJoint);
-                headJoint = null;
-            }
-            world.destroyBody(headBody);
-            headBody = null;
-        }
-    }
-
     public PlatformScene getScene() {
         return scene;
     }
 
-    public void dispatchHarvest() {
-        if (dispatcher != null) {
-            dispatcher.dispatchMessage(null, scene, MessageType.CRITTER_LOST_PLAYER);
-        }
-    }
-
-
-
-    public Body getHeadBody() {
-        return headBody;
-    }
 }
+
