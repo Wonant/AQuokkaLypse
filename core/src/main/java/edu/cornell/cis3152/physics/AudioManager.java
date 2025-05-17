@@ -40,8 +40,6 @@ public class AudioManager implements Disposable {
      * Private constructor to enforce singleton pattern.
      */
     private AudioManager() {
-        // Initialize preferences or load saved volume settings here
-        // For now, we'll use default values
     }
 
     /**
@@ -116,7 +114,6 @@ public class AudioManager implements Disposable {
      * @param looping Whether the music should loop
      */
     public void playMusic(Music music, boolean looping) {
-        // Stop any currently playing music
         if (currentMusic != null) {
             currentMusic.stop();
         }
@@ -156,8 +153,6 @@ public class AudioManager implements Disposable {
      * Stops all playing sound effects.
      */
     public void stopAllSounds() {
-        // In a real implementation, you'd want to keep track of all playing sounds
-        // and stop them individually
     }
 
     /**
@@ -203,13 +198,6 @@ public class AudioManager implements Disposable {
      * In a real implementation, this would save to preferences.
      */
     public void saveSettings() {
-        // In a real implementation, you'd save to preferences here
-        // For example:
-        // Preferences prefs = Gdx.app.getPreferences("game_settings");
-        // prefs.putFloat("master_volume", masterVolume);
-        // prefs.putFloat("music_volume", musicVolume);
-        // prefs.putFloat("sfx_volume", sfxVolume);
-        // prefs.flush();
     }
 
     /**
@@ -217,11 +205,5 @@ public class AudioManager implements Disposable {
      * In a real implementation, this would load from preferences.
      */
     public void loadSettings() {
-        // In a real implementation, you'd load from preferences here
-        // For example:
-        // Preferences prefs = Gdx.app.getPreferences("game_settings");
-        // masterVolume = prefs.getFloat("master_volume", 1.0f);
-        // musicVolume = prefs.getFloat("music_volume", 1.0f);
-        // sfxVolume = prefs.getFloat("sfx_volume", 1.0f);
     }
 }
