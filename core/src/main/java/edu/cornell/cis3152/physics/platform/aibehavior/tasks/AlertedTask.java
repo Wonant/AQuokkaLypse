@@ -23,6 +23,7 @@ public class AlertedTask extends LeafTask<Enemy> {
             CuriosityCritter critter = (CuriosityCritter) getObject();
             critter.setMovement(0);
             critter.applyForce();
+            critter.setIsChasing(true);
             // play critter alerted anikmation/behavior
         }
     }

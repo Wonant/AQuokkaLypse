@@ -12,6 +12,7 @@
         "abstract-glassy" : "shaders/abstract_field.jpg",
         "maintenance-sprite-sheet" : "platform/maintenance.png",
         "player-sprite-sheet" : "platform/dreamwalker.png",
+        "critter-sprite-sheet" : "platform/critter spreedsheet.png",
         "absorb-animation" : "platform/absorb.png",
         "fear-meter-sprite-sheet" : "platform/healthbar_spritesheet.png",
         "visibility-indicator" : "platform/v1.png",

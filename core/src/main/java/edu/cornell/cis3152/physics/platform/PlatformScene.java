@@ -818,6 +818,13 @@ public class PlatformScene implements Screen, Telegraph {
                     critter = new CuriosityCritter(units, constants.get("curiosity-critter"), new float[]{worldX,worldY}, this, dispatcher);
                     critter.setTexture(critterTexture);
                     addSprite(critter);
+
+
+                    texture = directory.getEntry( "critter-sprite-sheet", Texture.class);
+                    critter.createAnimators(texture);
+
+                    // Have to do after body is created
+
                     critter.setFilter();
                     critter.createSensor();
                     enemies.add(critter);

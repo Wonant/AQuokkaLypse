@@ -24,6 +24,7 @@ public class RunTask extends LeafTask<Enemy> {
             CuriosityCritter critter = (CuriosityCritter) getObject();
             critter.setMovement(runSpeed);
             critter.applyForce();
+            critter.setInAttackAnimation(true);
         }
     }
 

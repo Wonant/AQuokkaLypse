@@ -22,6 +22,8 @@ public class StareTask extends LeafTask<Enemy> {
     @Override
     public void start() {
         elapsed = 0;
+        CuriosityCritter critter = (CuriosityCritter) getObject();
+        critter.setInAttackAnimation(true);
     }
 
     @Override
