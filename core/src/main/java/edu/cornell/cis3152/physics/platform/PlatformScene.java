@@ -765,6 +765,10 @@ public class PlatformScene implements Screen, Telegraph {
         setComplete(false);
         setFailure(false);
         populateLevel();
+
+        shadowMode = false;
+        avatar.setShroudMode(false);
+        pendingSpears.clear();
     }
 
     /**
