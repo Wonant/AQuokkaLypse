@@ -24,6 +24,7 @@
         "dream-dweller-inactive": "shared/DreamDwellerInactive.png",
         "fear-meter" : "platform/fearmeter_0.png",
         "background1" : "platform/background.png",
+        "shard-sprite" : "shard/shard.png",
 
     "platform-spear"  : "platform/spear.png",
         "platform-spear-right"  : "platform/spear-right.png",

@@ -277,7 +277,7 @@ public class PlatformScene implements Screen, Telegraph {
     private Texture blankTexture, screenTexture;
     private Sprite blankSprite;
     private Texture abstractGlassyTexture;
-
+    private Texture shard;
 
     private VertexBuffer bulletVB;
     private Shader glowShader;
@@ -799,7 +799,7 @@ public class PlatformScene implements Screen, Telegraph {
         float units = TiledMapInfo.PIXELS_PER_WORLD_METER;
         minimapRenderer = new MinimapRenderer(tiledMap.map, batch, units, bounds.width, bounds.height);
         int level = 0;
-
+        shard = directory.getEntry("shard-sprite", Texture.class);
 
         // entity spawn handling from tiled
 
@@ -911,7 +911,8 @@ public class PlatformScene implements Screen, Telegraph {
                     possibleShardPos.put(shardID, new Vector2(reposition.getProperties().get("x", Float.class) / 32f, reposition.getProperties().get("y", Float.class) / 32f));
                 }
                 if (o.getName() == null) {
-                    Shard goalShard = new Shard(units, goal, worldX, worldY, shardID);
+                    shard = directory.getEntry("shard-sprite", Texture.class);
+                    Shard goalShard = new Shard(units, goal, worldX, worldY, shardID, shard);
                     shardPos.add(shardID, new Vector2(worldX, worldY));
                     goalShard.setTexture(texture);
                     goalShard.getObstacle().setName("goal_" + shardID);
@@ -2103,7 +2104,7 @@ public class PlatformScene implements Screen, Telegraph {
                     camera.position.set(position);
                 }
 
-                camera.zoom = 0.7f;
+                camera.zoom = 0.6f;
                 clampCamera();
                 camera.update();
             }
@@ -2293,7 +2294,8 @@ public class PlatformScene implements Screen, Telegraph {
             TiledMapInfo.PIXELS_PER_WORLD_METER,
             goal,
             world.x, world.y,
-            s.id
+            s.id,
+            shard
         );
 
         // set up the sprite

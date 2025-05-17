@@ -13,12 +13,16 @@
  */
  package edu.cornell.cis3152.physics.platform;
 
+import com.badlogic.gdx.Gdx;
 import com.badlogic.gdx.graphics.Color;
+import com.badlogic.gdx.graphics.Texture;
+import com.badlogic.gdx.graphics.g2d.TextureRegion;
 import com.badlogic.gdx.physics.box2d.BodyDef;
 import com.badlogic.gdx.physics.box2d.Filter;
 import com.badlogic.gdx.physics.box2d.Fixture;
 import com.badlogic.gdx.utils.JsonValue;
 import edu.cornell.gdiac.assets.ParserUtils;
+import edu.cornell.gdiac.graphics.SpriteBatch;
 import edu.cornell.gdiac.physics2.BoxObstacle;
 import edu.cornell.gdiac.physics2.ObstacleSprite;
 
@@ -42,6 +46,10 @@ public class Shard extends ObstacleSprite {
     private boolean pickedUp;
     public int id;
 
+    private Animator sprite;
+    private TextureRegion currentFrame;
+    private float timeAlive;
+
 
     /**
      * Creates a door with the given physics units and settings
@@ -52,7 +60,7 @@ public class Shard extends ObstacleSprite {
      * @param units     The physics units
      * @param settings  The door physics constants
      */
-    public Shard(float units, JsonValue settings, float x, float y, int id) {
+    public Shard(float units, JsonValue settings, float x, float y, int id, Texture sprite) {
         super();
 
         this.id = id;
@@ -60,7 +68,7 @@ public class Shard extends ObstacleSprite {
         float s = settings.getFloat( "size" );
         float size = s*units;
 
-        obstacle = new BoxObstacle(x, y, s, s);
+        obstacle = new BoxObstacle(x, y, s*2, s*2);
         obstacle.setDensity(settings.getFloat("density", 0));
         obstacle.setFriction(settings.getFloat("friction", 0));
         obstacle.setRestitution(settings.getFloat("restitution", 0));
@@ -78,6 +86,8 @@ public class Shard extends ObstacleSprite {
         // want (0,0) to be in the center of the mesh. So the method call below
         // is (x,y,w,h) where x, y is the bottom left.
         mesh.set(-size/2.0f,-size/2.0f,size,size);
+        this.sprite = new Animator(sprite, 1, 1, 0.1f, 1, 0, 0);
+        timeAlive = 0;
     }
 
     public void setFilter() {
@@ -90,5 +100,41 @@ public class Shard extends ObstacleSprite {
             filter.maskBits = CollisionFiltering.CATEGORY_PLAYER | CollisionFiltering.CATEGORY_ENEMY;
             fixture.setFilterData(filter);
         }
+    }
+
+    @Override
+    public void update(float dt) {
+        timeAlive += Gdx.graphics.getDeltaTime();
+
+        obstacle.setPosition(obstacle.getX(), obstacle.getY() + 0.01f* (float) Math.sin(timeAlive*4));
+        super.update(dt);
+    }
+
+    @Override
+    public void draw(SpriteBatch batch) {
+        TextureRegion frame = sprite.getCurrentFrame(Gdx.graphics.getDeltaTime());
+
+        float u = obstacle.getPhysicsUnits();
+        float posX = obstacle.getX() * u;
+        float posY = obstacle.getY() * u;
+        float drawWidth = frame.getRegionWidth()/9f;
+        float drawHeight = frame.getRegionHeight()/9f;
+
+        float originX = drawWidth/ 2f;
+        float originY = drawHeight / 2f;
+
+
+
+        batch.draw(frame,
+            posX - originX, // lower-left x position
+            posY - originY, // lower-left y position
+            posX,        // originX used for scaling and rotation
+            posY,        // originY
+            drawWidth,      // width
+            drawHeight,     // height
+            1f,             // scaleX
+            1f,             // scaleY
+            0
+        );
     }
 }
