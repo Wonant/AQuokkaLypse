@@ -34,50 +34,10 @@ public class StunnedActionTask extends LeafTask<Enemy> {
             return Status.SUCCEEDED;
         }
 
-
         CuriosityCritter c = (CuriosityCritter) getObject();
 
         if (!c.isStunned()) {
             return Status.SUCCEEDED;
-
-            // Remain stunned: no movement
-            c.setMovement(0);
-            c.applyForce(); // So velocity gets updated
-
-            // Track elapsed time
-            float dt = GdxAI.getTimepiece().getDeltaTime();
-            elapsed += dt;
-
-            // If we've served our full stun sentence, clear it and succeed
-            if (elapsed >= stunDuration) {
-                c.setActiveTexture(c.getScene().getAiManager().directory);
-                c.setStunned(false);
-                System.out.println("stun ended");
-                return Status.SUCCEEDED;
-            } else if (getObject() instanceof DreamDweller) {
-                DreamDweller d = (DreamDweller) getObject();
-                if (!d.isStunned()) {
-                    return Status.SUCCEEDED;
-                }
-
-                // Remain stunned: no movement
-                d.setMovement(0);
-
-                // Track elapsed time
-                dt = GdxAI.getTimepiece().getDeltaTime();
-                elapsed += dt;
-
-                // If we've served our full stun sentence, clear it and succeed
-                if (elapsed >= stunDuration) {
-                    c.setActiveTexture(c.getScene().getAiManager().directory);
-                    c.setStunned(false);
-                    System.out.println("stun ended");
-                    return Status.SUCCEEDED;
-                }
-
-                // Otherwise keep running
-            }
-
         }
 
         c.setMovement(0);
@@ -88,7 +48,7 @@ public class StunnedActionTask extends LeafTask<Enemy> {
 
         if (elapsed >= stunDuration) {
             c.setStunned(false);
-            c.setActiveTexture(c.getScene().getAiManager().directory); 
+            c.setActiveTexture(c.getScene().getAiManager().directory); // 恢复贴图
             System.out.println("stun ended");
             return Status.SUCCEEDED;
         }

@@ -14,7 +14,7 @@ import stunnedAction:"edu.cornell.cis3152.physics.platform.aibehavior.tasks.Stun
 root
     dynamicGuardSelector
         (stunnedGuard) stunnedAction stunDuration:0.3
-        (playerVisible) sequence:
+        (playerVisible) sequence
             alerted duration:0.05
             selector
                 (fearMeterHigh) moveShard tolerance:1.0

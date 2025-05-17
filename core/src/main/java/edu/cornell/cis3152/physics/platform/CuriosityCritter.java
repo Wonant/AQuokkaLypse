@@ -66,44 +66,23 @@ public class CuriosityCritter extends Enemy {
     private int climbCounter = 0;
     private final int CLIMB_DURATION = 11;
 
+    private Animator walkSprite;
+    private Animator turnSprite;
+    private Animator alertSprite;
+    private Animator attackSprite;
+    private Animator shardWalkSprite;
+    private Animator stunnedSprite;
+
+    private AnimationState animationState;
+    private boolean inAttackAnimation = false;
+    private boolean inTurnAnimation = false;
+    private boolean inStunAnimation = false;
+    private boolean isChasing = false;
+    private boolean lastFacingRight = true;
+
     private boolean turning = false;
     private float turnCooldown = 0f;
     private static final float TURN_COOLDOWN_TIME = 0.3f;
-
-
-    /** animation */
-    private Animator walkingSprite;
-    private Animator turnSprite;
-    private Animator alertSprite;
-    private Animator alertWalkSprite;
-    private Animator attackSprite;
-    private Animator stunnedSprite;
-    private CuriosityCritter.AnimationState animationState;
-
-    private boolean inAttackAnimation = false;
-    private boolean inChasingAnimation = false;
-    private int     attackFrameCounter = 0;
-    private boolean inStunAnimation   = false;
-    private int     stunFrameCounter  = 0;
-    private boolean inTurnAnimation   = false;
-    private int     turnFrameCounter  = 0;
-
-    private enum AnimationState {
-        WALK,
-        TURN,
-        ALERT,
-        ATTACK,
-        STUN
-    }
-
-    public void createAnimators(Texture critter) {
-        walkingSprite = new Animator(critter, 10, 13, 0.06f, 130, 0,15);
-        turnSprite = new Animator(critter, 10, 13, 0.06f, 130, 16,39);
-        alertSprite = new Animator(critter, 10, 13, 0.08f, 130, 40,64);
-        alertWalkSprite = new Animator(critter, 10, 13, 0.05f, 130, 65,82);
-        attackSprite = new Animator(critter, 10, 13, 0.05f, 130, 83, 110);
-        stunnedSprite = new Animator(critter, 10, 13, 0.08f, 130, 111, 129);
-    }
 
 
     public boolean isGrounded() {

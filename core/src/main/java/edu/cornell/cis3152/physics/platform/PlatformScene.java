@@ -820,8 +820,8 @@ public class PlatformScene implements Screen, Telegraph {
                     addSprite(critter);
 
 
-                    texture = directory.getEntry( "critter-sprite-sheet", Texture.class);
-                    critter.createAnimators(texture);
+                    critterTexture = directory.getEntry( "critter-sprite-sheet", Texture.class);
+                    critter.createAnimators(critterTexture);
 
                     // Have to do after body is created
 
