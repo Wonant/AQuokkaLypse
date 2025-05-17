@@ -311,6 +311,10 @@ public class DreamDweller extends Enemy {
     @Override
     public void draw(SpriteBatch batch) {
         TextureRegion frame = null;
+        if (animationState == null)
+        {
+            return;
+        }
         switch (animationState) {
             case IDLE:
                 frame = idleSprite.getCurrentFrame(Gdx.graphics.getDeltaTime());
