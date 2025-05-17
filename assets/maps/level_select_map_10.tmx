@@ -2,7 +2,6 @@
 <map version="1.10" tiledversion="1.11.2" orientation="orthogonal" renderorder="right-down" width="49" height="53" tilewidth="128" tileheight="128" infinite="0" nextlayerid="15" nextobjectid="24">
  <tileset firstgid="1" source="../tilesets/Temple Edges.tsx"/>
  <tileset firstgid="337" source="../tilesets/Temple Gradient.tsx"/>
- <tileset firstgid="454" source="../tilesets/Outside Background.tsx"/>
  <tileset firstgid="1478" source="../tilesets/Temple L1.tsx"/>
  <tileset firstgid="1595" source="../tilesets/Temple Window.tsx"/>
  <tileset firstgid="1869" source="../tilesets/Doors.tsx"/>

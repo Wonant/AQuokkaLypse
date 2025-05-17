@@ -99,7 +99,7 @@ public class DreamDweller extends Enemy {
         height = s * data.get("inner").getFloat(1);
 
         float drawWidth = (float) (size / 1.5);
-        float drawHeight = size;
+        float drawHeight = size * 1.2f;
 
         obstacle = new CapsuleObstacle(x, y, width, height);
         JsonValue debugInfo = data.get("debug");

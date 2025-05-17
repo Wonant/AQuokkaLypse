@@ -44,8 +44,8 @@ public class GDXRoot extends Game implements ScreenListener {
     /** Array of map keys for each level */
 
 
-    private String[] maps = {"level_select", "tutorial1", "level2", "level3", "level4", "level5", "level6", "level7", "level9", "level10"};
-    private String[] tiled = {"maps/level_select_map_10.tmx", "maps/tutorial.tmx", "maps/level_2.tmx", "maps/level_3.tmx", "maps/level_4.tmx", "maps/level_5.tmx","maps/level_6.tmx", "maps/level_7.tmx", "maps/level_9.tmx", "maps/level_10.tmx"};
+    private String[] maps = {"tutorial1", "level_select",  "level2", "level3", "level4", "level5", "level6", "level7", "level9", "level10"};
+    private String[] tiled = {"maps/tutorial.tmx", "maps/level_select_map_10.tmx", "maps/level_2.tmx", "maps/level_3.tmx", "maps/level_4.tmx", "maps/level_5.tmx","maps/level_6.tmx", "maps/level_7.tmx", "maps/level_9.tmx", "maps/level_10.tmx"};
 
 
     /** Current map index for switching levels */
@@ -168,7 +168,7 @@ public class GDXRoot extends Game implements ScreenListener {
         else if (screen == mainMenu) {
             switch (exitCode) {
                 case MainMenuScene.EXIT_PLAY:
-                    current = 1;
+                    current = 0;
                     setScreen(controllers[current]);
                     break;
                 case MainMenuScene.EXIT_SETTINGS:
@@ -200,7 +200,7 @@ public class GDXRoot extends Game implements ScreenListener {
                 setScreen(controllers[current]);
             } else if (exitCode == PlatformScene.EXIT_LEVELSELECT)
             {
-                setScreen(controllers[0]);
+                setScreen(controllers[1]);
             }
             else if (exitCode == PlatformScene.FROM_LEVELSELECT){
                 int dest = ((PlatformScene) screen).getDoorDestination();
@@ -231,7 +231,7 @@ public class GDXRoot extends Game implements ScreenListener {
                     setScreen(pausedScreen);
                     break;
                 case PauseScene.EXIT_LEVELSELECT:
-                    setScreen(controllers[0]);
+                    setScreen(controllers[1]);
                     break;
                 case PauseScene.EXIT_SETTINGS:
                     // Open settings screen

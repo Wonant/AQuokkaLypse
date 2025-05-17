@@ -66,7 +66,7 @@ public class DayglowSpike extends ObstacleSprite {
         mesh.set(0, 0, width * units, height * units);
         this.width = width;
         this.height = height;
-        this.isLaser = isLaser;
+        this.isLaser = false;
         this.laserCharging = false;
         this.laserFiring = false;
         this.chargeCounter = 0;
