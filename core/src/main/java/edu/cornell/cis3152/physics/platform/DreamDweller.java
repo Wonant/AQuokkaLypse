@@ -1,5 +1,7 @@
 package edu.cornell.cis3152.physics.platform;
 
+import com.badlogic.gdx.Gdx;
+import com.badlogic.gdx.graphics.g2d.TextureRegion;
 import com.badlogic.gdx.math.*;
 import com.badlogic.gdx.graphics.*;
 import com.badlogic.gdx.physics.box2d.*;
@@ -41,6 +43,47 @@ public class DreamDweller extends Enemy {
 
     private float susCooldown = 20;
     private float susCountdown = susCooldown;
+
+    private Animator idleSprite;
+    private Animator turnSprite;
+    private Animator shootSprite;
+    private Animator stunSprite;
+    private Animator floatSprite;
+    private AnimationState animationState;
+
+    private float turnTimer = 0f;
+    private float turnCooldown = 3.0f;
+    private boolean inTurnAnimation = false;
+    private int turnFrameCounter = 0;
+
+    private boolean lastFacingRight;
+
+    private float facingDirectionHoldTimer = 0f;
+    private final float facingHoldDuration = 3.0f;
+
+    private boolean shouldFlipAfterTurn = false;
+    private boolean inShootAnimation = false;
+    private boolean onPlatform = isGrounded;
+
+
+
+    private enum AnimationState {
+        IDLE, TURN,FLOAT,SHOOT, STUN
+    }
+
+    public void createAnimators(Texture sheet1, Texture sheet2, Texture sheet3) {
+        // Sheet1: 8x8
+        idleSprite = new Animator(sheet1, 8, 8, 0.06f, 31, 0, 30); // idle (on platform)
+        turnSprite = new Animator(sheet1, 8, 8, 0.06f, 27, 31, 57, false); // turn
+
+        // Sheet2: 8x8
+        floatSprite = new Animator(sheet2, 8, 8, 0.06f, 39, 0, 38); // float (in air idle)
+        shootSprite = new Animator(sheet2, 8, 8, 0.05f, 24, 39, 62, false); // shoot
+
+        // Sheet3: 8x5
+        stunSprite = new Animator(sheet3, 8, 8, 0.08f, 16, 23, 38, false); // stun
+    }
+
 
     public DreamDweller(float units, JsonValue data, float[] points, PlatformScene scene) {
         super(null);
@@ -196,7 +239,9 @@ public class DreamDweller extends Enemy {
 
         Vector2 playerPos = scene.getAvatar().getObstacle().getPosition();
         Vector2 selfPos = obstacle.getPosition();
-        facingRight = playerPos.x >= selfPos.x;
+        if (isAwareOfPlayer() && !scene.isFailure() && !inTurnAnimation && !inShootAnimation) {
+            facingRight = playerPos.x >= selfPos.x;
+        }
 
         if (isAwareOfPlayer() && !scene.isFailure()) {
             setShooting(true);
@@ -212,26 +257,96 @@ public class DreamDweller extends Enemy {
             shootCooldown = Math.max(0, shootCooldown - 1);
         }
 
+        if (isStunned()) {
+            animationState = AnimationState.STUN;
+        }
+
+        else if (inShootAnimation) {
+            animationState = AnimationState.SHOOT;
+            if (shootSprite.isAnimationFinished()) {
+                inShootAnimation = false;
+            }
+        }
+        else if (isShooting()) {
+            animationState = AnimationState.SHOOT;
+            shootSprite.reset();
+            inShootAnimation = true;
+            setShooting(false);
+        }
+        else if (!isAwareOfPlayer()) {
+            turnTimer += dt;
+            facingDirectionHoldTimer += dt;
+
+            if (turnTimer >= turnCooldown && facingDirectionHoldTimer >= facingHoldDuration) {
+                shouldFlipAfterTurn = true;
+                inTurnAnimation = true;
+                turnTimer = 0f;
+                facingDirectionHoldTimer = 0f;
+                turnSprite.reset();
+            }
+
+            if (inTurnAnimation) {
+                animationState = AnimationState.TURN;
+                if (turnSprite.isAnimationFinished()) {
+                    inTurnAnimation = false;
+                    if (shouldFlipAfterTurn) {
+                        facingRight = !facingRight;
+                        shouldFlipAfterTurn = false;
+
+                        if (onPlatform) {
+                            idleSprite.reset();
+                        } else {
+                            floatSprite.reset();
+                        }
+                    }
+                }
+            } else {
+                animationState = onPlatform ? AnimationState.IDLE : AnimationState.FLOAT;
+            }
+        }
+        else {
+            animationState = onPlatform ? AnimationState.IDLE : AnimationState.FLOAT;
+        }
         super.update(dt);
     }
 
     @Override
     public void draw(SpriteBatch batch) {
-        if (obstacle != null && mesh != null) {
-            float x = obstacle.getX();
-            float y = obstacle.getY();
-            float a = obstacle.getAngle();
-            float u = obstacle.getPhysicsUnits();
-
-            transform.idt();
-            transform.preScale(facingRight ? -1.4f : 1.4f, 1.4f);
-            transform.preRotate((float) (a * MathUtils.radiansToDegrees));
-            transform.preTranslate(x * u, (y - height / 12f) * u);
-
-            batch.setTextureRegion(sprite);
-            batch.drawMesh(mesh, transform, false);
-            batch.setTexture((Texture) null);
+        TextureRegion frame = null;
+        switch (animationState) {
+            case IDLE:
+                frame = idleSprite.getCurrentFrame(Gdx.graphics.getDeltaTime());
+                break;
+            case FLOAT:
+                frame = floatSprite.getCurrentFrame(Gdx.graphics.getDeltaTime());
+                break;
+            case TURN:
+                frame = turnSprite.getCurrentFrame(Gdx.graphics.getDeltaTime());
+                break;
+            case SHOOT:
+                frame = shootSprite.getCurrentFrame(Gdx.graphics.getDeltaTime());
+                break;
+            case STUN:
+                frame = stunSprite.getCurrentFrame(Gdx.graphics.getDeltaTime());
+                break;
         }
+
+        // ✅ 仅在必要时 flip，避免闪烁
+        if (!facingRight && !frame.isFlipX()) {
+            frame.flip(true, false);
+        } else if (facingRight && frame.isFlipX()) {
+            frame.flip(true, false);
+        }
+
+        float u = obstacle.getPhysicsUnits();
+        float posX = obstacle.getX() * u;
+        float posY = obstacle.getY() * u;
+        float drawWidth = width * u * 1.5f;
+        float drawHeight = height * u * 1.15f;
+        float originX = drawWidth / 2f;
+        float originY = drawHeight / 2f;
+
+        batch.draw(frame, posX - originX, posY - originY, originX, originY, drawWidth, drawHeight, 1f, 1f, 0f);
     }
 
     @Override
