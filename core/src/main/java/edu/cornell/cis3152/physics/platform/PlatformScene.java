@@ -735,7 +735,7 @@ public class PlatformScene implements Screen, Telegraph {
         pix.dispose();
         blankSprite   = new Sprite(blankTexture);
 
-
+        background = directory.getEntry("outside-background", Texture.class);
         abstractGlassyTexture = directory.getEntry("abstract-glassy", Texture.class);
     }
 
@@ -780,7 +780,7 @@ public class PlatformScene implements Screen, Telegraph {
     private void populateLevel() {
         globalTime = 0;
         tiledMap = new TiledMapInfo(tiledLevelName);
-        tiledRenderer = new TiledMapRenderer(tiledMap.map, batch, 32);
+        tiledRenderer = new TiledMapRenderer(tiledMap.map, batch, 128);
         aiCManager = new AIControllerManager(avatar,directory,world);
         aiManager = new AIManager("behaviors/critter.tree", "behaviors/dweller.tree","behaviors/maintenance.tree", directory);
         aiManager.setPlayer(avatar);
@@ -908,7 +908,7 @@ public class PlatformScene implements Screen, Telegraph {
                 MapObject reposition = o.getProperties().get("path", MapObject.class);
 
                 if (reposition != null) {
-                    possibleShardPos.put(shardID, new Vector2(reposition.getProperties().get("x", Float.class) / 32f, reposition.getProperties().get("y", Float.class) / 32f));
+                    possibleShardPos.put(shardID, new Vector2(reposition.getProperties().get("x", Float.class) / 128f, reposition.getProperties().get("y", Float.class) / 128f));
                 }
                 if (o.getName() == null) {
                     shard = directory.getEntry("shard-sprite", Texture.class);
@@ -1612,9 +1612,6 @@ public class PlatformScene implements Screen, Telegraph {
      * @param dt    Number of seconds since last animation frame
      */
     public void draw(float dt) {
-        // Clear the screen (color is homage to the XNA years)
-        // This shows off how powerful our new SpriteBatch is
-
         batch.begin(camera);
 
 
@@ -1997,7 +1994,7 @@ public class PlatformScene implements Screen, Telegraph {
 
     private void drawScareEffect() {
 
-        float u = 32;
+        float u = 128;
         Vector2 worldPos = avatar.getObstacle().getPosition();
         float cx = worldPos.x * u;
         float cy = worldPos.y * u;
@@ -2104,7 +2101,7 @@ public class PlatformScene implements Screen, Telegraph {
                     camera.position.set(position);
                 }
 
-                camera.zoom = 0.6f;
+                camera.zoom = 2.5f;
                 clampCamera();
                 camera.update();
             }
@@ -2130,21 +2127,6 @@ public class PlatformScene implements Screen, Telegraph {
                 if (miniMapActive) miniMapTime = 0f;
                 miniCam.position.set(defaultMiniCamPos);
             }
-
-            Texture background1 = directory.getEntry("background1", Texture.class);
-
-            float parallaxFactor = 0.9f;
-            float scale = 0.7f;
-            float scaledWidth = background1.getWidth() * scale;
-            float scaledHeight = background1.getHeight() * scale;
-
-            float bgX = camera.position.x * parallaxFactor - scaledWidth / 2f;
-            float bgY = camera.position.y * parallaxFactor - scaledHeight / 2f;
-
-            batch.begin(camera);
-            batch.draw(background1, bgX, bgY, scaledWidth, scaledHeight);
-
-            batch.end();
 
 
             if (miniMapActive) {

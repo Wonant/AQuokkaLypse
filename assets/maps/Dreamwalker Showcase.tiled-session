@@ -1,0 +1,133 @@
+{
+    "Map/SizeTest": {
+        "height": 4300,
+        "width": 2
+    },
+    "activeFile": "",
+    "expandedProjectPaths": [
+        "tilesets"
+    ],
+    "file.lastUsedOpenFilter": "All Files (*)",
+    "fileStates": {
+        "/Users/ajh365/Downloads/level_8.tmx": {
+            "scale": 0.015625,
+            "selectedLayer": 4,
+            "viewCenter": {
+                "x": 9632,
+                "y": 1888
+            }
+        },
+        "/Users/ajh365/developer/personal/gdiac/AQuokkaLypse/assets/tilesets/Outside Background.tsx": {
+            "dynamicWrapping": false,
+            "scaleInEditor": 0.14
+        },
+        "/Users/ajh365/developer/personal/gdiac/AQuokkaLypse/assets/tilesets/Outside background1.tsx": {
+            "scaleInDock": 0.089,
+            "scaleInEditor": 0.14
+        },
+        "/Users/ajh365/developer/personal/gdiac/AQuokkaLypse/assets/tilesets/Temple Gradient.tsx": {
+            "scaleInDock": 1
+        },
+        "/Users/ajh365/developer/personal/gdiac/AQuokkaLypse/assets/tilesets/Temple L1 Stairs.tsx": {
+            "scaleInDock": 1
+        },
+        "/Users/ajh365/developer/personal/gdiac/AQuokkaLypse/assets/tilesets/Temple Roof L1.tsx": {
+            "scaleInDock": 1
+        },
+        "/Users/ajh365/developer/personal/gdiac/AQuokkaLypse/assets/tilesets/Temple Window.tsx": {
+            "scaleInDock": 1
+        },
+        "/Users/ajh365/developer/personal/gdiac/AQuokkaLypse/assets/tilesets/laser base.tsx": {
+            "scaleInDock": 1
+        },
+        "/Users/ajh365/tilesets/Doors.tsx": {
+            "scaleInDock": 1
+        },
+        "/Users/ajh365/tilesets/Outside Background.tsx": {
+            "scaleInDock": 1
+        },
+        "/Users/ajh365/tilesets/Temple Edges pt 2.tsx": {
+            "scaleInDock": 1
+        },
+        "/Users/ajh365/tilesets/Temple Edges.tsx": {
+            "scaleInDock": 1
+        },
+        "/Users/ajh365/tilesets/Temple Gradient.tsx": {
+            "scaleInDock": 1
+        },
+        "/Users/ajh365/tilesets/Temple L1 Stairs.tsx": {
+            "scaleInDock": 1
+        },
+        "/Users/ajh365/tilesets/Temple L1.tsx": {
+            "scaleInDock": 1
+        },
+        "/Users/ajh365/tilesets/Temple Roof L1.tsx": {
+            "scaleInDock": 1
+        },
+        "/Users/ajh365/tilesets/Temple Window.tsx": {
+            "scaleInDock": 1
+        },
+        "/Users/ajh365/tilesets/laser base.tsx": {
+            "scaleInDock": 1
+        },
+        "level_8.tmx": {
+            "scale": 0.09,
+            "selectedLayer": 4,
+            "viewCenter": {
+                "x": 9900,
+                "y": 3355.555555555555
+            }
+        },
+        "tilesets/Broken Wall R.tsx": {
+            "scaleInDock": 1,
+            "scaleInEditor": 1
+        },
+        "tilesets/tutorial.tmx": {
+            "scale": 0.059,
+            "selectedLayer": 1,
+            "viewCenter": {
+                "x": 2610.169491525424,
+                "y": 3567.796610169491
+            }
+        },
+        "tutorial.tmx": {
+            "expandedGroupLayers": [
+                6
+            ],
+            "expandedObjectLayers": [
+                3
+            ],
+            "scale": 0.2172,
+            "selectedLayer": 2,
+            "viewCenter": {
+                "x": 18522.099447513814,
+                "y": 2481.5837937384895
+            }
+        }
+    },
+    "last.externalTilesetPath": "/Users/ajh365/developer/personal/gdiac/AQuokkaLypse/assets/tilesets",
+    "last.imagePath": "/Users/ajh365/developer/personal/gdiac/AQuokkaLypse/assets/tilesets",
+    "map.height": 36,
+    "map.lastUsedFormat": "tmx",
+    "map.tileHeight": 128,
+    "map.tileWidth": 128,
+    "map.width": 160,
+    "openFiles": [
+    ],
+    "project": "Dreamwalker Showcase.tiled-project",
+    "property.type": "object",
+    "recentFiles": [
+        "/Users/ajh365/developer/personal/gdiac/AQuokkaLypse/assets/tilesets/Outside Background.tsx",
+        "/Users/ajh365/developer/personal/gdiac/AQuokkaLypse/assets/tilesets/Outside background1.tsx",
+        "level_8.tmx",
+        "/Users/ajh365/Downloads/level_8.tmx",
+        "tilesets/tutorial.tmx",
+        "tilesets/Broken Wall R.tsx"
+    ],
+    "tileset.lastUsedFilter": "Tiled tileset files (*.tsx *.xml)",
+    "tileset.lastUsedFormat": "tsx",
+    "tileset.tileSize": {
+        "height": 128,
+        "width": 128
+    }
+}

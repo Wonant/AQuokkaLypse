@@ -5,6 +5,7 @@ import com.badlogic.gdx.graphics.g2d.TextureRegion;
 import com.badlogic.gdx.maps.MapGroupLayer;
 import com.badlogic.gdx.maps.MapLayer;
 import com.badlogic.gdx.maps.tiled.TiledMap;
+import com.badlogic.gdx.maps.tiled.TiledMapImageLayer;
 import com.badlogic.gdx.maps.tiled.TiledMapTile;
 import com.badlogic.gdx.maps.tiled.TiledMapTileLayer;
 import com.badlogic.gdx.maps.tiled.tiles.StaticTiledMapTile;
@@ -35,13 +36,41 @@ public class TiledMapRenderer {
 
         float layerPx = layer.getParallaxX();
         float layerPy = layer.getParallaxY();
-        PY *= layerPy;
-        PX *= layerPx;
+
+        float totalPx = PX * layerPx;
+        float totalPy = PY * layerPy;
 
         if (layer instanceof MapGroupLayer) {
             for (MapLayer l : ((MapGroupLayer) layer).getLayers()) {
-                renderLayersHelper(l, camera, PX, PY);
+                renderLayersHelper(l, camera, totalPx, totalPy);
             }
+            return;
+        }
+
+        if (layer instanceof TiledMapImageLayer) {
+            TiledMapImageLayer imageLayer = (TiledMapImageLayer) layer;
+            TextureRegion region = imageLayer.getTextureRegion();
+            if (region == null) return;
+
+            float layerPX = layer.getParallaxX();
+            float layerPY = layer.getParallaxY();
+
+            float offX = camera.position.x - camera.viewportWidth  * 0.5f;
+            float offY = camera.position.y - camera.viewportHeight * 0.5f;
+
+            float parallaxOffsetX = offX * (1f - PX * layerPX);
+            float parallaxOffsetY = offY * (1f - PY * layerPY);
+
+            float imageX = imageLayer.getX() + parallaxOffsetX;
+            float imageY = imageLayer.getY() + parallaxOffsetY;
+
+            batch.draw(
+                region,
+                imageX,
+                imageY,
+                region.getRegionWidth() * unitScale,
+                region.getRegionHeight() * unitScale
+            );
             return;
         }
 
@@ -56,9 +85,9 @@ public class TiledMapRenderer {
 
         float offX = camera.position.x - camera.viewportWidth  * 0.5f;
         float offY = camera.position.y - camera.viewportHeight * 0.5f;
-        offX *= (1f - PX);
-        offY *= (1f - PY);
 
+        float parallaxOffsetX = offX * (1f - totalPx);
+        float parallaxOffsetY = offY * (1f - totalPy);
 
         for (int y = 0; y < tileLayer.getHeight(); y++) {
             for (int x = 0; x < tileLayer.getWidth(); x++) {
@@ -76,8 +105,8 @@ public class TiledMapRenderer {
                 float degrees  = rotSteps * 90f;
 
 
-                float worldX = x * tileW + offX;
-                float worldY = y * tileH + offY;
+                float worldX = x * tileW + parallaxOffsetX;
+                float worldY = y * tileH + parallaxOffsetY;
 
                 batch.draw(
                     region,
