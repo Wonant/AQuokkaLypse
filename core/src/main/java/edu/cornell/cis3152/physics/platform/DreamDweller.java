@@ -64,6 +64,9 @@ public class DreamDweller extends Enemy {
     private boolean shouldFlipAfterTurn = false;
     private boolean inShootAnimation = false;
     private boolean onPlatform = isGrounded;
+    private boolean attackFacingRight;
+    private boolean lockFacing = false;
+
 
 
 
@@ -81,7 +84,7 @@ public class DreamDweller extends Enemy {
         shootSprite = new Animator(sheet2, 8, 8, 0.05f, 24, 39, 62, false); // shoot
 
         // Sheet3: 8x5
-        stunSprite = new Animator(sheet3, 8, 8, 0.08f, 16, 23, 38, false); // stun
+        stunSprite = new Animator(sheet3, 8, 5, 0.08f, 16, 23, 38, false); // stun
     }
 
 
@@ -239,7 +242,7 @@ public class DreamDweller extends Enemy {
 
         Vector2 playerPos = scene.getAvatar().getObstacle().getPosition();
         Vector2 selfPos = obstacle.getPosition();
-        if (isAwareOfPlayer() && !scene.isFailure() && !inTurnAnimation && !inShootAnimation) {
+        if (isAwareOfPlayer() && !scene.isFailure() && !inTurnAnimation && !inShootAnimation && !lockFacing) {
             facingRight = playerPos.x >= selfPos.x;
         }
 
@@ -265,6 +268,8 @@ public class DreamDweller extends Enemy {
             animationState = AnimationState.SHOOT;
             if (shootSprite.isAnimationFinished()) {
                 inShootAnimation = false;
+                facingRight = attackFacingRight;
+                lockFacing = false;
             }
         }
         else if (isShooting()) {
@@ -272,6 +277,8 @@ public class DreamDweller extends Enemy {
             shootSprite.reset();
             inShootAnimation = true;
             setShooting(false);
+            attackFacingRight = playerPos.x <= selfPos.x;
+            lockFacing = true;
         }
         else if (!isAwareOfPlayer()) {
             turnTimer += dt;
@@ -293,7 +300,7 @@ public class DreamDweller extends Enemy {
                         facingRight = !facingRight;
                         shouldFlipAfterTurn = false;
 
-                        if (onPlatform) {
+                        if (isGrounded()) {
                             idleSprite.reset();
                         } else {
                             floatSprite.reset();
@@ -301,11 +308,11 @@ public class DreamDweller extends Enemy {
                     }
                 }
             } else {
-                animationState = onPlatform ? AnimationState.IDLE : AnimationState.FLOAT;
+                animationState = isGrounded() ? AnimationState.IDLE : AnimationState.FLOAT;
             }
         }
         else {
-            animationState = onPlatform ? AnimationState.IDLE : AnimationState.FLOAT;
+            animationState = isGrounded() ? AnimationState.IDLE : AnimationState.FLOAT;
         }
         super.update(dt);
     }
@@ -331,10 +338,16 @@ public class DreamDweller extends Enemy {
                 break;
         }
 
-        // ✅ 仅在必要时 flip，避免闪烁
-        if (!facingRight && !frame.isFlipX()) {
+
+        if (frame.isFlipX()) {
             frame.flip(true, false);
-        } else if (facingRight && frame.isFlipX()) {
+        }
+
+        boolean actualFacing = (animationState == AnimationState.SHOOT && inShootAnimation)
+            ? attackFacingRight
+            : facingRight;
+
+        if (!actualFacing) {
             frame.flip(true, false);
         }
 
