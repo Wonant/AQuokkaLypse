@@ -747,6 +747,10 @@ public class PlatformScene implements Screen, Telegraph {
 
         shadowMode = false;
         avatar.setShroudMode(false);
+        for(ShieldWall s: shieldWalls){
+            removeBullet(s);
+            shieldWalls.remove(s);
+        }
         pendingSpears.clear();
     }
 
@@ -814,6 +818,10 @@ public class PlatformScene implements Screen, Telegraph {
                         addSprite(door);
                         door.setFilter();
                     }
+                }
+                if (o.getName().startsWith("dialouge")) {
+                    String message = o.getProperties().get("text", String.class);
+                    DialougeDetector d = new DialougeDetector(x,y,message);
                 }
                 if (o.getName().startsWith("Player")) {
                     playerSpawnPos.set(worldX, worldY);
