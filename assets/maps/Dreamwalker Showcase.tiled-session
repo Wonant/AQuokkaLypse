@@ -1,0 +1,468 @@
+{
+    "Map/SizeTest": {
+        "height": 4300,
+        "width": 2
+    },
+    "activeFile": "level_10.tmx",
+    "expandedProjectPaths": [
+    ],
+    "fileStates": {
+        "/Users/ajh365/Downloads/drive-download-20250517T110905Z-1-001/level_10.tmx": {
+            "scale": 0.0551,
+            "selectedLayer": 3,
+            "viewCenter": {
+                "x": 2558.9836660617066,
+                "y": 5181.488203266788
+            }
+        },
+        "/Users/ajh365/Downloads/drive-download-20250517T110905Z-1-001/level_4.tmx": {
+            "scale": 0.04288756388415673,
+            "selectedLayer": 3,
+            "viewCenter": {
+                "x": 2308.3614697120165,
+                "y": 4371.896722939424
+            }
+        },
+        "/Users/ajh365/Downloads/drive-download-20250517T110905Z-1-001/level_5.tmx": {
+            "scale": 0.0849,
+            "selectedLayer": 4,
+            "viewCenter": {
+                "x": 5005.889281507656,
+                "y": 2926.9729093050646
+            }
+        },
+        "/Users/ajh365/Downloads/drive-download-20250517T110905Z-1-001/level_6.tmx": {
+            "scale": 0.0579,
+            "selectedLayer": 3,
+            "viewCenter": {
+                "x": 5112.262521588946,
+                "y": 3842.8324697754747
+            }
+        },
+        "/Users/ajh365/Downloads/drive-download-20250517T110905Z-1-001/level_7.tmx": {
+            "scale": 0.03629763130792997,
+            "selectedLayer": 4,
+            "viewCenter": {
+                "x": 9614.952475528444,
+                "y": 1914.7254929777273
+            }
+        },
+        "/Users/ajh365/Downloads/drive-download-20250517T110905Z-1-001/level_8.tmx": {
+            "scale": 0.026223958333333332,
+            "selectedLayer": 3,
+            "viewCenter": {
+                "x": 13422.84011916584,
+                "y": 2573.9821251241315
+            }
+        },
+        "/Users/ajh365/Downloads/drive-download-20250517T110905Z-1-001/level_9.tmx": {
+            "scale": 0.0611892361111111,
+            "selectedLayer": 3,
+            "viewCenter": {
+                "x": 5752.6457653567895,
+                "y": 3570.889487870621
+            }
+        },
+        "/Users/ajh365/Downloads/drive-download-20250517T110905Z-1-001/level_select_map.tmx": {
+            "scale": 0.07421875,
+            "selectedLayer": 6,
+            "viewCenter": {
+                "x": 3031.5789473684213,
+                "y": 3395.368421052631
+            }
+        },
+        "/Users/ajh365/Downloads/drive-download-20250517T110905Z-1-001/level_select_map_10.tmx": {
+            "scale": 0.1113,
+            "selectedLayer": 6,
+            "viewCenter": {
+                "x": 3036.8373764600183,
+                "y": 3391.734052111411
+            }
+        },
+        "/Users/ajh365/Downloads/level_8.tmx": {
+            "scale": 0.015625,
+            "selectedLayer": 4,
+            "viewCenter": {
+                "x": 9632,
+                "y": 1888
+            }
+        },
+        "/Users/ajh365/Downloads/tilesets/Broken Wall R.tsx": {
+            "scaleInDock": 0.6945
+        },
+        "/Users/ajh365/Downloads/tilesets/DRAFT _ Pillar Variations.tsx": {
+            "scaleInDock": 1
+        },
+        "/Users/ajh365/Downloads/tilesets/Doors.tsx": {
+            "dynamicWrapping": true,
+            "scaleInDock": 1
+        },
+        "/Users/ajh365/Downloads/tilesets/Ends L1.tsx": {
+            "dynamicWrapping": true,
+            "scaleInDock": 1
+        },
+        "/Users/ajh365/Downloads/tilesets/Outside Background.tsx": {
+            "dynamicWrapping": true,
+            "scaleInDock": 1
+        },
+        "/Users/ajh365/Downloads/tilesets/Temple Edges pt 2.tsx": {
+            "scaleInDock": 0.12
+        },
+        "/Users/ajh365/Downloads/tilesets/Temple Edges.tsx": {
+            "scaleInDock": 1
+        },
+        "/Users/ajh365/Downloads/tilesets/Temple Gradient.tsx": {
+            "dynamicWrapping": true,
+            "scaleInDock": 1
+        },
+        "/Users/ajh365/Downloads/tilesets/Temple Int Wall.tsx": {
+            "scaleInDock": 1
+        },
+        "/Users/ajh365/Downloads/tilesets/Temple Interior.tsx": {
+            "scaleInDock": 0.12
+        },
+        "/Users/ajh365/Downloads/tilesets/Temple L1 Stairs.tsx": {
+            "scaleInDock": 1
+        },
+        "/Users/ajh365/Downloads/tilesets/Temple L1.tsx": {
+            "scaleInDock": 0.12
+        },
+        "/Users/ajh365/Downloads/tilesets/Temple L2.tsx": {
+            "scaleInDock": 1
+        },
+        "/Users/ajh365/Downloads/tilesets/Temple Roof L1.tsx": {
+            "scaleInDock": 1
+        },
+        "/Users/ajh365/Downloads/tilesets/Temple Window.tsx": {
+            "scaleInDock": 1
+        },
+        "/Users/ajh365/Downloads/tilesets/Tutorial 2.tsx": {
+            "scaleInDock": 1
+        },
+        "/Users/ajh365/Downloads/tilesets/ends.tsx": {
+            "dynamicWrapping": true,
+            "scaleInDock": 1
+        },
+        "/Users/ajh365/Downloads/tilesets/laser base.tsx": {
+            "dynamicWrapping": true,
+            "scaleInDock": 1
+        },
+        "/Users/ajh365/Downloads/tilesets/tutorial p1.tsx": {
+            "dynamicWrapping": true,
+            "scaleInDock": 0.0175
+        },
+        "/Users/ajh365/developer/personal/gdiac/AQuokkaLypse/assets/tilesets/Broken Wall R.tsx": {
+            "dynamicWrapping": false,
+            "scaleInDock": 0.8279
+        },
+        "/Users/ajh365/developer/personal/gdiac/AQuokkaLypse/assets/tilesets/DRAFT _ Pillar Variations.tsx": {
+            "dynamicWrapping": false,
+            "scaleInDock": 0.3373
+        },
+        "/Users/ajh365/developer/personal/gdiac/AQuokkaLypse/assets/tilesets/Doors.tsx": {
+            "dynamicWrapping": false,
+            "scaleInDock": 0.12,
+            "scaleInEditor": 0.18
+        },
+        "/Users/ajh365/developer/personal/gdiac/AQuokkaLypse/assets/tilesets/Ends L1.tsx": {
+            "dynamicWrapping": false,
+            "scaleInDock": 0.12
+        },
+        "/Users/ajh365/developer/personal/gdiac/AQuokkaLypse/assets/tilesets/Outside Background.tsx": {
+            "dynamicWrapping": false,
+            "scaleInDock": 0.12,
+            "scaleInEditor": 0.14
+        },
+        "/Users/ajh365/developer/personal/gdiac/AQuokkaLypse/assets/tilesets/Outside background dark copy.tsx": {
+            "scaleInDock": 1
+        },
+        "/Users/ajh365/developer/personal/gdiac/AQuokkaLypse/assets/tilesets/Outside background1.tsx": {
+            "scaleInDock": 0.089,
+            "scaleInEditor": 0.14
+        },
+        "/Users/ajh365/developer/personal/gdiac/AQuokkaLypse/assets/tilesets/Temple Door.tsx": {
+            "scaleInDock": 1
+        },
+        "/Users/ajh365/developer/personal/gdiac/AQuokkaLypse/assets/tilesets/Temple Edges pt 2.tsx": {
+            "scaleInDock": 0.5304
+        },
+        "/Users/ajh365/developer/personal/gdiac/AQuokkaLypse/assets/tilesets/Temple Edges.tsx": {
+            "scaleInDock": 0.8339
+        },
+        "/Users/ajh365/developer/personal/gdiac/AQuokkaLypse/assets/tilesets/Temple Gradient Pillar.tsx": {
+            "scaleInDock": 1
+        },
+        "/Users/ajh365/developer/personal/gdiac/AQuokkaLypse/assets/tilesets/Temple Gradient.tsx": {
+            "dynamicWrapping": false,
+            "scaleInDock": 0.1263
+        },
+        "/Users/ajh365/developer/personal/gdiac/AQuokkaLypse/assets/tilesets/Temple Int Wall.tsx": {
+            "scaleInDock": 0.086
+        },
+        "/Users/ajh365/developer/personal/gdiac/AQuokkaLypse/assets/tilesets/Temple Interior.tsx": {
+            "dynamicWrapping": true,
+            "scaleInDock": 0.6616
+        },
+        "/Users/ajh365/developer/personal/gdiac/AQuokkaLypse/assets/tilesets/Temple L1 Stairs.tsx": {
+            "scaleInDock": 0.12
+        },
+        "/Users/ajh365/developer/personal/gdiac/AQuokkaLypse/assets/tilesets/Temple L1.tsx": {
+            "scaleInDock": 0.1065
+        },
+        "/Users/ajh365/developer/personal/gdiac/AQuokkaLypse/assets/tilesets/Temple L2 Stairs.tsx": {
+            "scaleInDock": 0.12
+        },
+        "/Users/ajh365/developer/personal/gdiac/AQuokkaLypse/assets/tilesets/Temple L2.tsx": {
+            "scaleInDock": 0.12
+        },
+        "/Users/ajh365/developer/personal/gdiac/AQuokkaLypse/assets/tilesets/Temple L3 Stairs.tsx": {
+            "scaleInDock": 0.12
+        },
+        "/Users/ajh365/developer/personal/gdiac/AQuokkaLypse/assets/tilesets/Temple L3-2.tsx": {
+            "scaleInDock": 1
+        },
+        "/Users/ajh365/developer/personal/gdiac/AQuokkaLypse/assets/tilesets/Temple L3.tsx": {
+            "scaleInDock": 0.12
+        },
+        "/Users/ajh365/developer/personal/gdiac/AQuokkaLypse/assets/tilesets/Temple Roof L1.tsx": {
+            "scaleInDock": 0.12
+        },
+        "/Users/ajh365/developer/personal/gdiac/AQuokkaLypse/assets/tilesets/Temple Roof L2.tsx": {
+            "scaleInDock": 0.12
+        },
+        "/Users/ajh365/developer/personal/gdiac/AQuokkaLypse/assets/tilesets/Temple Roof L3.tsx": {
+            "scaleInDock": 0.12
+        },
+        "/Users/ajh365/developer/personal/gdiac/AQuokkaLypse/assets/tilesets/Temple Roof.tsx": {
+            "scaleInDock": 1
+        },
+        "/Users/ajh365/developer/personal/gdiac/AQuokkaLypse/assets/tilesets/Temple Wall Cracks.tsx": {
+            "scaleInDock": 1
+        },
+        "/Users/ajh365/developer/personal/gdiac/AQuokkaLypse/assets/tilesets/Temple Walls.tsx": {
+            "scaleInDock": 1
+        },
+        "/Users/ajh365/developer/personal/gdiac/AQuokkaLypse/assets/tilesets/Temple Window.tsx": {
+            "scaleInDock": 0.0841
+        },
+        "/Users/ajh365/developer/personal/gdiac/AQuokkaLypse/assets/tilesets/Tutorial 2.tsx": {
+            "scaleInDock": 0.1843
+        },
+        "/Users/ajh365/developer/personal/gdiac/AQuokkaLypse/assets/tilesets/ends.tsx": {
+            "scaleInDock": 0.1944
+        },
+        "/Users/ajh365/developer/personal/gdiac/AQuokkaLypse/assets/tilesets/laser base.tsx": {
+            "dynamicWrapping": false,
+            "scaleInDock": 1
+        },
+        "/Users/ajh365/developer/personal/gdiac/AQuokkaLypse/assets/tilesets/new stairs.tsx": {
+            "dynamicWrapping": false,
+            "scaleInDock": 1
+        },
+        "/Users/ajh365/developer/personal/gdiac/AQuokkaLypse/assets/tilesets/shift+space.tsx": {
+            "dynamicWrapping": false,
+            "scaleInDock": 0.12,
+            "scaleInEditor": 0.18
+        },
+        "/Users/ajh365/developer/personal/gdiac/AQuokkaLypse/assets/tilesets/tutorial p1.tsx": {
+            "dynamicWrapping": false,
+            "scaleInDock": 0.0297
+        },
+        "/Users/ajh365/tilesets/Doors.tsx": {
+            "scaleInDock": 1
+        },
+        "/Users/ajh365/tilesets/Outside Background.tsx": {
+            "scaleInDock": 1
+        },
+        "/Users/ajh365/tilesets/Temple Edges pt 2.tsx": {
+            "scaleInDock": 1
+        },
+        "/Users/ajh365/tilesets/Temple Edges.tsx": {
+            "scaleInDock": 1
+        },
+        "/Users/ajh365/tilesets/Temple Gradient.tsx": {
+            "scaleInDock": 1
+        },
+        "/Users/ajh365/tilesets/Temple L1 Stairs.tsx": {
+            "scaleInDock": 1
+        },
+        "/Users/ajh365/tilesets/Temple L1.tsx": {
+            "scaleInDock": 1
+        },
+        "/Users/ajh365/tilesets/Temple Roof L1.tsx": {
+            "scaleInDock": 1
+        },
+        "/Users/ajh365/tilesets/Temple Window.tsx": {
+            "scaleInDock": 1
+        },
+        "/Users/ajh365/tilesets/laser base.tsx": {
+            "scaleInDock": 1
+        },
+        "L1.tsx": {
+            "scaleInDock": 0.1242,
+            "scaleInEditor": 0.28
+        },
+        "level_10.tmx": {
+            "scale": 0.07,
+            "selectedLayer": 5,
+            "viewCenter": {
+                "x": 1150,
+                "y": 4792.857142857142
+            }
+        },
+        "level_2.tmx": {
+            "expandedGroupLayers": [
+                2
+            ],
+            "expandedObjectLayers": [
+                6,
+                7
+            ],
+            "scale": 0.0754,
+            "selectedLayer": 6,
+            "viewCenter": {
+                "x": 7108.7533156498685,
+                "y": 1836.8700265251991
+            }
+        },
+        "level_3.tmx": {
+            "expandedGroupLayers": [
+                3
+            ],
+            "expandedObjectLayers": [
+                9,
+                7,
+                8
+            ],
+            "scale": 0.1336,
+            "selectedLayer": 5,
+            "viewCenter": {
+                "x": 4146.706586826347,
+                "y": 3843.5628742514973
+            }
+        },
+        "level_4.tmx": {
+            "scale": 0.1221,
+            "selectedLayer": 3,
+            "viewCenter": {
+                "x": 2309.5823095823093,
+                "y": 3124.4881244881244
+            }
+        },
+        "level_5.tmx": {
+            "scale": 0.0989,
+            "selectedLayer": 4,
+            "viewCenter": {
+                "x": 13417.593528816986,
+                "y": 1026.2891809909
+            }
+        },
+        "level_6.tmx": {
+            "scale": 0.0466,
+            "selectedLayer": 3,
+            "viewCenter": {
+                "x": 5128.755364806867,
+                "y": 3830.4721030042915
+            }
+        },
+        "level_7.tmx": {
+            "scale": 0.149,
+            "selectedLayer": 4,
+            "viewCenter": {
+                "x": 9617.44966442953,
+                "y": 1922.818791946309
+            }
+        },
+        "level_8.tmx": {
+            "expandedObjectLayers": [
+                3,
+                7
+            ],
+            "scale": 0.0803,
+            "selectedLayer": 5,
+            "viewCenter": {
+                "x": 19371.108343711083,
+                "y": 4402.2415940224155
+            }
+        },
+        "level_9.tmx": {
+            "expandedObjectLayers": [
+                3,
+                7,
+                8
+            ],
+            "scale": 0.0576,
+            "selectedLayer": 8,
+            "viewCenter": {
+                "x": 8602.430555555555,
+                "y": 4644.097222222222
+            }
+        },
+        "tilesets/Broken Wall R.tsx": {
+            "scaleInDock": 1,
+            "scaleInEditor": 1
+        },
+        "tilesets/tutorial.tmx": {
+            "scale": 0.059,
+            "selectedLayer": 1,
+            "viewCenter": {
+                "x": 2610.169491525424,
+                "y": 3567.796610169491
+            }
+        },
+        "tutorial.tmx": {
+            "expandedGroupLayers": [
+                6
+            ],
+            "expandedObjectLayers": [
+                4,
+                9
+            ],
+            "scale": 0.08,
+            "selectedLayer": 7,
+            "viewCenter": {
+                "x": 19293.75,
+                "y": 2218.75
+            }
+        }
+    },
+    "last.imagePath": "/Users/ajh365/developer/personal/gdiac/AQuokkaLypse/assets/tilesets",
+    "map.height": 36,
+    "map.lastUsedFormat": "tmx",
+    "map.tileHeight": 128,
+    "map.tileWidth": 128,
+    "map.width": 160,
+    "openFiles": [
+        "level_2.tmx",
+        "level_3.tmx",
+        "level_4.tmx",
+        "L1.tsx",
+        "level_5.tmx",
+        "level_6.tmx",
+        "level_7.tmx",
+        "level_8.tmx",
+        "level_9.tmx",
+        "level_10.tmx"
+    ],
+    "project": "",
+    "property.type": "int",
+    "recentFiles": [
+        "level_2.tmx",
+        "level_3.tmx",
+        "level_4.tmx",
+        "L1.tsx",
+        "level_5.tmx",
+        "level_6.tmx",
+        "level_7.tmx",
+        "level_8.tmx",
+        "level_9.tmx",
+        "level_10.tmx",
+        "/Users/ajh365/Downloads/drive-download-20250517T110905Z-1-001/level_9.tmx",
+        "/Users/ajh365/Downloads/drive-download-20250517T110905Z-1-001/level_select_map_10.tmx"
+    ],
+    "tileset.lastUsedFormat": "tsx",
+    "tileset.tileSize": {
+        "height": 128,
+        "width": 128
+    }
+}

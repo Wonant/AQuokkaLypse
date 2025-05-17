@@ -39,9 +39,8 @@ public class GDXRoot extends Game implements ScreenListener {
     private int current;
     /** Array of map keys for each level */
 
-    private String[] maps = {"tutorial1", "tutorial2", "level_select", "easy1", "medium1", "hard_1"};
-    private String[] tiled = {"maps/tutorial_1.tmx", "maps/tutorial_2.tmx", "maps/level_select.tmx", "maps/easy_level.tmx",
-                                "maps/medium1.tmx", "maps/hard1.tmx"};
+    private String[] maps = {"tutorial1", "level2", "level3", "level4", "level5", "level6", "level7", "level9", "level10"};
+    private String[] tiled = {"maps/tutorial.tmx", "maps/level_2.tmx", "maps/level_3.tmx", "maps/level_4.tmx", "maps/level_5.tmx","maps/level_6.tmx", "maps/level_7.tmx", "maps/level_9.tmx", "maps/level_10.tmx"};
 
     /** Current map index for switching levels */
     private int currentMapIndex = 0;
@@ -139,6 +138,7 @@ public class GDXRoot extends Game implements ScreenListener {
                 if(i == 2){
                     isLevelSelect = true;
                 }
+                System.out.println(maps[i]);
                 controllers[i] = new PlatformScene(directory, maps[i], tiled[i], isLevelSelect);
                 controllers[i].setScreenListener(this);
                 controllers[i].setSpriteBatch(batch);

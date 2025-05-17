@@ -117,8 +117,8 @@ public class Shard extends ObstacleSprite {
         float u = obstacle.getPhysicsUnits();
         float posX = obstacle.getX() * u;
         float posY = obstacle.getY() * u;
-        float drawWidth = frame.getRegionWidth()/9f;
-        float drawHeight = frame.getRegionHeight()/9f;
+        float drawWidth = frame.getRegionWidth()/2.5f;
+        float drawHeight = frame.getRegionHeight()/2.5f;
 
         float originX = drawWidth/ 2f;
         float originY = drawHeight / 2f;

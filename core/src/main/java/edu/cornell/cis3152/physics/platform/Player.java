@@ -724,10 +724,10 @@
             sensorScareName = "scare_sensor";
 
 
-            maxFearMeter = 20;
+            maxFearMeter = 50;
             fearMeter = maxFearMeter;
 
-            teleportRangeRadius = 210;
+            teleportRangeRadius = 800;
 
             // Create a rectangular mesh for Player. This is the same as for door,
             // since Player is a rectangular image. But note that the capsule is
@@ -1079,7 +1079,7 @@
             if (isKnockedBack()) {
 
                 if (knockbackDmg) {
-                    setFearMeter(getFearMeter() - 2);
+                    setFearMeter(getFearMeter() - 5);
                     System.out.println("TAKEN KNOCKBACK DMG");
                     knockbackDmg = false;
                 }
@@ -1128,7 +1128,7 @@
 
             if (isTakingDamage())
             {
-                setFearMeter(fearMeter - 1);
+                setFearMeter(fearMeter - 5);
                 takeDamageCooldown = takeDamageLimit;
                 setTakingDamage(false);
 

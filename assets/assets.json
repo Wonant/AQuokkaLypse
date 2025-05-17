@@ -25,6 +25,9 @@
         "fear-meter" : "platform/fearmeter_0.png",
         "background1" : "platform/background.png",
         "shard-sprite" : "shard/shard.png",
+        "spikes" : "platform/spikes.png",
+        "laser" : "platform/laser.png",
+        "crystal" : "platform/crystal.png",
 
     "platform-spear"  : "platform/spear.png",
         "platform-spear-right"  : "platform/spear-right.png",
@@ -34,7 +37,7 @@
         "crosshair" : "platform/portalxhair.png",
 
         "background": {
-            "file": "menu/background.png"
+            "file": "menu/menu.png"
         },
         "title": {
             "file": "menu/start_button.png"
@@ -108,6 +111,15 @@
     },
     "jsons"  : {
         "level_select":"levels/level_select.json",
+        "level2" : "levels/level2.json",
+        "level3" : "levels/level3.json",
+        "level4" : "levels/level4.json",
+        "level5" : "levels/level5.json",
+        "level6" : "levels/level6.json",
+        "level7" : "levels/level7.json",
+        "level8" : "levels/level8.json",
+        "level9" : "levels/level9.json",
+        "level10" : "levels/level10.json",
         "tutorial1" : "levels/tutorial_1.json",
         "tutorial2" : "levels/tutorial_2.json",
         "easy1" : "levels/easy1.json",
