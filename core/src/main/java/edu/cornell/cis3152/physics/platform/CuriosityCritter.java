@@ -1,5 +1,6 @@
 package edu.cornell.cis3152.physics.platform;
 
+import com.badlogic.gdx.Gdx;
 import com.badlogic.gdx.ai.msg.MessageDispatcher;
 import com.badlogic.gdx.math.*;
 import com.badlogic.gdx.graphics.*;
@@ -11,6 +12,7 @@ import com.badlogic.gdx.utils.JsonValue;
 import edu.cornell.gdiac.assets.AssetDirectory;
 import edu.cornell.gdiac.assets.ParserUtils;
 import edu.cornell.gdiac.graphics.SpriteBatch;
+import com.badlogic.gdx.graphics.g2d.TextureRegion;
 import edu.cornell.gdiac.graphics.Texture2D;
 import edu.cornell.gdiac.math.Path2;
 import edu.cornell.gdiac.math.PathFactory;
@@ -64,6 +66,25 @@ public class CuriosityCritter extends Enemy {
     private int climbCounter = 0;
     private final int CLIMB_DURATION = 11;
 
+    private Animator walkSprite;
+    private Animator turnSprite;
+    private Animator alertSprite;
+    private Animator attackSprite;
+    private Animator shardWalkSprite;
+    private Animator stunnedSprite;
+
+    private AnimationState animationState;
+    private boolean inAttackAnimation = false;
+    private boolean inTurnAnimation = false;
+    private boolean inStunAnimation = false;
+    private boolean isChasing = false;
+    private boolean lastFacingRight = true;
+
+    private boolean turning = false;
+    private float turnCooldown = 0f;
+    private static final float TURN_COOLDOWN_TIME = 0.3f;
+
+
     public boolean isGrounded() {
         return isGrounded;
     }
@@ -92,6 +113,23 @@ public class CuriosityCritter extends Enemy {
         return safeToWalk;
     }
 
+    private enum AnimationState {
+        WALK,
+        TURN,
+        ALERT,
+        ATTACK,
+        SHARD_WALK,
+        STUN
+    }
+
+    public void createAnimators(Texture texture) {
+        walkSprite       = new Animator(texture, 8, 20, 0.06f, 154, 0, 14);       // Walk
+        turnSprite       = new Animator(texture, 8, 20, 0.06f, 154, 15, 50);      // Turn
+        alertSprite      = new Animator(texture, 8, 20, 0.06f, 154, 51, 82);      // Alert
+        attackSprite     = new Animator(texture, 8, 20, 0.06f, 154, 83, 111);     // Attack Start
+        shardWalkSprite  = new Animator(texture, 8, 20, 0.06f, 154, 112, 129);// Walk with shard
+        stunnedSprite = new Animator(texture, 8, 20, 0.06f, 154, 130, 153);
+    }
 
     public CuriosityCritter(float units, JsonValue data, float[] points, PlatformScene scene, MessageDispatcher dispatcher) {
         super(dispatcher);
@@ -474,6 +512,15 @@ public class CuriosityCritter extends Enemy {
 
     @Override
     public void update(float dt) {
+        if (turnCooldown > 0) turnCooldown -= dt;
+        boolean desiredFacing = (movement > 0) ? true : (movement < 0) ? false : facingRight;
+        if (desiredFacing != facingRight && turnCooldown <= 0f) {
+            inTurnAnimation = true;
+            turnSprite.reset();
+            turnCooldown = TURN_COOLDOWN_TIME;
+        }
+        facingRight = desiredFacing;
+
         lookForPlayer();
         if (isPlatformStep(scene.world, stepRayLength)) {
             System.out.println("Critter's seen a step");
@@ -508,6 +555,24 @@ public class CuriosityCritter extends Enemy {
 
         wasAware = isAwareOfPlayer();
 
+        if (inStunAnimation) {
+            animationState = AnimationState.STUN;
+        } else if (inTurnAnimation) {
+            animationState = AnimationState.TURN;
+            if (turnSprite.isAnimationFinished()) {
+                inTurnAnimation = false;
+            }
+        }else if (hasShard) {
+            animationState = AnimationState.SHARD_WALK;
+        } else if (inAttackAnimation) {
+            animationState = AnimationState.ATTACK;
+        } else if (isChasing) {
+            animationState = AnimationState.ALERT;
+        } else {
+            animationState = AnimationState.WALK;
+            super.update(dt);
+        }
+
         super.update(dt);
     }
 
@@ -519,27 +584,46 @@ public class CuriosityCritter extends Enemy {
      */
     @Override
     public void draw(SpriteBatch batch) {
-        if (facingRight) {
-            flipCache.setToScaling(1, 1);
-        } else {
-            flipCache.setToScaling(-1, 1);
-        }
-        if (obstacle != null && mesh != null) {
-            float scaleFactor = 1.4f; // Increase sprite size by 20%
-            float x = obstacle.getX();
-            float y = obstacle.getY();
-            float a = obstacle.getAngle();
-            float u = obstacle.getPhysicsUnits();
+        TextureRegion frame;
 
-            transform.idt();
-            transform.preScale(scaleFactor, scaleFactor); // Scale up sprite only
-            transform.preRotate((float) ((double) (a * 180.0F) / Math.PI));
-            transform.preTranslate(x * u, y * u);
-
-            batch.setTextureRegion(sprite);
-            batch.drawMesh(mesh, transform, false);
-            batch.setTexture((Texture) null);
+        switch (animationState) {
+            case WALK:
+                frame = walkSprite.getCurrentFrame(Gdx.graphics.getDeltaTime());
+                break;
+            case TURN:
+                frame = turnSprite.getCurrentFrame(Gdx.graphics.getDeltaTime());
+                break;
+            case ALERT:
+                frame = alertSprite.getCurrentFrame(Gdx.graphics.getDeltaTime());
+                break;
+            case ATTACK:
+                frame = attackSprite.getCurrentFrame(Gdx.graphics.getDeltaTime());
+                break;
+            case SHARD_WALK:
+                frame = shardWalkSprite.getCurrentFrame(Gdx.graphics.getDeltaTime());
+                break;
+            case STUN:
+                frame = stunnedSprite.getCurrentFrame(Gdx.graphics.getDeltaTime());
+                break;
+            default:
+                frame = walkSprite.getCurrentFrame(Gdx.graphics.getDeltaTime());
         }
+
+        if (frame.isFlipX() != facingRight) {
+            frame.flip(true, false);
+        }
+
+        float u = obstacle.getPhysicsUnits();
+        float posX = obstacle.getX() * u;
+        float posY = obstacle.getY() * u;
+        float drawWidth = width * u * 4f;
+        float drawHeight = height * u * 1.15f;
+
+        batch.draw(frame,
+            posX - drawWidth / 2f, posY - drawHeight / 2f,
+            drawWidth / 2f, drawHeight / 2f,
+            drawWidth, drawHeight,
+            1f, 1f, 0f);
     }
 
 
@@ -621,7 +705,35 @@ public class CuriosityCritter extends Enemy {
         return worldTarget;
     }
 
+    private float stunTimer;
+    private float stunAnimTime = 0f;
     public Body getHeadBody() {
         return headBody;
     }
+    public void getStunned() {
+        if (!inStunAnimation) {
+            inStunAnimation = true;
+            setMovement(0);
+            applyForce();
+            setAwareOfPlayer(false);
+            isChasing = false;
+        }
+    }
+
+    public void setStunned(boolean stunned) {
+        inStunAnimation = stunned;
+    }
+
+    public boolean isStunned() {
+        return inStunAnimation;
+    }
+
+    public void setIsChasing(boolean val) {
+        this.isChasing = val;
+    }
+
+    public void setInAttackAnimation(boolean val) {
+        this.inAttackAnimation = val;
+    }
+
 }

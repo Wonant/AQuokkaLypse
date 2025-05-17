@@ -45,7 +45,7 @@ public class Animator {
         } else {
             frameIndex = startFrame + (int)(stateTime / frameDuration);
             if (frameIndex > endFrame) {
-                frameIndex = endFrame - 1;
+                frameIndex = endFrame;
             }
 
         }
