@@ -8,8 +8,8 @@
  <tileset firstgid="1896" source="../tilesets/DRAFT _ Pillar Variations.tsx"/>
  <tileset firstgid="2049" source="../tilesets/Temple Roof L1.tsx"/>
  <tileset firstgid="2166" source="../tilesets/ends.tsx"/>
- <tileset firstgid="2319" source="../tilesets/Tutorial 2.tsx"/>
- <tileset firstgid="3919" source="../tilesets/tutorial p1.tsx"/>
+ <tileset firstgid="2319" source="../maps/Tutorial 2.tsx"/>
+ <tileset firstgid="3919" source="../maps/tutorial p1.tsx"/>
  <group id="3" name="background">
   <group id="13" name="parallax">
    <layer id="1" name="image" width="49" height="53" offsetx="-200" offsety="0" parallaxx="0.9">

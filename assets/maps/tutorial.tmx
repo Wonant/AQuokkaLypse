@@ -1,17 +1,17 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <map version="1.10" tiledversion="1.11.2" orientation="orthogonal" renderorder="right-down" width="160" height="36" tilewidth="128" tileheight="128" infinite="0" nextlayerid="10" nextobjectid="59">
  <tileset firstgid="1" source="../tilesets/Temple Edges.tsx"/>
- <tileset firstgid="337" source="L1.tsx"/>
+ <tileset firstgid="337" source="../maps/L1.tsx"/>
  <tileset firstgid="472" source="../tilesets/Doors.tsx"/>
  <tileset firstgid="538" source="../tilesets/Temple Window.tsx"/>
  <tileset firstgid="1301" source="../tilesets/Temple L2.tsx"/>
  <tileset firstgid="1418" source="../tilesets/Temple L1 Stairs.tsx"/>
  <tileset firstgid="1535" source="../tilesets/Temple Gradient.tsx"/>
- <tileset firstgid="1652" source="Final_Pilar_Contrast_ 2.tsx"/>
+ <tileset firstgid="1652" source="../maps/Final_Pilar_Contrast_ 2.tsx"/>
  <tileset firstgid="1805" source="../tilesets/Temple Edges pt 2.tsx"/>
- <tileset firstgid="1922" source="Tutorial 2.tsx"/>
- <tileset firstgid="2242" source="tutorial p1.tsx"/>
- <tileset firstgid="2340" source="shift+space.tsx"/>
+ <tileset firstgid="1922" source="../maps/Tutorial 2.tsx"/>
+ <tileset firstgid="2242" source="../maps/tutorial p1.tsx"/>
+ <tileset firstgid="2340" source="../maps/shift+space.tsx"/>
  <group id="6" name="Background">
   <layer id="7" name="Walls" width="160" height="36">
    <data encoding="csv">

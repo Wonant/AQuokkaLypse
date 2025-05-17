@@ -151,6 +151,18 @@
             "dynamicWrapping": true,
             "scaleInDock": 0.0175
         },
+        "/Users/ajh365/developer/personal/gdiac/AQuokkaLypse/assets/Final_Pilar_Contrast_ 2.tsx": {
+            "scaleInDock": 1
+        },
+        "/Users/ajh365/developer/personal/gdiac/AQuokkaLypse/assets/L1.tsx": {
+            "scaleInDock": 1
+        },
+        "/Users/ajh365/developer/personal/gdiac/AQuokkaLypse/assets/Tutorial 2.tsx": {
+            "scaleInDock": 1
+        },
+        "/Users/ajh365/developer/personal/gdiac/AQuokkaLypse/assets/shift+space.tsx": {
+            "scaleInDock": 1
+        },
         "/Users/ajh365/developer/personal/gdiac/AQuokkaLypse/assets/tilesets/Broken Wall R.tsx": {
             "dynamicWrapping": false,
             "scaleInDock": 0.8279
@@ -268,6 +280,9 @@
             "dynamicWrapping": false,
             "scaleInDock": 0.0297
         },
+        "/Users/ajh365/developer/personal/gdiac/AQuokkaLypse/assets/tutorial p1.tsx": {
+            "scaleInDock": 1
+        },
         "/Users/ajh365/tilesets/Doors.tsx": {
             "scaleInDock": 1
         },
@@ -303,11 +318,14 @@
             "scaleInEditor": 0.28
         },
         "level_10.tmx": {
-            "scale": 0.07,
+            "expandedObjectLayers": [
+                6
+            ],
+            "scale": 0.1954,
             "selectedLayer": 5,
             "viewCenter": {
-                "x": 1150,
-                "y": 4792.857142857142
+                "x": 2638.1780962128964,
+                "y": 1732.3439099283523
             }
         },
         "level_2.tmx": {
@@ -391,11 +409,11 @@
                 7,
                 8
             ],
-            "scale": 0.0576,
-            "selectedLayer": 8,
+            "scale": 0.1248,
+            "selectedLayer": 7,
             "viewCenter": {
-                "x": 8602.430555555555,
-                "y": 4644.097222222222
+                "x": 1486.378205128205,
+                "y": 4579.326923076924
             }
         },
         "tilesets/Broken Wall R.tsx": {
@@ -416,13 +434,14 @@
             ],
             "expandedObjectLayers": [
                 4,
-                9
+                9,
+                5
             ],
-            "scale": 0.08,
-            "selectedLayer": 7,
+            "scale": 0.1272,
+            "selectedLayer": 0,
             "viewCenter": {
-                "x": 19293.75,
-                "y": 2218.75
+                "x": 13140.723270440252,
+                "y": 1953.616352201258
             }
         }
     },
