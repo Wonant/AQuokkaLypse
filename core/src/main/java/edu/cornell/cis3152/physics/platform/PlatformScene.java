@@ -76,7 +76,7 @@ public class PlatformScene implements Screen, Telegraph {
     public static final int FROM_LEVELSELECT = 4;
 
     /** How many frames after winning/losing do we continue? */
-    public static final int EXIT_LOSE_COUNT = 200;
+    public static final int EXIT_LOSE_COUNT = 140;
     public static final int EXIT_WIN_COUNT = 120;
 
 
@@ -148,9 +148,9 @@ public class PlatformScene implements Screen, Telegraph {
     /** The sound effect manager that is used to play sounds  */
     SoundEffectManager soundManager = SoundEffectManager.getInstance();
     /** The jump sound. We only want to play once. */
-    private SoundEffect jumpSound;
+    private SoundEffect teleportSound;
     /** The weapon fire sound. We only want to play once. */
-    private SoundEffect fireSound;
+    private SoundEffect scareSound;
     /** The weapon pop sound. We only want to play once. */
     private SoundEffect plopSound;
     /** The default sound volume */
@@ -326,7 +326,7 @@ public class PlatformScene implements Screen, Telegraph {
 
     // FADE CONSTANTS
     private float fadeAlpha = 0f;
-    private float loseFadeSpeed = 0.005f;
+    private float loseFadeSpeed = 0.007f;
     private float winFadeSpeed = 0.01f;
     private boolean isFading = false;
     private Color loseFadeColor = new Color(0, 0, 0, 0);
@@ -742,8 +742,8 @@ public class PlatformScene implements Screen, Telegraph {
         shadowSensorFixtures = new ObjectSet<Fixture>();
 
         // SOUNDS
-        jumpSound = directory.getEntry( "platform-jump", SoundEffect.class );
-        fireSound = directory.getEntry( "platform-pew", SoundEffect.class );
+        teleportSound = directory.getEntry( "teleport-sound", SoundEffect.class );
+        scareSound = directory.getEntry( "scare-sound", SoundEffect.class );
         plopSound = directory.getEntry( "platform-plop", SoundEffect.class );
         volume = constants.getFloat("volume", 1.0f);
 
@@ -1348,6 +1348,7 @@ public class PlatformScene implements Screen, Telegraph {
 
         if (avatar.isHarvesting())
         {
+            soundManager.play("fire", scareSound, volume);
             drawScareEffect = true;
             if (!queuedHarvestedEnemy.isEmpty())
             {
@@ -1533,6 +1534,7 @@ public class PlatformScene implements Screen, Telegraph {
             return;
         }
         queuedTeleportPosition = new Vector2(crosshairWorld.x, crosshairWorld.y);
+        soundManager.play("fire", teleportSound, volume);
     }
 
     /**
@@ -1560,7 +1562,6 @@ public class PlatformScene implements Screen, Telegraph {
 
         Bullet bullet = new Bullet(units, bulletjv, player.getPosition(), shootAngle.nor(), stunProjectileTexture);
         addQueuedObject(bullet);
-        //sounds.play("fire", fireSound, volume);
     }
 
     /**
