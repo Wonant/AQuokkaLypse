@@ -104,6 +104,21 @@
         },
         "overlay" : {
           "file": "pause/temp_overlay.png"
+        },
+        "black_bg" : {
+          "file": "menu/black_bg.png"
+        },
+        "sliderBg" : {
+          "file": "menu/sliderBg.png"
+        },
+        "sliderKnob" : {
+          "file": "menu/sliderKnob.png"
+        },
+        "backButton" : {
+          "file": "menu/backButton.png"
+        },
+        "testButton" : {
+          "file": "menu/testButton.png"
         }
     },
     "jsons"  : {
@@ -128,6 +143,7 @@
         }
     },
     "samples": {
-        "theme": "music/theme.ogg"
+        "theme": "music/theme.ogg",
+        "theme_level": "music/level.ogg"
   }
 }

@@ -94,6 +94,9 @@ public class MainMenuScene implements Screen, InputProcessor {
     /** A queue to play music */
     MusicQueue music;
 
+    /** Reference to the AudioManager for volume control */
+    private AudioManager audioManager;
+
 
     /**
      * Returns the asset directory produced by this loading screen
@@ -121,6 +124,7 @@ public class MainMenuScene implements Screen, InputProcessor {
     public MainMenuScene(AssetDirectory assets, SpriteBatch batch) {
         this.batch  = batch;
         this.assets = assets;
+        this.audioManager = AudioManager.getInstance();
 
         camera = new OrthographicCamera();
         //viewport = new FitViewport(1420, 799, camera);
@@ -161,12 +165,22 @@ public class MainMenuScene implements Screen, InputProcessor {
         music.addSource( samples[0] );
         music.setLooping(true);
 
-        //VOLUME CONTROL SHOULD PROBABLY BE IN A SETTINGS SCREEN
-        if (music != null) {
-            music.setVolume(1.0f);
-        }
+        // Set initial volume from AudioManager
+        updateMusicVolume();
 
         Gdx.input.setInputProcessor(this);
+    }
+
+    /**
+     * Updates the music volume based on AudioManager settings
+     */
+    private void updateMusicVolume() {
+        if (music != null) {
+            // Apply both master and music volume
+            float masterVolume = audioManager.getMasterVolume();
+            float musicVolume = audioManager.getMusicVolume();
+            music.setVolume(masterVolume * musicVolume);
+        }
     }
 
     /**
@@ -178,9 +192,9 @@ public class MainMenuScene implements Screen, InputProcessor {
         }
 
         for (AudioSource sample : samples) {
-             if (sample != null) {
-                 sample.dispose();
-             }
+            if (sample != null) {
+                sample.dispose();
+            }
         }
     }
 
@@ -194,6 +208,8 @@ public class MainMenuScene implements Screen, InputProcessor {
      * @param delta Number of seconds since last animation frame
      */
     private void update(float delta) {
+        // Update music volume in case settings have changed
+        updateMusicVolume();
 
         if (music.getPosition() + 10 > music.getDuration()){
             music.stop();
@@ -322,8 +338,8 @@ public class MainMenuScene implements Screen, InputProcessor {
      * This is usually when it regains focus.
      */
     public void resume() {
-        // TODO Auto-generated method stub
-
+        // Refresh volume settings when resuming
+        updateMusicVolume();
     }
 
     /**
@@ -333,6 +349,9 @@ public class MainMenuScene implements Screen, InputProcessor {
         active = true;
         resize(Gdx.graphics.getWidth(), Gdx.graphics.getHeight());
         Gdx.input.setInputProcessor(this);
+
+        // Update volume before playing
+        updateMusicVolume();
 
         if (music != null && !music.isPlaying()) {
             music.play();
@@ -524,4 +543,3 @@ public class MainMenuScene implements Screen, InputProcessor {
     }
 
 }
-

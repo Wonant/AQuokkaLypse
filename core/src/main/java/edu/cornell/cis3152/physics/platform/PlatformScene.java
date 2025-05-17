@@ -24,8 +24,12 @@ import com.badlogic.gdx.maps.MapObject;
 import com.badlogic.gdx.maps.objects.PolygonMapObject;
 import com.badlogic.gdx.maps.objects.RectangleMapObject;
 import edu.cornell.cis3152.physics.AIControllerManager;
+import edu.cornell.cis3152.physics.AudioManager;
 import edu.cornell.cis3152.physics.ObstacleGroup;
 
+import edu.cornell.gdiac.audio.AudioEngine;
+import edu.cornell.gdiac.audio.AudioSource;
+import edu.cornell.gdiac.audio.MusicQueue;
 import java.util.*;
 
 import com.badlogic.gdx.*;
@@ -308,6 +312,15 @@ public class PlatformScene implements Screen, Telegraph {
 
     int nextIndex = 0;
 
+    private AudioManager audioManager;
+    /** List of music to play */
+    AudioSource samples[];
+    /** The current music sample to play */
+    int currentSample = 0;
+
+    /** A queue to play music */
+    MusicQueue music;
+
     /*==============================ContactListener Getters/Setters===============================*/
 
     public Player getAvatar() { return avatar;}
@@ -478,6 +491,16 @@ public class PlatformScene implements Screen, Telegraph {
             bulletVB.dispose();
             bulletVB = null;
         }
+
+        if (music != null) {
+            music.stop();
+        }
+
+        for (AudioSource sample : samples) {
+            if (sample != null) {
+                sample.dispose();
+            }
+        }
     }
 
 
@@ -537,7 +560,7 @@ public class PlatformScene implements Screen, Telegraph {
      * This is usually when it regains focus.
      */
     public void resume() {
-        // TODO Auto-generated method stub
+        updateMusicVolume();
     }
 
     /**
@@ -546,6 +569,11 @@ public class PlatformScene implements Screen, Telegraph {
     public void show() {
         // Useless if called in outside animation loop
         active = true;
+        updateMusicVolume();
+
+        if (music != null && !music.isPlaying()) {
+            music.play();
+        }
     }
 
     /**
@@ -554,6 +582,9 @@ public class PlatformScene implements Screen, Telegraph {
     public void hide() {
         // Useless if called in outside animation loop
         active = false;
+        if (music != null && music.isPlaying()) {
+            music.pause();
+        }
     }
 
     /**
@@ -573,6 +604,7 @@ public class PlatformScene implements Screen, Telegraph {
     public PlatformScene(AssetDirectory directory, String mapkey, String tiled, Boolean isLevelSelect) {
         this.directory = directory;
         this.mapkey = mapkey;
+        this.audioManager = AudioManager.getInstance();
         tiledLevelName = tiled;
         this.isLevelSelect = isLevelSelect;
         constants = directory.getEntry(mapkey,JsonValue.class);
@@ -714,6 +746,31 @@ public class PlatformScene implements Screen, Telegraph {
 
         dispatcher.addListener(this, MessageType.CRITTER_SEES_PLAYER);
         dispatcher.addListener(this, MessageType.CRITTER_LOST_PLAYER);
+
+        samples = new AudioSource[1];
+        samples[0] = directory.getEntry( "theme_level", AudioSource.class );
+        currentSample = 0;
+
+        AudioEngine engine = (AudioEngine)Gdx.audio;
+        music = engine.newMusicQueue( false, 44100 );
+        music.addSource( samples[0] );
+        music.setLooping(true);
+
+        // Set initial volume from AudioManager
+        updateMusicVolume();
+    }
+
+
+    /**
+     * Updates the music volume based on AudioManager settings
+     */
+    private void updateMusicVolume() {
+        if (music != null) {
+            // Apply both master and music volume
+            float masterVolume = audioManager.getMasterVolume();
+            float musicVolume = audioManager.getMusicVolume();
+            music.setVolume(masterVolume * musicVolume);
+        }
     }
 
     /**
@@ -1076,6 +1133,14 @@ public class PlatformScene implements Screen, Telegraph {
         aiManager.update(dt);
         aiCManager.update(dt);
         GdxAI.getTimepiece().update(dt);
+
+        updateMusicVolume();
+
+        if (music.getPosition() + 10 > music.getDuration()){
+            music.stop();
+            music.removeSource(0);
+            music.addSource( samples[0] );
+        }
 
         for (Enemy e: enemies){
             if (e instanceof MindMaintenance && ((MindMaintenance) e).isShooting()){
