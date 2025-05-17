@@ -75,15 +75,10 @@ public class DreamDweller extends Enemy {
     }
 
     public void createAnimators(Texture sheet1, Texture sheet2, Texture sheet3) {
-        // Sheet1: 8x8
-        idleSprite = new Animator(sheet1, 8, 8, 0.06f, 31, 0, 30); // idle (on platform)
+        idleSprite = new Animator(sheet1, 8, 8, 0.033f, 31, 0, 30); // idle (on platform)
         turnSprite = new Animator(sheet1, 8, 8, 0.06f, 27, 31, 57, false); // turn
-
-        // Sheet2: 8x8
-        floatSprite = new Animator(sheet2, 8, 8, 0.06f, 39, 0, 38); // float (in air idle)
+        floatSprite = new Animator(sheet2, 8, 8, 0.06f, 39, 16, 38); // float (in air idle)
         shootSprite = new Animator(sheet2, 8, 8, 0.05f, 24, 39, 62, false); // shoot
-
-        // Sheet3: 8x5
         stunSprite = new Animator(sheet3, 8, 5, 0.08f, 16, 23, 38, false); // stun
     }
 
