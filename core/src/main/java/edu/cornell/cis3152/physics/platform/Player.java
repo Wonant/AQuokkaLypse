@@ -350,6 +350,10 @@
             }
         }
 
+        public void rechargeFearMeter(){
+            fearMeter = maxFearMeter;
+        }
+
 
         /** Sets maxFearMeter to value
          *
@@ -813,43 +817,6 @@
             factory.makeRect( (sensorCenter.x-w/2)*u,(sensorCenter.y-h/2)*u, w*u, h*u,  sensorOutline);
         }
 
-        public void createFallSensor() {
-            float units = obstacle.getPhysicsUnits();
-            float fallDepth = data.getFloat("fall_sensor_depth", 0.2f);
-            // how far below feet to sense (in physics units)
-            Vector2 center = new Vector2(0, -height/2.3f - fallDepth/2);
-
-            FixtureDef def = new FixtureDef();
-            def.isSensor = true;
-            def.density  = 0;
-            PolygonShape shape = new PolygonShape();
-            shape.setAsBox(width/2 * 0.2f, fallDepth/2, center, 0);
-            def.shape = shape;
-
-            Body body = obstacle.getBody();
-            Fixture f = body.createFixture(def);
-            fallSensorName = "fall_sensor";
-            f.setUserData(fallSensorName);
-
-            // collide only with scenery
-            Filter filter = f.getFilterData();
-            filter.categoryBits = CATEGORY_PLAYER;
-            filter.maskBits     = CATEGORY_SCENERY;
-            f.setFilterData(filter);
-
-            // debug outline
-            float u = units;
-            PathFactory factory = new PathFactory();
-            fallSensorOutline = new Path2();
-            factory.makeRect(
-                (center.x - width/2)*u,
-                (center.y - fallDepth/2)*u,
-                width*u,
-                fallDepth*u,
-                fallSensorOutline
-            );
-        }
-
         public void createScareSensor(){
             if (scareSensorFixture != null) return;
             Vector2 sensorScareCenter = new Vector2(0, 0);
@@ -935,14 +902,6 @@
                 body.applyLinearImpulse(forceCache, pos, true);
                 isClimbing = false;
             }
-//                jumpHoldFrames = 0; // initiated a jump
-//                jumpReleased = false;
-//            } else if (jumpReleased && vy > 0 && jumpHoldFrames < MIN_JUMP_HOLD_FRAMES) {
-//                // Cut the jump short by reducing upward velocity
-//                float reducedVelocity = vy * 0.2f; // Cut velocity in half
-//                body.setLinearVelocity(body.getLinearVelocity().x, reducedVelocity);
-//                jumpReleased = false;
-//            }
 
             // Climbing logic
             else if (isClimbing && isGrounded) {
@@ -1061,9 +1020,6 @@
                     body.setTransform(body.getPosition().x, targetCenterY, body.getAngle());
                 }
             }
-
-
-
             return false;
         }
 
@@ -1132,7 +1088,6 @@
 
 
             // Apply cooldowns
-
             if (harvestDurationCounter <= 0 && scareSensorFixture != null) {
                 Body body = obstacle.getBody();
                 body.destroyFixture(scareSensorFixture);
@@ -1141,7 +1096,6 @@
                 scareSensorFixture = null;
                 sensorScareOutline = null;
             }
-
 
             if (isJumping()) {
                 jumpCooldown = jumpLimit;
@@ -1211,8 +1165,6 @@
                 super.update(dt);
                 return;
             }
-
-
 
             if (jumpHeld && !isGrounded && obstacle.getVY() > 0) {
                 jumpHoldFrames++;
@@ -1435,40 +1387,6 @@
             drawRayDebug(batch);
         }
 
-        public void drawRecastSensor(SpriteBatch batch) {
-
-
-            Vector2 pos = obstacle.getPosition();
-            float u = obstacle.getPhysicsUnits();
-
-            float sensorWidth = width * 0.8f;
-            float sensorHeight = height * 0.4f;
-            float recastOffset = sensorHeight + 0.1f;
-
-            float horizontalOffset = isFacingRight() ? width / 2 : -width / 2;
-
-            Vector2 sensorCenter = new Vector2(pos.x + horizontalOffset,
-                pos.y - height / 2 + recastOffset);
-
-            Path2 recastSensorOutline = new Path2();
-            PathFactory factory = new PathFactory();
-            factory.makeRect((sensorCenter.x - sensorWidth / 2) * u,
-                (sensorCenter.y - sensorHeight / 2) * u,
-                sensorWidth * u,
-                sensorHeight * u,
-                recastSensorOutline);
-
-            Affine2 transform = new Affine2();
-            transform.idt();
-            transform.preRotate((float) (obstacle.getAngle() * 180.0 / Math.PI));
-            transform.preTranslate(pos.x * u, pos.y * u);
-
-            batch.setTexture(Texture2D.getBlank());
-            batch.setColor(Color.RED);
-            batch.outline(recastSensorOutline, transform);
-            batch.setColor(Color.WHITE);
-        }
-
         public void drawRayDebug(SpriteBatch batch) {
             if (debugRayStart != null && debugRayEnd != null) {
                 float u = obstacle.getPhysicsUnits();
@@ -1525,9 +1443,6 @@
         }
         public void setBlindTimer(float time) {
             this.blindTimer = time;
-        }
-        public int getTakeDamageCooldown() {
-            return takeDamageCooldown;
         }
 
     }

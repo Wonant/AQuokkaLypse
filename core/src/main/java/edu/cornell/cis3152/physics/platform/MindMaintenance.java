@@ -68,15 +68,6 @@ public class MindMaintenance extends Enemy {
     private Vector2 debugLookEnd = new Vector2();
 
     /** game logic stuff */
-
-    // should be seconds in how long it takes for the critter to reset from aware of player to idle
-    private float awarenessCooldown;
-
-    private Path2 visionSensorOutline;
-    private Path2 visionFollowOutline;
-    private Path2 walkSensorOutline;
-    private Path2 harvestOutline;
-
     private boolean safeToWalk;
 
     /** animation */
@@ -295,20 +286,14 @@ public class MindMaintenance extends Enemy {
             return false;
         } else {
             Vector2 stairHit = new Vector2(enemyVisionRaycast.getHitPoint());
-
             if (isGrounded && Math.abs(movement) > 0) {
                 float targetCenterY = stairHit.y + height/2;
                 Body body = obstacle.getBody();
-                Vector2 pos = body.getPosition();
                 body.setTransform(stairHit.x, targetCenterY, body.getAngle());
-
                 debugRayEnd = stairHit;
             }
-
         }
-
         enemyVisionRaycast.reset();
-
         return true;
     }
 
@@ -354,26 +339,19 @@ public class MindMaintenance extends Enemy {
         if (!obstacle.isActive()) {
             return;
         }
-
-        Vector2 pos = obstacle.getPosition();
         float vx = obstacle.getVX();
         float vy = obstacle.getVY();
         Body body = obstacle.getBody();
-
-
         if (getMovement() == 0f) {
             velocityCache.set(0, vy);
             body.setLinearVelocity(velocityCache);
         }
-
         if (Math.abs(vx) >= getMaxSpeed()) {
             obstacle.setVX(Math.signum(vx) * getMaxSpeed());
         } else {
             velocityCache.set(getMovement(), vy);
             body.setLinearVelocity(velocityCache);
         }
-
-
     }
 
     public void applyForce() {
@@ -523,7 +501,6 @@ public class MindMaintenance extends Enemy {
                 frame = alertSprite.getCurrentFrame(Gdx.graphics.getDeltaTime());
                 break;
         }
-
 
         if(facingRight){
             frame.flip(true,false);
