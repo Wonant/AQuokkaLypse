@@ -200,7 +200,7 @@ public class GDXRoot extends Game implements ScreenListener {
                 setScreen(controllers[current]);
             } else if (exitCode == PlatformScene.EXIT_LEVELSELECT)
             {
-                setScreen(controllers[2]);
+                setScreen(controllers[0]);
             }
             else if (exitCode == PlatformScene.FROM_LEVELSELECT){
                 int dest = ((PlatformScene) screen).getDoorDestination();
@@ -231,7 +231,7 @@ public class GDXRoot extends Game implements ScreenListener {
                     setScreen(pausedScreen);
                     break;
                 case PauseScene.EXIT_LEVELSELECT:
-                    setScreen(controllers[2]);
+                    setScreen(controllers[0]);
                     break;
                 case PauseScene.EXIT_SETTINGS:
                     // Open settings screen
