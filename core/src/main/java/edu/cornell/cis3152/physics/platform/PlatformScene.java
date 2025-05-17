@@ -72,7 +72,9 @@ public class PlatformScene implements Screen, Telegraph {
     public static final int FROM_LEVELSELECT = 4;
 
     /** How many frames after winning/losing do we continue? */
-    public static final int EXIT_COUNT = 120;
+    public static final int EXIT_LOSE_COUNT = 200;
+    public static final int EXIT_WIN_COUNT = 120;
+
 
     public static final int STUN_COST = 1;
     public static final int TELEPORT_COST = 2;
@@ -173,6 +175,7 @@ public class PlatformScene implements Screen, Telegraph {
     private Texture dreamwalkerTexture;
     private Texture absorbTexture;
     private Texture critterTexture;
+    private Texture attackTexture;
 
     /** Enemy textures */
     private Texture maintenanceTexture;
@@ -302,9 +305,12 @@ public class PlatformScene implements Screen, Telegraph {
 
     // FADE CONSTANTS
     private float fadeAlpha = 0f;
-    private float fadeSpeed = 0.01f;
+    private float loseFadeSpeed = 0.005f;
+    private float winFadeSpeed = 0.01f;
     private boolean isFading = false;
-    private Color fadeColor = new Color(0, 0, 0, 0);
+    private Color loseFadeColor = new Color(0, 0, 0, 0);
+    private Color winFadeColor = new Color(1, 1, 1, 0);
+
 
     int nextIndex = 0;
 
@@ -372,7 +378,7 @@ public class PlatformScene implements Screen, Telegraph {
      */
     public void setComplete(boolean value) {
         if (value) {
-            countdown = EXIT_COUNT;
+            countdown = EXIT_WIN_COUNT;
             isFading = true;
             fadeAlpha = 0f;
         }
@@ -399,7 +405,7 @@ public class PlatformScene implements Screen, Telegraph {
      */
     public void setFailure(boolean value) {
         if (value) {
-            countdown = EXIT_COUNT;
+            countdown = EXIT_LOSE_COUNT;
             isFading = true;
             fadeAlpha = 0f;
         }
@@ -653,6 +659,7 @@ public class PlatformScene implements Screen, Telegraph {
         teleportTexture = directory.getEntry("teleport", Texture.class);
         backgroundTexture = directory.getEntry("background1", Texture.class);
         critterTexture = directory.getEntry( "curiosity-critter-active", Texture.class );
+        attackTexture = directory.getEntry("attack-animation", Texture.class);
 
         // REFERENCE FOR NEW FONT
         displayFont = directory.getEntry( "shared-retro" ,BitmapFont.class);
@@ -706,9 +713,6 @@ public class PlatformScene implements Screen, Telegraph {
         miniCam.setToOrtho(false, sw, sh);
         miniCam.zoom = 3f;
         defaultMiniCamPos = miniCam.position.cpy();
-
-        // is this not supposed to be removed?
-        units = height / bounds.height;
 
         createAnimators(fearTexture,swirlTexture);
 
@@ -967,11 +971,10 @@ public class PlatformScene implements Screen, Telegraph {
         }
 
         avatar = new Player(units, constants.get("player"), playerSpawnPos, this);
-
         addSprite(avatar);
         dreamwalkerTexture = directory.getEntry("player-sprite-sheet", Texture.class);
-        absorbTexture = directory.getEntry("absorb-animation", Texture.class);
-        avatar.createAnimators(dreamwalkerTexture, absorbTexture);
+        attackTexture = directory.getEntry("attack-animation", Texture.class);
+        avatar.createAnimators(dreamwalkerTexture, attackTexture);
         avatar.setFilter();
         avatar.createSensor();
         aiManager.setPlayer(avatar);
@@ -1797,11 +1800,19 @@ public class PlatformScene implements Screen, Telegraph {
         }
 
         // FADE TO BLACK
-        if ((complete || failed) && isFading) {
-            fadeAlpha = Math.min(fadeAlpha + fadeSpeed, 1.0f);
+        if (failed && isFading) {
+            fadeAlpha = Math.min(fadeAlpha + loseFadeSpeed, 1.0f);
 
-            fadeColor.a = fadeAlpha;
-            batch.setColor(fadeColor);
+            loseFadeColor.a = fadeAlpha;
+            batch.setColor(loseFadeColor);
+            batch.draw(blankTexture, 0, 0, width, height);
+            batch.setColor(Color.WHITE);
+        }
+        if (complete && isFading) {
+            fadeAlpha = Math.min(fadeAlpha + winFadeSpeed, 1.0f);
+
+            winFadeColor.a = fadeAlpha;
+            batch.setColor(winFadeColor);
             batch.draw(blankTexture, 0, 0, width, height);
             batch.setColor(Color.WHITE);
         }

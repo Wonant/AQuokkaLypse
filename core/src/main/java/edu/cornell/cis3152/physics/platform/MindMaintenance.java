@@ -425,11 +425,14 @@ public class MindMaintenance extends Enemy {
             System.out.println("MM's seen a step");
         }
 
+        /*
         if(checkBehindForPlayer()){
             setSus(true);
             super.update(dt);
             return;
         }
+
+         */
 
         if (!canContinue()) {
             safeToWalk = false;
