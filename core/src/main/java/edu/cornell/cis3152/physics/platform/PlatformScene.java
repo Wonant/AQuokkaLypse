@@ -24,8 +24,12 @@ import com.badlogic.gdx.maps.MapObject;
 import com.badlogic.gdx.maps.objects.PolygonMapObject;
 import com.badlogic.gdx.maps.objects.RectangleMapObject;
 import edu.cornell.cis3152.physics.AIControllerManager;
+import edu.cornell.cis3152.physics.AudioManager;
 import edu.cornell.cis3152.physics.ObstacleGroup;
 
+import edu.cornell.gdiac.audio.AudioEngine;
+import edu.cornell.gdiac.audio.AudioSource;
+import edu.cornell.gdiac.audio.MusicQueue;
 import java.util.*;
 
 import com.badlogic.gdx.*;
@@ -72,7 +76,9 @@ public class PlatformScene implements Screen, Telegraph {
     public static final int FROM_LEVELSELECT = 4;
 
     /** How many frames after winning/losing do we continue? */
-    public static final int EXIT_COUNT = 120;
+    public static final int EXIT_LOSE_COUNT = 200;
+    public static final int EXIT_WIN_COUNT = 120;
+
 
     public static final int STUN_COST = 5;
     public static final int TELEPORT_COST = 5;
@@ -180,6 +186,7 @@ public class PlatformScene implements Screen, Telegraph {
     private Texture dreamwalkerTexture;
     private Texture absorbTexture;
     private Texture critterTexture;
+    private Texture attackTexture;
 
     /** Enemy textures */
     private Texture maintenanceTexture;
@@ -319,11 +326,23 @@ public class PlatformScene implements Screen, Telegraph {
 
     // FADE CONSTANTS
     private float fadeAlpha = 0f;
-    private float fadeSpeed = 0.01f;
+    private float loseFadeSpeed = 0.005f;
+    private float winFadeSpeed = 0.01f;
     private boolean isFading = false;
-    private Color fadeColor = new Color(0, 0, 0, 0);
+    private Color loseFadeColor = new Color(0, 0, 0, 0);
+    private Color winFadeColor = new Color(1, 1, 1, 0);
+
 
     int nextIndex = 0;
+
+    private AudioManager audioManager;
+    /** List of music to play */
+    AudioSource samples[];
+    /** The current music sample to play */
+    int currentSample = 0;
+
+    /** A queue to play music */
+    MusicQueue music;
 
     /*==============================ContactListener Getters/Setters===============================*/
 
@@ -389,7 +408,7 @@ public class PlatformScene implements Screen, Telegraph {
      */
     public void setComplete(boolean value) {
         if (value) {
-            countdown = EXIT_COUNT;
+            countdown = EXIT_WIN_COUNT;
             isFading = true;
             fadeAlpha = 0f;
         }
@@ -416,7 +435,7 @@ public class PlatformScene implements Screen, Telegraph {
      */
     public void setFailure(boolean value) {
         if (value) {
-            countdown = EXIT_COUNT;
+            countdown = EXIT_LOSE_COUNT;
             isFading = true;
             fadeAlpha = 0f;
         }
@@ -495,6 +514,16 @@ public class PlatformScene implements Screen, Telegraph {
             bulletVB.dispose();
             bulletVB = null;
         }
+
+        if (music != null) {
+            music.stop();
+        }
+
+        for (AudioSource sample : samples) {
+            if (sample != null) {
+                sample.dispose();
+            }
+        }
     }
 
 
@@ -554,7 +583,7 @@ public class PlatformScene implements Screen, Telegraph {
      * This is usually when it regains focus.
      */
     public void resume() {
-        // TODO Auto-generated method stub
+        updateMusicVolume();
     }
 
     /**
@@ -563,6 +592,11 @@ public class PlatformScene implements Screen, Telegraph {
     public void show() {
         // Useless if called in outside animation loop
         active = true;
+        updateMusicVolume();
+
+        if (music != null && !music.isPlaying()) {
+            music.play();
+        }
     }
 
     /**
@@ -571,6 +605,9 @@ public class PlatformScene implements Screen, Telegraph {
     public void hide() {
         // Useless if called in outside animation loop
         active = false;
+        if (music != null && music.isPlaying()) {
+            music.pause();
+        }
     }
 
     /**
@@ -590,6 +627,7 @@ public class PlatformScene implements Screen, Telegraph {
     public PlatformScene(AssetDirectory directory, String mapkey, String tiled, Boolean isLevelSelect) {
         this.directory = directory;
         this.mapkey = mapkey;
+        this.audioManager = AudioManager.getInstance();
         tiledLevelName = tiled;
         this.isLevelSelect = isLevelSelect;
         constants = directory.getEntry(mapkey,JsonValue.class);
@@ -670,6 +708,7 @@ public class PlatformScene implements Screen, Telegraph {
         teleportTexture = directory.getEntry("teleport", Texture.class);
         backgroundTexture = directory.getEntry("background1", Texture.class);
         critterTexture = directory.getEntry( "curiosity-critter-active", Texture.class );
+        attackTexture = directory.getEntry("attack-animation", Texture.class);
 
         // REFERENCE FOR NEW FONT
         displayFont = directory.getEntry( "shared-retro" ,BitmapFont.class);
@@ -730,8 +769,34 @@ public class PlatformScene implements Screen, Telegraph {
         Texture t = directory.getEntry("fear-meter-sprite-sheet", Texture.class);
         createAnimators(t,swirlTexture);
 
+
         dispatcher.addListener(this, MessageType.CRITTER_SEES_PLAYER);
         dispatcher.addListener(this, MessageType.CRITTER_LOST_PLAYER);
+
+        samples = new AudioSource[1];
+        samples[0] = directory.getEntry( "theme_level", AudioSource.class );
+        currentSample = 0;
+
+        AudioEngine engine = (AudioEngine)Gdx.audio;
+        music = engine.newMusicQueue( false, 44100 );
+        music.addSource( samples[0] );
+        music.setLooping(true);
+
+        // Set initial volume from AudioManager
+        updateMusicVolume();
+    }
+
+
+    /**
+     * Updates the music volume based on AudioManager settings
+     */
+    private void updateMusicVolume() {
+        if (music != null) {
+            // Apply both master and music volume
+            float masterVolume = audioManager.getMasterVolume();
+            float musicVolume = audioManager.getMusicVolume();
+            music.setVolume(masterVolume * musicVolume);
+        }
     }
 
     /**
@@ -761,6 +826,10 @@ public class PlatformScene implements Screen, Telegraph {
 
         shadowMode = false;
         avatar.setShroudMode(false);
+        for(ShieldWall s: shieldWalls){
+            removeBullet(s);
+            shieldWalls.remove(s);
+        }
         pendingSpears.clear();
     }
 
@@ -852,6 +921,9 @@ public class PlatformScene implements Screen, Telegraph {
                     gates.add(gate);
                     addSprite(gate);
                     gate.setFilter();
+                if (o.getName().startsWith("dialouge")) {
+                    String message = o.getProperties().get("text", String.class);
+                    DialougeDetector d = new DialougeDetector(x,y,message);
                 }
                 if (o.getName().startsWith("Player")) {
                     playerSpawnPos.set(worldX, worldY);
@@ -874,8 +946,12 @@ public class PlatformScene implements Screen, Telegraph {
                 }
                 if (o.getName().startsWith("dream dweller")) {
                     dreamDweller = new DreamDweller(units, constants.get("dream-dweller"), new float[]{worldX, worldY}, this);
-                    dreamDweller.setTexture(dwellerTexture);
                     addSprite(dreamDweller);
+                    Texture dwellerAttack = directory.getEntry("dweller-attack", Texture.class);
+                    Texture dwellerHover = directory.getEntry("dweller-hover", Texture.class);
+                    Texture dwellerStunned = directory.getEntry("dweller-stunned", Texture.class);
+                    Texture dwellerTurn = directory.getEntry("dweller-turn", Texture.class);
+                    dreamDweller.createAnimators(dwellerAttack, dwellerHover, dwellerStunned, dwellerTurn);
                     dreamDweller.setFilter();
                     dreamDweller.createSensor();
                     enemies.add(dreamDweller);
@@ -1010,11 +1086,10 @@ public class PlatformScene implements Screen, Telegraph {
         }
 
         avatar = new Player(units, constants.get("player"), playerSpawnPos, this);
-
         addSprite(avatar);
         dreamwalkerTexture = directory.getEntry("player-sprite-sheet", Texture.class);
-        absorbTexture = directory.getEntry("absorb-animation", Texture.class);
-        avatar.createAnimators(dreamwalkerTexture, absorbTexture);
+        attackTexture = directory.getEntry("attack-animation", Texture.class);
+        avatar.createAnimators(dreamwalkerTexture, attackTexture);
         avatar.setFilter();
         avatar.createSensor();
         aiManager.setPlayer(avatar);
@@ -1120,6 +1195,14 @@ public class PlatformScene implements Screen, Telegraph {
         aiManager.update(dt);
         aiCManager.update(dt);
         GdxAI.getTimepiece().update(dt);
+
+        updateMusicVolume();
+
+        if (music.getPosition() + 10 > music.getDuration()){
+            music.stop();
+            music.removeSource(0);
+            music.addSource( samples[0] );
+        }
 
         for (Enemy e: enemies){
             if (e instanceof MindMaintenance && ((MindMaintenance) e).isShooting()){
@@ -1903,11 +1986,19 @@ public class PlatformScene implements Screen, Telegraph {
         }
 
         // FADE TO BLACK
-        if ((complete || failed) && isFading) {
-            fadeAlpha = Math.min(fadeAlpha + fadeSpeed, 1.0f);
+        if (failed && isFading) {
+            fadeAlpha = Math.min(fadeAlpha + loseFadeSpeed, 1.0f);
 
-            fadeColor.a = fadeAlpha;
-            batch.setColor(fadeColor);
+            loseFadeColor.a = fadeAlpha;
+            batch.setColor(loseFadeColor);
+            batch.draw(blankTexture, 0, 0, width, height);
+            batch.setColor(Color.WHITE);
+        }
+        if (complete && isFading) {
+            fadeAlpha = Math.min(fadeAlpha + winFadeSpeed, 1.0f);
+
+            winFadeColor.a = fadeAlpha;
+            batch.setColor(winFadeColor);
             batch.draw(blankTexture, 0, 0, width, height);
             batch.setColor(Color.WHITE);
         }

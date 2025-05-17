@@ -171,6 +171,8 @@
         private Animator stunningSprite;
         private Animator interactingSprite;
         private Animator absorbSprite;
+        private Animator attackSprite;
+        private Animator deadSprite;
         private AnimationState animationState;
 
         private boolean shroudMode;
@@ -229,7 +231,9 @@
             LAND,
             STUN,
             INTERACT,
-            ABSORB
+            ABSORB,
+            ATTACK,
+            DEAD
         }
 
         public float getWidth() {
@@ -285,10 +289,6 @@
                 movement = 0;
                 return;
             }
-//            if (isLanding) {
-//                movement = value;
-//                return;
-//            }
 
             movement = value;
             // Change facing if appropriate
@@ -371,7 +371,6 @@
          */
         public boolean isHarvesting() {
             return harvestDurationCounter > 0;
-            //return isHarvesting && harvestCooldown <= 0;
         }
 
         public float getHarvestCooldown() {
@@ -663,14 +662,11 @@
             this.data = data;
             JsonValue debugInfo = data.get("debug");
 
-
             float x = spawn.x;
             float y = spawn.y;
             float s = data.getFloat( "size" );
             float sizeWidth = s*units;
             float sizeHeight = s*units*1.8f;
-
-
 
             // The capsule is smaller than the image
             // "inner" is the fraction of the original size for the capsule
@@ -700,7 +696,7 @@
             dash_force = data.getFloat("dash_force", 0);
             jumpLimit = data.getInt( "jump_cool", 0 );
             harvestLimit = 60;
-            harvestDuration = 20;
+            harvestDuration = 50;
             stunLimit = data.getInt( "shot_cool", 0 );
             teleportLimit = 30;
             takeDamageLimit = 120;
@@ -744,7 +740,7 @@
             playerSlowShader = new Shader(Gdx.files.internal("shaders/shroud.vert"), Gdx.files.internal("shaders/pink.frag"));
         }
 
-        public void createAnimators(Texture dreamwalker, Texture absorb) {
+        public void createAnimators(Texture dreamwalker, Texture dreamwalker2) {
             walkingSprite = new Animator(dreamwalker, 11, 16, 0.033f, 176, 0, 15);
             idleSprite = new Animator(dreamwalker, 11, 16, 0.033f, 176, 37, 56);
             jumpSprite = new Animator(dreamwalker, 11, 16, 0.033f, 176, 20, 26, false);
@@ -752,8 +748,11 @@
             fallSprite = new Animator(dreamwalker, 11, 16, 0.033f, 176, 26, 26, false);
             landingSprite = new Animator(dreamwalker, 11, 16, 0.033f, 176, 138, 156, false);
             stunningSprite = new Animator(dreamwalker, 11, 16, 0.033f, 176, 157, 174, false);
-            interactingSprite = new Animator(absorb, 5, 5, 0.033f, 23, 0, 22, false);
-            absorbSprite = new Animator(absorb, 5, 5, 0.033f, 23, 10, 11);
+            interactingSprite = new Animator(dreamwalker2, 6, 16, 0.033f, 23, 0, 22, false);
+            absorbSprite = new Animator(dreamwalker2, 6, 16, 0.033f, 23, 10, 11);
+            deadSprite = new Animator(dreamwalker2, 6, 16, 0.033f, 39, 23, 62, false);
+            attackSprite = new Animator(dreamwalker2, 6, 16, 0.033f, 27, 63, 88, false);
+
         }
 
         public void setFilter() {
@@ -1008,14 +1007,11 @@
 
                 stairCooldown = FRAME_STAIR_COOLDOWN;
                 if (isGrounded && Math.abs(movement) > 0) {
-                    float targetCenterY = stairHit.y + height/2;
-
                     isClimbing = true;
                     debugRayEnd = stairHit;
                     return true;
                 }
                 if (movement == 0 && !isJumping()) {
-
                     float targetCenterY = stairHit.y + height/2f;  // tiny offset to avoid re-trigger
                     body.setTransform(body.getPosition().x, targetCenterY, body.getAngle());
                 }
@@ -1096,7 +1092,10 @@
                 scareSensorFixture = null;
                 sensorScareOutline = null;
             }
-
+            if(getFearMeter() == 0){
+                animationState = AnimationState.DEAD;
+                return;
+            }
             if (isJumping()) {
                 jumpCooldown = jumpLimit;
             } else {
@@ -1248,6 +1247,12 @@
                 coyoteTimeCounter = Math.max(0, coyoteTimeCounter - 1);
             }
 
+            if(isHarvesting() && isGrounded() && movement == 0){
+                animationState = AnimationState.ATTACK;
+            }
+            else{
+                attackSprite.reset();
+            }
 
             super.update(dt);
 
@@ -1255,124 +1260,88 @@
 
         @Override
         public void draw(SpriteBatch batch) {
+            if (animationState == null) return;
 
-            TextureRegion frame = new TextureRegion();
-            float scale = 1.05f;
             float dt = Gdx.graphics.getDeltaTime();
-            if (slowed) {
-                dt /= 2;
-            }
-            if (animationState == null) {
-                return;
-            }
+            if (slowed) dt *= 0.5f;
+
+            TextureRegion frame;
             switch (animationState) {
-                case WALK:
-                    frame = walkingSprite.getCurrentFrame(dt);
-                    break;
-                case IDLE:
-                    frame = idleSprite.getCurrentFrame(dt);
-                    break;
+                case WALK:      frame = walkingSprite.getCurrentFrame(dt); break;
+                case IDLE:      frame = idleSprite   .getCurrentFrame(dt); break;
                 case JUMP:
-                    if (!lastJumping && isJumping()) {
-                        jumpSprite.reset();
-                    }
+                    if (!lastJumping && isJumping()) jumpSprite.reset();
                     frame = jumpSprite.getCurrentFrame(dt);
                     break;
-                case STAIR:
-                    frame = walkingSprite.getCurrentFrame(dt);
-                    break;
-                case FALL:
-                    frame = fallSprite.getCurrentFrame(dt);
-                    break;
-                case LAND:
-                    frame = landingSprite.getCurrentFrame(dt);
-                    break;
-                case STUN:
-                    frame = stunningSprite.getCurrentFrame(dt);
-                    break;
-                case INTERACT:
-                    frame = interactingSprite.getCurrentFrame(dt);
-                    break;
-                case ABSORB:
-                    frame = absorbSprite.getCurrentFrame(dt);
-                    break;
-                default:
-                    frame = idleSprite.getCurrentFrame(dt);
-                    break;
+                case STAIR:     frame = walkingSprite.getCurrentFrame(dt); break;
+                case FALL:      frame = fallSprite   .getCurrentFrame(dt); break;
+                case LAND:      frame = landingSprite.getCurrentFrame(dt); break;
+                case STUN:      frame = stunningSprite.getCurrentFrame(dt); break;
+                case INTERACT:  frame = interactingSprite.getCurrentFrame(dt); break;
+                case ABSORB:    frame = absorbSprite .getCurrentFrame(dt); break;
+                case DEAD:      frame = deadSprite   .getCurrentFrame(dt); break;
+                case ATTACK:    frame = attackSprite .getCurrentFrame(dt); break;
+                default:        frame = idleSprite   .getCurrentFrame(dt); break;
             }
 
             float u = obstacle.getPhysicsUnits();
-            // Determine drawing coordinates.
-            // Here we assume obstacle.getX() and getY() return the center position.
             float posX = obstacle.getX() * u;
-            float posY = obstacle.getY() * u;
-            float drawWidth = width * u * 3f * scale;
-            float drawHeight = height * u * scale * 1.25f;
+            float posY = obstacle.getY() * u + (animationState == AnimationState.ATTACK ? 0f : 5f);
 
-            float originX = (faceRight) ? drawWidth / 2.0f : drawWidth / 1.75f;
-            float originY = drawHeight / 1.92f;
-            if (animationState == AnimationState.FALL || animationState == AnimationState.JUMP) {
-                originY = drawHeight/1.3f;
+            float scale = 1.05f;
+            float drawW = width  * u * 3f * scale * 1.1f;  // including your *1.1f
+            float drawH = height * u * scale * 1.25f * 1.1f;
+
+            float originX = faceRight ? drawW/2f : drawW/1.75f;
+            float originY = (animationState == AnimationState.FALL || animationState == AnimationState.JUMP)
+                ? drawH/1.3f
+                : drawH/1.92f;
+
+            ShaderProgram shaderToUse = null;
+            float shaderAlpha   = 1f;
+            float shaderTime    = 0f;
+
+            if (shroudMode) {
+                shaderToUse = playerShroudShader;
+                shaderAlpha = shroudAlpha;
+                shaderTime  = 0f;
             }
-
-            if (faceRight) {
-
-            } else {
-                frame.flip(true, false);
+            if (slowed) {
+                shaderToUse = playerSlowShader;
+                shaderAlpha = 1f;
+                shaderTime  = slowTime;
             }
 
             ShaderProgram prev = batch.getShader();
-            if (shroudMode) {
+            if (shaderToUse != null) {
                 batch.end();
-
-                batch.setShader(playerShroudShader);
-                batch.setColor(1,1,1,shroudAlpha);
-
-                playerShroudShader.setUniformf("iTime", shroudModeTime);
-                System.out.println("shroud time " + shroudModeTime);
-                playerShroudShader.setUniformf("iResolution", drawWidth, drawHeight);
-
-                batch.begin();
-            }
-            if (slowed) {
-                batch.end();
-
-                batch.setShader(playerSlowShader);
-                batch.setColor(1,1,1,shroudAlpha);
-
-                playerSlowShader.setUniformf("iTime", slowTime);
-                System.out.println("slow time " + slowTime);
-                playerSlowShader.setUniformf("iResolution", drawWidth, drawHeight);
-
+                batch.setShader(shaderToUse);
+                batch.setColor(1f, 1f, 1f, shaderAlpha);
+                shaderToUse.setUniformf("iTime",       shaderTime);
+                shaderToUse.setUniformf("iResolution", drawW, drawH);
                 batch.begin();
             }
 
-            // Draw the current frame centered on the player's position.
-            batch.draw(frame,
-                posX - originX, // lower-left x position
-                posY - originY, // lower-left y position
-                originX,        // originX used for scaling and rotation
-                originY,        // originY
-                drawWidth * 1.1f,      // width
-                drawHeight * 1.1f,     // height
-                1f,             // scaleX
-                1f,             // scaleY
-                0f              // rotation (in degrees)
+            if (!faceRight) frame.flip(true, false);
+            batch.draw(
+                frame,
+                posX - originX,
+                posY - originY,
+                originX, originY,
+                drawW, drawH,
+                1f, 1f,
+                0f
             );
-            batch.setColor(Color.WHITE);
+            if (!faceRight) frame.flip(true, false);  // flip back so we don’t double-flip next frame
 
-//            if (faceRight) {
-//                flipCache.setToScaling( 1,1 );
-//            } else {
-//                flipCache.setToScaling( -1,1 );
-//            }
-//            super.draw(batch,flipCache);
-            if ((shroudMode || slowed) && prev != null) {
+            batch.setColor(Color.WHITE);
+            if (shaderToUse != null) {
                 batch.end();
                 batch.setShader(prev);
                 batch.begin();
             }
         }
+
 
         @Override
         public void drawDebug(SpriteBatch batch) {

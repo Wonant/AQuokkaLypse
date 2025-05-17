@@ -1,5 +1,7 @@
 package edu.cornell.cis3152.physics.platform;
 
+import com.badlogic.gdx.Gdx;
+import com.badlogic.gdx.graphics.g2d.TextureRegion;
 import com.badlogic.gdx.math.*;
 import com.badlogic.gdx.graphics.*;
 import com.badlogic.gdx.physics.box2d.*;
@@ -42,6 +44,46 @@ public class DreamDweller extends Enemy {
     private float susCooldown = 20;
     private float susCountdown = susCooldown;
 
+    private Animator idleSprite;
+    private Animator turnSprite;
+    private Animator shootSprite;
+    private Animator stunSprite;
+    private Animator floatSprite;
+    private AnimationState animationState;
+
+    private float turnTimer = 0f;
+    private float turnCooldown = 3.0f;
+    private boolean inTurnAnimation = false;
+    private int turnFrameCounter = 0;
+
+    private boolean lastFacingRight;
+
+    private float facingDirectionHoldTimer = 0f;
+    private final float facingHoldDuration = 3.0f;
+
+    private boolean shouldFlipAfterTurn = false;
+    private boolean inShootAnimation = false;
+    private boolean inStunAnimation = false;
+    private boolean onPlatform = isGrounded;
+    private boolean attackFacingRight;
+    private boolean lockFacing = false;
+
+
+
+
+    private enum AnimationState {
+        IDLE, TURN,FLOAT,SHOOT, STUN
+    }
+
+    public void createAnimators(Texture attack, Texture hover, Texture stunned, Texture turn) {
+        shootSprite = new Animator(attack, 4, 8, 0.06f, 28, 0, 27, false);
+        floatSprite = new Animator(hover, 8, 8, 0.06f, 39, 16, 38);
+        stunSprite = new Animator(stunned, 2, 8, 0.06f, 15, 0, 14, false);
+        turnSprite = new Animator(turn, 4, 8, 0.06f, 31, 0, 30, false);
+
+    }
+
+
     public DreamDweller(float units, JsonValue data, float[] points, PlatformScene scene) {
         super(null);
         this.data = data;
@@ -69,7 +111,7 @@ public class DreamDweller extends Enemy {
         obstacle.setFixedRotation(true);
         obstacle.setPhysicsUnits(units);
         obstacle.setUserData(this);
-        obstacle.setName("maintenance");
+        obstacle.setName("dweller");
 
         debug = ParserUtils.parseColor(debugInfo.get("avatar"), Color.WHITE);
         sensorColor = ParserUtils.parseColor(debugInfo.get("sensor"), Color.WHITE);
@@ -188,50 +230,120 @@ public class DreamDweller extends Enemy {
     @Override
     public void update(float dt) {
         lookForPlayer();
-
-
+        System.out.println(animationState);
         if (obstacle != null && obstacle.getBody() != null) {
-            obstacle.getBody().setGravityScale(0);
+            obstacle.getBody().setGravityScale(0); // always floating
+        }
+        float playerX = scene.getAvatar().getObstacle().getPosition().x;
+        if (playerX < obstacle.getX() && facingRight || playerX > obstacle.getX() && !facingRight ){
+            inTurnAnimation = true;
         }
 
-        Vector2 playerPos = scene.getAvatar().getObstacle().getPosition();
-        Vector2 selfPos = obstacle.getPosition();
-        facingRight = playerPos.x >= selfPos.x;
-
-        if (isAwareOfPlayer() && !scene.isFailure()) {
-            setShooting(true);
-            susCountdown = susCooldown;
-        } else {
-            susCountdown--;
-            setShooting(false);
+        if (isStunned()) {
+            isShooting = false;
+            inStunAnimation = true;
+            animationState = AnimationState.STUN;
+        }
+        else if (inStunAnimation) {
+            if (stunSprite.isAnimationFinished()) {
+                animationState = AnimationState.FLOAT;
+                inStunAnimation = false;
+                stunSprite.reset();
+            } else {
+                animationState = AnimationState.STUN;
+            }
         }
 
+        if (inStunAnimation) {
+            super.update(dt);
+            return;
+        }
+
+        // Handle shooting cooldown logic
         if (isShooting()) {
             shootCooldown = shootLimit;
+            inShootAnimation = true;
+            animationState = AnimationState.SHOOT;
+            shootSprite.reset();
+            attackFacingRight = facingRight; // lock the direction for the shoot
+            lockFacing = true;
+            isShooting = false; // one-time trigger
         } else {
             shootCooldown = Math.max(0, shootCooldown - 1);
+        }
+
+        // Handle shoot animation finishing
+        if (inShootAnimation) {
+            // flip the direction so it doesn't look wierd shooting backwards
+            if (playerX < obstacle.getX() && facingRight || playerX > obstacle.getX() && !facingRight ){
+                facingRight = !facingRight;
+            }
+            animationState = AnimationState.SHOOT;
+            if (shootSprite.isAnimationFinished()) {
+                System.out.println("FINISHED SHOOTING");
+                shootSprite.reset();
+                inShootAnimation = false;
+            }
+        }
+        // Handle turn animation
+        else if (inTurnAnimation) {
+            animationState = AnimationState.TURN;
+            if (turnSprite.isAnimationFinished()) {
+                System.out.println("FINISHED TURNING");
+                inTurnAnimation = false;
+                turnSprite.reset();
+                animationState = AnimationState.FLOAT;
+                facingRight = !facingRight;
+
+            }
+        }
+
+        // Default floating state
+        else {
+            animationState = AnimationState.FLOAT;
         }
 
         super.update(dt);
     }
 
+
+
     @Override
     public void draw(SpriteBatch batch) {
-        if (obstacle != null && mesh != null) {
-            float x = obstacle.getX();
-            float y = obstacle.getY();
-            float a = obstacle.getAngle();
-            float u = obstacle.getPhysicsUnits();
-
-            transform.idt();
-            transform.preScale(facingRight ? -1.4f : 1.4f, 1.4f);
-            transform.preRotate((float) (a * MathUtils.radiansToDegrees));
-            transform.preTranslate(x * u, (y - height / 12f) * u);
-
-            batch.setTextureRegion(sprite);
-            batch.drawMesh(mesh, transform, false);
-            batch.setTexture((Texture) null);
+        TextureRegion frame = null;
+        switch (animationState) {
+            case IDLE:
+                frame = idleSprite.getCurrentFrame(Gdx.graphics.getDeltaTime());
+                break;
+            case FLOAT:
+                frame = floatSprite.getCurrentFrame(Gdx.graphics.getDeltaTime());
+                break;
+            case TURN:
+                frame = turnSprite.getCurrentFrame(Gdx.graphics.getDeltaTime());
+                break;
+            case SHOOT:
+                frame = shootSprite.getCurrentFrame(Gdx.graphics.getDeltaTime());
+                break;
+            case STUN:
+                frame = stunSprite.getCurrentFrame(Gdx.graphics.getDeltaTime());
+                break;
         }
+
+
+        if (facingRight) {
+            frame.flip(true, false);
+        }
+
+
+        float u = obstacle.getPhysicsUnits();
+        float posX = obstacle.getX() * u;
+        float posY = obstacle.getY() * u;
+        float drawWidth = width * u * 1.5f;
+        float drawHeight = height * u * 1.15f;
+        float originX = drawWidth / 2f;
+        float originY = drawHeight / 2f;
+
+        batch.draw(frame, posX - originX, posY - originY, originX, originY, drawWidth, drawHeight, 1f, 1f, 0f);
     }
 
     @Override
@@ -295,7 +407,15 @@ public class DreamDweller extends Enemy {
 
     public void setShooting(boolean value) {
         isShooting = value;
+
+        if (isShooting() && !inShootAnimation) {
+            inShootAnimation = true;
+            shootSprite.reset();
+            attackFacingRight = facingRight;
+            lockFacing = true;
+        }
     }
+
     public void applyForce() {
         setMovement(0);
 

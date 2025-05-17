@@ -50,7 +50,7 @@ public class ShieldWall extends ObstacleSprite {
         debug = ParserUtils.parseColor( settings.get( "debug" ), Color.PURPLE);
 
         mesh.set( -radius, 20*-radius, 5 * radius, 40 * radius );
-        travelSprite = new Animator(travelTex, 1, 4, 0.25f, 4, 0, 3, true);
+        travelSprite = new Animator(travelTex, 1, 4, 0.26f, 4, 0, 3, true);
         endSprite = new Animator(endTex, 1, 4, 0.15f, 4, 0, 3, false);
     }
     public void update(float dt){

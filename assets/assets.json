@@ -13,7 +13,12 @@
         "maintenance-sprite-sheet" : "platform/maintenance.png",
         "player-sprite-sheet" : "platform/dreamwalker.png",
         "critter-sprite-sheet" : "platform/critter_spritesheet.png",
+        "dweller-attack":"platform/dweller_attack.png",
+        "dweller-hover":"platform/dweller_hover.png",
+        "dweller-stunned":"platform/dweller_stunned.png",
+        "dweller-turn":"platform/dweller_turn.png",
         "absorb-animation" : "platform/absorb.png",
+        "attack-animation" : "platform/attack.png",
         "fear-meter-sprite-sheet" : "platform/healthbar_spritesheet.png",
         "visibility-indicator" : "platform/v1.png",
         "teleport" : "platform/teleport_sheet.png",
@@ -25,13 +30,13 @@
         "fear-meter" : "platform/fearmeter_0.png",
         "background1" : "platform/background.png",
         "shard-sprite" : "shard/shard.png",
+
         "spikes" : "platform/spikes.png",
         "laser" : "platform/laser.png",
         "crystal" : "platform/crystal.png",
 
     "platform-spear"  : "platform/spear.png",
         "platform-spear-right"  : "platform/spear-right.png",
-
         "platform-bullet"   : "platform/bullet.png",
         "platform-scare-effect" : "platform/scare_effct.png",
         "crosshair" : "platform/portalxhair.png",
@@ -107,6 +112,21 @@
         },
         "overlay" : {
           "file": "pause/temp_overlay.png"
+        },
+        "black_bg" : {
+          "file": "menu/black_bg.png"
+        },
+        "sliderBg" : {
+          "file": "menu/sliderBg.png"
+        },
+        "sliderKnob" : {
+          "file": "menu/sliderKnob.png"
+        },
+        "backButton" : {
+          "file": "menu/backButton.png"
+        },
+        "testButton" : {
+          "file": "menu/testButton.png"
         }
     },
     "jsons"  : {
@@ -140,6 +160,7 @@
         }
     },
     "samples": {
-        "theme": "music/theme.ogg"
+        "theme": "music/theme.ogg",
+        "theme_level": "music/level.ogg"
   }
 }

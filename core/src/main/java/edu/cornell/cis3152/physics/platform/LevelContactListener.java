@@ -49,6 +49,7 @@ public class LevelContactListener implements ContactListener {
 
             handleShieldWallContact(bd1, bd2);
             handleDoorContact(bd1, bd2);
+            handleDialougeContact(bd1, bd2);
             handleDreamShardContact(bd1, bd2, fd1, fd2);
 
             handleWalkSensorContact(bd1, bd2, fd1, fd2);
@@ -106,6 +107,7 @@ public class LevelContactListener implements ContactListener {
             dreamWalkerScene.currentInteractingShard = null;
         }
         handleDoorEndContact((ObstacleSprite) bd1, (ObstacleSprite) bd2);
+        handleDialougeEndContact((ObstacleSprite) bd1, (ObstacleSprite) bd2);
     }
 
     /** Handle collision between ShieldWall and Player */
@@ -144,6 +146,32 @@ public class LevelContactListener implements ContactListener {
 
     /** Set door as inactive when contact between player and door ends */
     private void handleDoorEndContact(ObstacleSprite bd1, ObstacleSprite bd2) {
+        if ((bd1 == dreamWalkerScene.getAvatar() && bd2 instanceof Door) ||
+            (bd2 == dreamWalkerScene.getAvatar() && bd1 instanceof Door)) {
+            if(bd1 instanceof Door){
+                ((Door) bd1).setInactive();
+            }
+            else{
+                ((Door) bd2).setInactive();
+            }
+        }
+    }
+
+    /** Set door as active when contact between player and door is detected */
+    private void handleDialougeContact(ObstacleSprite bd1, ObstacleSprite bd2) {
+        if ((bd1 == dreamWalkerScene.getAvatar() && bd2 instanceof Door) ||
+            (bd2 == dreamWalkerScene.getAvatar() && bd1 instanceof Door)) {
+            if(bd1 instanceof Door){
+                ((Door) bd1).setActive();
+            }
+            else{
+                ((Door) bd2).setActive();
+            }
+        }
+    }
+
+    /** Set door as inactive when contact between player and door ends */
+    private void handleDialougeEndContact(ObstacleSprite bd1, ObstacleSprite bd2) {
         if ((bd1 == dreamWalkerScene.getAvatar() && bd2 instanceof Door) ||
             (bd2 == dreamWalkerScene.getAvatar() && bd1 instanceof Door)) {
             if(bd1 instanceof Door){

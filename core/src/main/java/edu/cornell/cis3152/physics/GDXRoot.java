@@ -14,6 +14,7 @@
 package edu.cornell.cis3152.physics;
 
 import com.badlogic.gdx.*;
+import com.badlogic.gdx.utils.ScreenUtils;
 import edu.cornell.cis3152.physics.platform.PlatformScene;
 import edu.cornell.gdiac.util.*;
 import edu.cornell.gdiac.assets.*;
@@ -32,6 +33,9 @@ public class GDXRoot extends Game implements ScreenListener {
     private MainMenuScene mainMenu;
     /** The pause scene */
     private PauseScene pauseScene;
+    /** The settings scene */
+    private SettingsScene settingsScene;
+    /** The game screen that was active when pause/settings was opened */
     private PlatformScene pausedScreen;
     /** Array of Arena controllers (one per map) */
     private PlatformScene[] controllers;
@@ -39,8 +43,10 @@ public class GDXRoot extends Game implements ScreenListener {
     private int current;
     /** Array of map keys for each level */
 
+
     private String[] maps = {"tutorial1", "level2", "level3", "level4", "level5", "level6", "level7", "level9", "level10"};
     private String[] tiled = {"maps/tutorial.tmx", "maps/level_2.tmx", "maps/level_3.tmx", "maps/level_4.tmx", "maps/level_5.tmx","maps/level_6.tmx", "maps/level_7.tmx", "maps/level_9.tmx", "maps/level_10.tmx"};
+
 
     /** Current map index for switching levels */
     private int currentMapIndex = 0;
@@ -54,6 +60,10 @@ public class GDXRoot extends Game implements ScreenListener {
      */
     public void create() {
         batch = new SpriteBatch();
+
+        // Initialize the AudioManager (this also loads saved settings)
+        AudioManager.getInstance();
+
         loading = new LoadingScene("assets.json", batch, 1);
         loading.setScreenListener(this);
         setScreen(loading);
@@ -76,6 +86,10 @@ public class GDXRoot extends Game implements ScreenListener {
         if (pauseScene != null) {
             pauseScene.dispose();
             pauseScene = null;
+        }
+        if (settingsScene != null) {
+            settingsScene.dispose();
+            settingsScene = null;
         }
         if (controllers != null) {
             for (int i = 0; i < controllers.length; i++) {
@@ -107,6 +121,9 @@ public class GDXRoot extends Game implements ScreenListener {
         }
         if (mainMenu != null) {
             mainMenu.resize(width, height);
+        }
+        if (settingsScene != null) {
+            settingsScene.resize(width, height);
         }
         if (controllers != null) {
             for (int i = 0; i < controllers.length; i++) {
@@ -155,10 +172,13 @@ public class GDXRoot extends Game implements ScreenListener {
                     setScreen(controllers[current]);
                     break;
                 case MainMenuScene.EXIT_SETTINGS:
-                    // TODO: Implement level select screen
-                    // For now, just start the game
-                    current = 0;
-                    setScreen(controllers[current]);
+                    // Show settings screen
+                    if (settingsScene == null) {
+                        settingsScene = new SettingsScene(directory, batch, mainMenu);
+                        settingsScene.setScreenListener(this);
+                    }
+                    pausedScreen = null; // No game is being paused
+                    setScreen(settingsScene);
                     break;
                 case MainMenuScene.EXIT_CREDITS:
                     // TODO: Implement credits screen
@@ -188,8 +208,6 @@ public class GDXRoot extends Game implements ScreenListener {
             }
             else if (exitCode == PlatformScene.EXIT_PAUSE) {
                 if (screen instanceof PlatformScene) {
-                    // Quit the application
-
                     pausedScreen = (PlatformScene) screen;
                     if (pauseScene == null) {
                         pauseScene = new PauseScene(directory, batch, screen);
@@ -216,14 +234,30 @@ public class GDXRoot extends Game implements ScreenListener {
                     setScreen(controllers[2]);
                     break;
                 case PauseScene.EXIT_SETTINGS:
-                    // TODO: SETTINGS
-                    // Would show options screen - for now, just resume
-                    ((PlatformScene)pausedScreen).setResumingFromPause(true);
-                    setScreen(pausedScreen);
+                    // Open settings screen
+                    if (settingsScene == null) {
+                        settingsScene = new SettingsScene(directory, batch, pauseScene);
+                        settingsScene.setScreenListener(this);
+                    }
+                    setScreen(settingsScene);
                     break;
                 case PauseScene.EXIT_QUIT:
-                    Gdx.app.exit();
+                    setScreen(mainMenu);
                     break;
+            }
+        }
+        else if (screen == settingsScene) {
+            if (exitCode == SettingsScene.EXIT_BACK) {
+                settingsScene.resetScreen();
+                if (pausedScreen != null) {
+                    pauseScene.resize(Gdx.graphics.getWidth(), Gdx.graphics.getHeight());
+                    setScreen(pauseScene);
+                } else {
+                    mainMenu.resize(Gdx.graphics.getWidth(), Gdx.graphics.getHeight());
+                    setScreen(mainMenu);
+                }
+
+                AudioManager.getInstance().loadSettings();
             }
         }
     }
