@@ -63,6 +63,7 @@ public class DreamDweller extends Enemy {
 
     private boolean shouldFlipAfterTurn = false;
     private boolean inShootAnimation = false;
+    private boolean inStunAnimation = false;
     private boolean onPlatform = isGrounded;
     private boolean attackFacingRight;
     private boolean lockFacing = false;
@@ -74,12 +75,12 @@ public class DreamDweller extends Enemy {
         IDLE, TURN,FLOAT,SHOOT, STUN
     }
 
-    public void createAnimators(Texture sheet1, Texture sheet2, Texture sheet3) {
-        idleSprite = new Animator(sheet1, 8, 8, 0.033f, 31, 0, 30); // idle (on platform)
-        turnSprite = new Animator(sheet1, 8, 8, 0.06f, 27, 31, 57, false); // turn
-        floatSprite = new Animator(sheet2, 8, 8, 0.06f, 39, 16, 38); // float (in air idle)
-        shootSprite = new Animator(sheet2, 8, 8, 0.05f, 24, 39, 62, false); // shoot
-        stunSprite = new Animator(sheet3, 8, 5, 0.08f, 16, 23, 38, false); // stun
+    public void createAnimators(Texture attack, Texture hover, Texture stunned, Texture turn) {
+        shootSprite = new Animator(attack, 4, 8, 0.06f, 28, 0, 27, false);
+        floatSprite = new Animator(hover, 8, 8, 0.06f, 39, 16, 38);
+        stunSprite = new Animator(stunned, 2, 8, 0.06f, 15, 0, 14, false);
+        turnSprite = new Animator(turn, 4, 8, 0.06f, 31, 0, 30, false);
+
     }
 
 
@@ -110,7 +111,7 @@ public class DreamDweller extends Enemy {
         obstacle.setFixedRotation(true);
         obstacle.setPhysicsUnits(units);
         obstacle.setUserData(this);
-        obstacle.setName("maintenance");
+        obstacle.setName("dweller");
 
         debug = ParserUtils.parseColor(debugInfo.get("avatar"), Color.WHITE);
         sensorColor = ParserUtils.parseColor(debugInfo.get("sensor"), Color.WHITE);
@@ -229,88 +230,83 @@ public class DreamDweller extends Enemy {
     @Override
     public void update(float dt) {
         lookForPlayer();
-
-
+        System.out.println(animationState);
         if (obstacle != null && obstacle.getBody() != null) {
-            obstacle.getBody().setGravityScale(0);
+            obstacle.getBody().setGravityScale(0); // always floating
+        }
+        float playerX = scene.getAvatar().getObstacle().getPosition().x;
+        if (playerX < obstacle.getX() && facingRight || playerX > obstacle.getX() && !facingRight ){
+            inTurnAnimation = true;
         }
 
-        Vector2 playerPos = scene.getAvatar().getObstacle().getPosition();
-        Vector2 selfPos = obstacle.getPosition();
-        if (isAwareOfPlayer() && !scene.isFailure() && !inTurnAnimation && !inShootAnimation && !lockFacing) {
-            facingRight = playerPos.x >= selfPos.x;
+        if (isStunned()) {
+            isShooting = false;
+            inStunAnimation = true;
+            animationState = AnimationState.STUN;
+        }
+        else if (inStunAnimation) {
+            if (stunSprite.isAnimationFinished()) {
+                animationState = AnimationState.FLOAT;
+                inStunAnimation = false;
+                stunSprite.reset();
+            } else {
+                animationState = AnimationState.STUN;
+            }
         }
 
-        if (isAwareOfPlayer() && !scene.isFailure()) {
-            setShooting(true);
-            susCountdown = susCooldown;
-        } else {
-            susCountdown--;
-            setShooting(false);
+        if (inStunAnimation) {
+            super.update(dt);
+            return;
         }
 
+        // Handle shooting cooldown logic
         if (isShooting()) {
             shootCooldown = shootLimit;
+            inShootAnimation = true;
+            animationState = AnimationState.SHOOT;
+            shootSprite.reset();
+            attackFacingRight = facingRight; // lock the direction for the shoot
+            lockFacing = true;
+            isShooting = false; // one-time trigger
         } else {
             shootCooldown = Math.max(0, shootCooldown - 1);
         }
 
-        if (isStunned()) {
-            animationState = AnimationState.STUN;
-        }
-
-        else if (inShootAnimation) {
+        // Handle shoot animation finishing
+        if (inShootAnimation) {
+            // flip the direction so it doesn't look wierd shooting backwards
+            if (playerX < obstacle.getX() && facingRight || playerX > obstacle.getX() && !facingRight ){
+                facingRight = !facingRight;
+            }
             animationState = AnimationState.SHOOT;
             if (shootSprite.isAnimationFinished()) {
+                System.out.println("FINISHED SHOOTING");
+                shootSprite.reset();
                 inShootAnimation = false;
-                facingRight = attackFacingRight;
-                lockFacing = false;
             }
         }
-        else if (isShooting()) {
-            animationState = AnimationState.SHOOT;
-            shootSprite.reset();
-            inShootAnimation = true;
-            setShooting(false);
-            attackFacingRight = playerPos.x <= selfPos.x;
-            lockFacing = true;
-        }
-        else if (!isAwareOfPlayer()) {
-            turnTimer += dt;
-            facingDirectionHoldTimer += dt;
-
-            if (turnTimer >= turnCooldown && facingDirectionHoldTimer >= facingHoldDuration) {
-                shouldFlipAfterTurn = true;
-                inTurnAnimation = true;
-                turnTimer = 0f;
-                facingDirectionHoldTimer = 0f;
+        // Handle turn animation
+        else if (inTurnAnimation) {
+            animationState = AnimationState.TURN;
+            if (turnSprite.isAnimationFinished()) {
+                System.out.println("FINISHED TURNING");
+                inTurnAnimation = false;
                 turnSprite.reset();
-            }
+                animationState = AnimationState.FLOAT;
+                facingRight = !facingRight;
 
-            if (inTurnAnimation) {
-                animationState = AnimationState.TURN;
-                if (turnSprite.isAnimationFinished()) {
-                    inTurnAnimation = false;
-                    if (shouldFlipAfterTurn) {
-                        facingRight = !facingRight;
-                        shouldFlipAfterTurn = false;
-
-                        if (isGrounded()) {
-                            idleSprite.reset();
-                        } else {
-                            floatSprite.reset();
-                        }
-                    }
-                }
-            } else {
-                animationState = isGrounded() ? AnimationState.IDLE : AnimationState.FLOAT;
             }
         }
+
+        // Default floating state
         else {
-            animationState = isGrounded() ? AnimationState.IDLE : AnimationState.FLOAT;
+            animationState = AnimationState.FLOAT;
         }
+
         super.update(dt);
     }
+
+
 
     @Override
     public void draw(SpriteBatch batch) {
@@ -334,17 +330,10 @@ public class DreamDweller extends Enemy {
         }
 
 
-        if (frame.isFlipX()) {
+        if (facingRight) {
             frame.flip(true, false);
         }
 
-        boolean actualFacing = (animationState == AnimationState.SHOOT && inShootAnimation)
-            ? attackFacingRight
-            : facingRight;
-
-        if (!actualFacing) {
-            frame.flip(true, false);
-        }
 
         float u = obstacle.getPhysicsUnits();
         float posX = obstacle.getX() * u;
@@ -418,7 +407,15 @@ public class DreamDweller extends Enemy {
 
     public void setShooting(boolean value) {
         isShooting = value;
+
+        if (isShooting() && !inShootAnimation) {
+            inShootAnimation = true;
+            shootSprite.reset();
+            attackFacingRight = facingRight;
+            lockFacing = true;
+        }
     }
+
     public void applyForce() {
         setMovement(0);
 

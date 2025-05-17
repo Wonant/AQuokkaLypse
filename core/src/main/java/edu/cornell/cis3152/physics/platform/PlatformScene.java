@@ -832,16 +832,16 @@ public class PlatformScene implements Screen, Telegraph {
                 }
                 if (o.getName().startsWith("dream dweller")) {
                     dreamDweller = new DreamDweller(units, constants.get("dream-dweller"), new float[]{worldX, worldY}, this);
-                    dreamDweller.setTexture(dwellerTexture);
                     addSprite(dreamDweller);
+                    Texture dwellerAttack = directory.getEntry("dweller-attack", Texture.class);
+                    Texture dwellerHover = directory.getEntry("dweller-hover", Texture.class);
+                    Texture dwellerStunned = directory.getEntry("dweller-stunned", Texture.class);
+                    Texture dwellerTurn = directory.getEntry("dweller-turn", Texture.class);
+                    dreamDweller.createAnimators(dwellerAttack, dwellerHover, dwellerStunned, dwellerTurn);
                     dreamDweller.setFilter();
                     dreamDweller.createSensor();
                     enemies.add(dreamDweller);
                     aiCManager.register(dreamDweller);
-                    Texture dwellerSheet1 = directory.getEntry("dweller-sheet-1", Texture.class);
-                    Texture dwellerSheet2 = directory.getEntry("dweller-sheet-2", Texture.class);
-                    Texture dwellerSheet3 = directory.getEntry("dweller-sheet-3", Texture.class);
-                    dreamDweller.createAnimators(dwellerSheet1, dwellerSheet2, dwellerSheet3);
                 }
                 if (o.getName().startsWith("mind maintenance")) {
                     maintenance = new MindMaintenance(units, constants.get("mind-maintenance"), new float[]{worldX, worldY}, this, dispatcher);
