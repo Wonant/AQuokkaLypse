@@ -2,6 +2,7 @@ package edu.cornell.cis3152.physics.platform;
 
 
 import com.badlogic.gdx.graphics.Color;
+import com.badlogic.gdx.graphics.g2d.TextureRegion;
 import com.badlogic.gdx.math.Vector2;
 import com.badlogic.gdx.physics.box2d.*;
 import edu.cornell.gdiac.graphics.SpriteBatch;
@@ -21,6 +22,10 @@ public class DayglowSpike extends ObstacleSprite {
         UP, RIGHT, DOWN, LEFT
     }
 
+    private TextureRegion spriteNormal;
+    private TextureRegion spriteLaser;
+    private TextureRegion spriteBeam;
+
     private boolean isLaser;
     private boolean active;
     private Direction facing;
@@ -32,12 +37,13 @@ public class DayglowSpike extends ObstacleSprite {
     private static final int LASER_CHARGE_FRAMES = 60;
     private static final int LASER_DURATION_FRAMES = 120;
     private Fixture laserBeam;
-    private static final float LASER_BEAM_LENGTH = 30f; // Length of the laser beam
+    private static final float LASER_BEAM_LENGTH = 8f; // Length of the laser beam
     private static final Color LASER_COLOR = Color.RED;
     private static final Color LASER_CHARGING_COLOR = Color.YELLOW;
     private static final Color LASER_DEBUG_RAY_COLOR = Color.MAGENTA;
     private Vector2 debugRayStart, debugRayEnd;
     private Vector2 rayStart, rayEnd;
+    private float height, width;
 
     private float units;
     private World world;
@@ -58,11 +64,19 @@ public class DayglowSpike extends ObstacleSprite {
 
         debug = Color.LIME;
         mesh.set(0, 0, width * units, height * units);
+        this.width = width;
+        this.height = height;
         this.isLaser = isLaser;
         this.laserCharging = false;
         this.laserFiring = false;
         this.chargeCounter = 0;
         this.firingCounter = 0;
+    }
+
+    public void setSprites(TextureRegion normal, TextureRegion laser, TextureRegion beam) {
+        this.spriteNormal = normal;
+        this.spriteLaser  = laser;
+        this.spriteBeam   = beam;
     }
 
     public boolean isActive() {
@@ -94,6 +108,52 @@ public class DayglowSpike extends ObstacleSprite {
     public void setWorld(World world) {
         this.world = world;
     }
+
+    @Override
+    public void draw(SpriteBatch batch) {
+
+        float u    = obstacle.getPhysicsUnits();
+        Vector2 p  = obstacle.getPosition();
+        float w    = width  * u;
+        float h    = height * u;
+        float drawX = p.x * u - w/2f;
+        float drawY = p.y * u - h/2f;
+
+        TextureRegion bodyRegion = (isLaser ? spriteLaser : spriteNormal);
+        if (bodyRegion != null) {
+            batch.draw(bodyRegion,
+                drawX, drawY,
+                w, h);
+        }
+
+        if (isLaser && laserFiring && spriteBeam != null) {
+            float beamW, beamH, bx, by;
+
+            // vertical beam
+            if (facing == Direction.UP || facing == Direction.DOWN) {
+                beamW = spriteBeam.getRegionWidth()  * u;
+                beamH = LASER_BEAM_LENGTH              * u;
+                bx    = p.x * u - beamW/2f;
+                by    = (facing==Direction.UP)
+                    ? p.y * u     // start at top of spike
+                    : p.y * u - beamH; // extend downward
+            }
+            // horizontal beam
+            else {
+                beamW = LASER_BEAM_LENGTH               * u;
+                beamH = spriteBeam.getRegionHeight() * u;
+                bx    = (facing==Direction.RIGHT)
+                    ? p.x * u     // start at right side
+                    : p.x * u - beamW; // extend left
+                by    = p.y * u - beamH/2f;
+            }
+
+            batch.draw(spriteBeam,
+                bx, by,
+                beamW, beamH);
+        }
+    }
+
 
     @Override
     public void update(float dt) {

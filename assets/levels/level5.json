@@ -1,0 +1,176 @@
+{
+  "world" : {
+    "bounds"  : [210,40],
+    "gravity" : -14.7,
+    "volume": 0.8
+  },
+  "teleporter" : {
+    "pos"       : [4.0, 14.0],
+    "inner"     : [0.5, 0.67],
+    "size"      : 3.0,
+    "density"   : 0.0,
+    "friction"  : 0.0,
+    "restitution": 0.0
+  },
+  "goal" : {
+    "pos"       : [[21.0, 10.0], [29.0, 12.0], [57, 13]],
+    "size"      : 1.0,
+    "density"   : 0.0,
+    "friction"  : 0.0,
+    "restitution": 0.0
+  },
+  "player" : {
+    "pos"       : [2.5, 7.0],
+    "inner"     : [0.5, 1.45],
+    "size"      : 1.5,
+    "force"     : 20.0,
+    "damping"   : 10.0,
+    "density"   : 1.0,
+    "friction"  : 0.5,
+    "maxspeed"  : 7.0,
+    "maxfear"   : 10.0,
+    "jump_force": 8.0,
+    "dash_force": 100.0,
+    "jump_cool" : 30,
+    "shot_cool" : 40,
+    "sensor": {
+      "shrink" : 1,
+      "height" : 0.05
+    },
+    "debug" : {
+      "avatar" : "#ffff00ff",
+      "sensor" : "#ff0000ff",
+      "scare_sensor" : "#fff00fff",
+      "tolerance" : 0.05
+
+    },
+    "debug" : {
+      "avatar" : "#ffff00ff",
+      "sensor" : "#ff0000ff",
+      "scare_sensor" : "#fff00fff",
+      "tolerance" : 0.05
+    }
+  ,
+    "debug" : {
+      "avatar" : "#ffff00ff",
+      "sensor" : "#ff0000ff",
+      "scare_sensor" : "#fff00fff",
+      "tolerance" : 0.05
+    }
+  },
+  "curiosity-critter" : {
+    "pos"       : [],
+    "inner"     : [0.7, 1.9],
+    "size"      : 0.8,
+    "force"     : 20.0,
+    "damping"   : 5.0,
+    "density"   : 0.5,
+    "friction"  : 0.0,
+    "maxspeed"  : 3.0,
+    "jump_force": 10.0,
+    "sensor": {
+      "shrink" : 0.6,
+      "height" : 0.05
+    },
+    "debug" : {
+      "avatar" : "#ffff00ff",
+      "sensor" : "#ff0000ff",
+      "tolerance" : 0.05
+    }
+  },
+  "mind-maintenance" : {
+    "pos"       : [],
+    "inner"     : [0.8, 3.5],
+    "size"      : 0.8,
+    "force"     : 20.0,
+    "damping"   : 5.0,
+    "density"   : 0.5,
+    "friction"  : 0.0,
+    "maxspeed"  : 5.25,
+    "jump_force": 3.0,
+    "sensor": {
+      "shrink" : 0.6,
+      "height" : 0.05
+    },
+    "debug" : {
+      "avatar" : "#ffff00ff",
+      "sensor" : "#ff0000ff",
+      "tolerance" : 0.05
+    }
+  },
+  "dream-dweller": {
+    "pos"       : [],
+    "inner"     : [2.0, 1.7],
+    "size"      : 1.5,
+    "force"     : 20.0,
+    "damping"   : 5.0,
+    "density"   : 0.5,
+    "friction"  : 0.0,
+    "maxspeed"  : 3.0,
+    "jump_force": 3.0,
+    "sensor": {
+      "shrink" : 0.6,
+      "height" : 0.05
+    },
+    "debug" : {
+      "avatar" : "#ffff00ff",
+      "sensor" : "#ff0000ff",
+      "tolerance" : 0.05
+    }
+  },
+  "bridge" : {
+    "pos"     : [9.0, 3.8],
+    "size"    : [1.0, 0.125],
+    "extent"  : 14.0,
+    "density" : 1.0,
+    "pin_radius": 0.1
+  },
+  "spinner" : {
+    "pos"     : [13.0,12.5],
+    "size"    : [0.125,6.0],
+    "radius"  : 0.1,
+    "low density" : 0.0,
+    "high density": 10.0
+  },
+  "bullet": {
+    "offset" : 0.75,
+    "size"   : 0.25,
+    "speed"  : 20.0,
+    "density": 10.0
+  },
+  "spear": {
+    "offset"     : 0.75,
+    "size": 1.0,
+    "width"      : 1.0,
+    "height"     : 0.2,
+    "speed"      : 15.0,
+    "density"    : 8.0,
+    "debug"      : "#800080"
+  },
+  "walls" : {
+    "tile" : 128.0,
+    "friction"    : 0.1,
+    "density"     : 0.0,
+    "restitution" : 0.1,
+    "debug"      : "#ff00ff",
+    "positions" : [
+      [  0.0, 20.0, 0.0,  0.0,  1.0,  0.0,
+        1.0, 20.0],
+      [ 59.0, 20.0, 59.0, 0.0, 60.0, 0.0,
+        60.0,  20.0]
+    ]
+  },
+  "platforms" : {
+    "tile"        : 128.0,
+    "friction"    : 0.1,
+    "density"     : 0.0,
+    "restitution" : 0.1,
+    "debug"      : "#ffffff",
+    "shadowed"   : [false, true, true],
+    "positions" : [
+      [ 1.0, 0.0, 16.0, 0.0, 16.0, 3.0, 1.0, 3.0],
+      [ 16.0, 0, 61.0, 0, 61.0, 3.0, 16.0, 3.0],
+      [ 21.0, 0.0, 22.0, 0.0, 22.0, 12.0, 21.0, 12.0]
+    ]
+  }
+}

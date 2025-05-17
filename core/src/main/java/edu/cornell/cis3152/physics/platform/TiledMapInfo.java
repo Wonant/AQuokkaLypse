@@ -14,7 +14,7 @@ public class TiledMapInfo {
     private OrthogonalTiledMapRenderer mapRenderer;
 
     /** conversion constats */
-    public static int PIXELS_PER_WORLD_METER = 32;
+    public static int PIXELS_PER_WORLD_METER = 128;
     public static Vector2 TILE_SIZE = new Vector2(PIXELS_PER_WORLD_METER, PIXELS_PER_WORLD_METER);
 
     public TiledMapInfo(String fileName) {

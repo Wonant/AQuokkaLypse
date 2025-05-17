@@ -121,8 +121,8 @@ public class Bullet extends ObstacleSprite {
         float u = obstacle.getPhysicsUnits();
         float posX = obstacle.getX() * u;
         float posY = obstacle.getY() * u;
-        float drawWidth = frame.getRegionWidth()/10f;
-        float drawHeight = frame.getRegionHeight()/10f;
+        float drawWidth = frame.getRegionWidth()/2f;
+        float drawHeight = frame.getRegionHeight()/2f;
 
         float originX = drawWidth / 1.3f;
         float originY = drawHeight / 2f;

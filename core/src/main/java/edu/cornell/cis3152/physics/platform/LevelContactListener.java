@@ -60,6 +60,7 @@ public class LevelContactListener implements ContactListener {
             handleHarvestingCollision(bd1, bd2, fd1, fd2);
             handleFallSensorContact(bd1, bd2, fd1, fd2);
             handleSpikeContact(bd1, bd2, fd2, fd2);
+            handleGateContact(bd1, bd2);
         } catch (Exception e) {
             e.printStackTrace();
         }
@@ -93,6 +94,7 @@ public class LevelContactListener implements ContactListener {
         handleGroundEndContact(bd1, bd2, fd1, fd2, fix1, fix2);
         handleShieldWallEndContact((ObstacleSprite) bd1, (ObstacleSprite) bd2);
         handleFallSensorEndContact((ObstacleSprite) bd1, (ObstacleSprite) bd2, fd1, fd2);
+        handleGateEndContact((ObstacleSprite) bd1, (ObstacleSprite) bd2);
         if (((bd1 == dreamWalkerScene.getAvatar() && bd2 instanceof Shard) ||
             (bd2 == dreamWalkerScene.getAvatar() && bd1 instanceof Shard)) &&
             (!("fall_sensor".equals(fd1) || "fall_sensor".equals(fd2))) &&
@@ -472,6 +474,21 @@ public class LevelContactListener implements ContactListener {
             Player player = (bd1 instanceof Player) ? (Player) bd1 : (Player) bd2;
 
             player.setKnockingBack(true, spike.getObstacle().getPosition());
+        }
+    }
+
+    private void handleGateContact(ObstacleSprite bd1, ObstacleSprite bd2) {
+        if ((bd1 == dreamWalkerScene.getAvatar() && bd2 instanceof Gate) ||
+            (bd2 == dreamWalkerScene.getAvatar() && bd1 instanceof Gate)) {
+            Gate g = (bd1 instanceof Gate) ? (Gate)bd1 : (Gate)bd2;
+            g.setActive();
+        }
+    }
+    private void handleGateEndContact(ObstacleSprite bd1, ObstacleSprite bd2) {
+        if ((bd1 == dreamWalkerScene.getAvatar() && bd2 instanceof Gate) ||
+            (bd2 == dreamWalkerScene.getAvatar() && bd1 instanceof Gate)) {
+            Gate g = (bd1 instanceof Gate) ? (Gate)bd1 : (Gate)bd2;
+            g.setInactive();
         }
     }
 }

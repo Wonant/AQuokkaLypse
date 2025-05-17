@@ -131,8 +131,8 @@ public class Spear extends ObstacleSprite {
         float u = obstacle.getPhysicsUnits();
         float posX = obstacle.getX() * u;
         float posY = obstacle.getY() * u;
-        float drawWidth = frame.getRegionWidth()/5;
-        float drawHeight = frame.getRegionHeight()/5;
+        float drawWidth = frame.getRegionWidth()/2f;
+        float drawHeight = frame.getRegionHeight()/2f;
         frame.flip(true,false);
 
         float originX = drawWidth / 1.3f;

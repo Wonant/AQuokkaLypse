@@ -80,14 +80,21 @@ public class PlatformScene implements Screen, Telegraph {
     public static final int EXIT_WIN_COUNT = 120;
 
 
-    public static final int STUN_COST = 1;
-    public static final int TELEPORT_COST = 2;
+    public static final int STUN_COST = 5;
+    public static final int TELEPORT_COST = 5;
 
     /** The asset directory for retrieving textures, atlases */
     protected AssetDirectory directory;
     /** The drawing camera for this scene */
     protected OrthographicCamera camera;
     protected OrthographicCamera uiCamera;
+
+    private float uiShakeTime = 0f;                      // how long we still shake
+    private static final float UI_SHAKE_DURATION = 0.3f; // seconds
+    private static final float UI_SHAKE_INTENSITY = 8f;  // in pixels
+    private boolean prevTakingDamage = false;
+
+
     protected OrthographicCamera miniCam;
     private Vector3 defaultMiniCamPos;
     /** Reference to the sprite batch */
@@ -220,6 +227,7 @@ public class PlatformScene implements Screen, Telegraph {
     /** hashset of ids to keep track of shards that might be currently moving*/
     private Set<Integer> removedShards = new HashSet<>();
 
+
     private static class PendingShard {
         public final Vector2 location;
         public final Shard shard;
@@ -258,9 +266,18 @@ public class PlatformScene implements Screen, Telegraph {
 
     /** projectile pooled lists */
     protected PooledList<Door> doors = new PooledList<Door>();
+    protected PooledList<Gate> gates = new PooledList<Gate>();
 
     protected PooledList<ShieldWall> shieldWalls = new PooledList<ShieldWall>();
     protected PooledList<Spear> spears = new PooledList<Spear>();
+
+    // fields for gate teleports
+    private boolean gateFadingIn   = false;
+    private boolean gateFadingOut  = false;
+    private float   gateFadeAlpha  = 0f;
+    private final float GATE_FADE_SPEED = 0.05f;
+    private Gate    currentGate    = null;
+
 
     /** Telegraphing/event communication */
     private final MessageDispatcher dispatcher = new MessageDispatcher();
@@ -746,7 +763,12 @@ public class PlatformScene implements Screen, Telegraph {
         miniCam.zoom = 3f;
         defaultMiniCamPos = miniCam.position.cpy();
 
-        createAnimators(fearTexture,swirlTexture);
+        // is this not supposed to be removed?
+        units = height / bounds.height;
+
+        Texture t = directory.getEntry("fear-meter-sprite-sheet", Texture.class);
+        createAnimators(t,swirlTexture);
+
 
         dispatcher.addListener(this, MessageType.CRITTER_SEES_PLAYER);
         dispatcher.addListener(this, MessageType.CRITTER_LOST_PLAYER);
@@ -815,7 +837,7 @@ public class PlatformScene implements Screen, Telegraph {
      * creates animator objects of sprite sheets
      */
     private void createAnimators(Texture fearMeter, Texture swirl) {
-        fearMeterSprite = new Animator(fearMeter, 2, 6, 0.033f, 11, 0, 10);
+        fearMeterSprite = new Animator(fearMeter, 5, 10, 0.033f, 50, 0, 49);
         swirlSprite = new Animator(swirl, 1, 6, 0.10f, 6, 0, 5);
     }
 
@@ -837,6 +859,10 @@ public class PlatformScene implements Screen, Telegraph {
         timeSinceStart = 0;
         miniMapActive = false;
         miniMapLastActive = false;
+
+        Texture spikes = directory.getEntry("spikes", Texture.class);
+        Texture crystal = directory.getEntry("crystal", Texture.class);
+        Texture beam = directory.getEntry("laser", Texture.class);
 
         float units = TiledMapInfo.PIXELS_PER_WORLD_METER;
         minimapRenderer = new MinimapRenderer(tiledMap.map, batch, units, bounds.width, bounds.height);
@@ -876,6 +902,25 @@ public class PlatformScene implements Screen, Telegraph {
                         door.setFilter();
                     }
                 }
+                if (o.getName().startsWith("gate")) {
+                    MapObject target = o.getProperties().get("path", MapObject.class);
+
+                    Vector2 exitLoc;
+                    if (target != null) {
+                        float tx = target.getProperties().get("x", Float.class) / units;
+                        float ty = target.getProperties().get("y", Float.class) / units;
+                        // bump Y by +2 world‐units
+                        exitLoc = new Vector2(tx, ty + 2);
+                    } else {
+                        // fallback if no path reference: just above the gate
+                        exitLoc = new Vector2(worldX, worldY + 2);
+                    }
+
+                    // create & register the gate
+                    Gate gate = new Gate(units, worldX, worldY, worldWidth, worldHeight, exitLoc);
+                    gates.add(gate);
+                    addSprite(gate);
+                    gate.setFilter();
                 if (o.getName().startsWith("dialouge")) {
                     String message = o.getProperties().get("text", String.class);
                     DialougeDetector d = new DialougeDetector(x,y,message);
@@ -1022,13 +1067,14 @@ public class PlatformScene implements Screen, Telegraph {
                                 default: dir = DayglowSpike.Direction.UP;    break;
                             }
                             DayglowSpike spike = new DayglowSpike(units, worldX, worldY, worldWidth, worldHeight, o.getProperties().get("laser", Boolean.class), dir);
-                            spike.setTexture(spikeTexture);
+                            spike.setSprites(new TextureRegion(spikes), new TextureRegion(crystal), new TextureRegion(beam));
                             addSprite(spike);
                             spike.setFilter();
                             spike.setWorld(world);
                         }
                     }
                 } else {
+                    System.out.println(mapkey);
                     Surface platform = new Surface(worldX, worldY, worldHeight, worldWidth, TiledMapInfo.PIXELS_PER_WORLD_METER, constants.get("platforms"), true, rotationRad);
                     platform.setDebugColor(Color.BLUE);
                     platform.getObstacle().setName("platform " + id);
@@ -1047,6 +1093,7 @@ public class PlatformScene implements Screen, Telegraph {
         avatar.setFilter();
         avatar.createSensor();
         aiManager.setPlayer(avatar);
+        avatar.rechargeFearMeter();
 
         initTeleportAnimation();
 
@@ -1208,6 +1255,35 @@ public class PlatformScene implements Screen, Telegraph {
             }
         }
 
+        for (Gate g : gates) {
+            if (!gateFadingIn && !gateFadingOut
+                && g.isActive()
+                && avatar.isInteracting()) {
+                currentGate   = g;
+                gateFadingIn  = true;
+                gateFadeAlpha = 0f;
+                break;
+            }
+        }
+
+        if (gateFadingIn) {
+            gateFadeAlpha += GATE_FADE_SPEED;
+            if (gateFadeAlpha >= 1f) {
+                // fully black → teleport
+                Vector2 loc = currentGate.getExitLocation();
+                avatar.getObstacle().setPosition(loc);
+                gateFadingIn  = false;
+                gateFadingOut = true;
+            }
+        } else if (gateFadingOut) {
+            gateFadeAlpha -= GATE_FADE_SPEED;
+            if (gateFadeAlpha <= 0f) {
+                // done
+                gateFadingOut = false;
+                currentGate    = null;
+            }
+        }
+
         for(ShieldWall s: shieldWalls){
             s.update(dt);
 
@@ -1262,11 +1338,13 @@ public class PlatformScene implements Screen, Telegraph {
         }
 
         // player damage
-        if (enemiesAlerted > 0) {
-            avatar.setTakingDamage(true);
-        } else {
-            avatar.setTakingDamage(false);
+        boolean takingDamage = (enemiesAlerted > 0);
+        if (takingDamage && !prevTakingDamage) {
+
+            uiShakeTime = UI_SHAKE_DURATION;
         }
+        avatar.setTakingDamage(takingDamage);
+        prevTakingDamage = takingDamage;
 
         if (avatar.isHarvesting())
         {
@@ -1277,7 +1355,7 @@ public class PlatformScene implements Screen, Telegraph {
                     if (!harvest_enemy.getObstacle().isRemoved()) {
                         harvest_enemy.getObstacle().markRemoved(true);
                         enemies.remove(harvest_enemy);
-                        avatar.setFearMeter(avatar.getFearMeter() + 3);
+                        avatar.setFearMeter(avatar.getFearMeter() + 6);
                         //BANDAID SLOW FIX
                         if (harvest_enemy instanceof CuriosityCritter && ((CuriosityCritter) harvest_enemy).isAwareOfPlayer()) {
                             enemiesAlerted--;
@@ -1556,8 +1634,7 @@ public class PlatformScene implements Screen, Telegraph {
         // This shows off how powerful our new SpriteBatch is
         batch.begin(camera);
 
-        dreamShardCountText.setText("Dream Shards: " + (totalShards - collectedShards));
-        dreamShardCountText.layout();
+
 
         if (drawScareEffect)
         {
@@ -1610,8 +1687,8 @@ public class PlatformScene implements Screen, Telegraph {
         float cx = pos.x * units;
         float cy = pos.y * units;
 
-        float w = bullet.getWidth()  * units;
-        float h = bullet.getHeight() * units;
+        float w = bullet.getWidth()  * 20f;
+        float h = bullet.getHeight() * 20f;
 
         ShaderProgram prev = batch.getShader();
 
@@ -1642,7 +1719,7 @@ public class PlatformScene implements Screen, Telegraph {
         // on‐screen center
         float cx = pos.x * units;
         float cy = pos.y * units;
-        float radius = 165;  // half‐size of the effect in pixels
+        float radius = 800;  // half‐size of the effect in pixels
 
         // tell the batch to use your GDIAC Shader
         batch.setShader(vortexShader);
@@ -1671,7 +1748,7 @@ public class PlatformScene implements Screen, Telegraph {
 
         batch.setBlendMode(SpriteBatch.BlendMode.PREMULT);
         batch.setShader(tendrilShader);
-        radius = 210;
+        radius = 1200;
         tendrilShader.bind();
         tendrilShader.setUniformf("iResolution", radius, radius, 0f);
         tendrilShader.setUniformf("iTime", sTime);
@@ -1716,7 +1793,7 @@ public class PlatformScene implements Screen, Telegraph {
             float width = currentTeleportFrame.getRegionWidth();
             float height = currentTeleportFrame.getRegionHeight();
 
-            float scale = 0.15f;
+            float scale = 0.7f;
             float scaledWidth = width * scale;
             float scaledHeight = height * scale;
 
@@ -1759,8 +1836,20 @@ public class PlatformScene implements Screen, Telegraph {
 
 
     private void drawUI() {
+        // apply shake offset
+        float delta = Gdx.graphics.getDeltaTime();
+        float shakeX = 0, shakeY = 0;
+        if (uiShakeTime > 0f) {
+            shakeX = MathUtils.random(-UI_SHAKE_INTENSITY, UI_SHAKE_INTENSITY);
+            shakeY = MathUtils.random(-UI_SHAKE_INTENSITY, UI_SHAKE_INTENSITY);
+            uiShakeTime -= delta;
+            if (uiShakeTime < 0f) { uiShakeTime = 0f; }
+        }
+        // reset uiCamera to center ± shake
+        uiCamera.position.set(width/2f + shakeX, height/2f + shakeY, 0);
         uiCamera.update();
         batch.setProjectionMatrix(uiCamera.combined);
+
         batch.begin();
 
         float scaleFactor = 0.2f;
@@ -1772,7 +1861,6 @@ public class PlatformScene implements Screen, Telegraph {
         float mouseX = Gdx.input.getX();
         float mouseY = Gdx.input.getY();
 
-        batch.drawText(dreamShardCountText, 11, 50);
 
         float units = TiledMapInfo.PIXELS_PER_WORLD_METER;
 
@@ -1785,11 +1873,11 @@ public class PlatformScene implements Screen, Telegraph {
         Vector2 crosshairWorld = new Vector2(crosshairTemp.x / units, crosshairTemp.y / units);
 
         // done in WORLD coordinates just like teleport() method :(
-        Vector2 delta = new Vector2(crosshairWorld).sub(playerPosition);
+        Vector2 delta2 = new Vector2(crosshairWorld).sub(playerPosition);
         float teleportRangeWorld = avatar.getTeleportRangeRadius() / units;
-        if (delta.len() > teleportRangeWorld) {
-            delta.nor().scl(teleportRangeWorld);
-            crosshairWorld = new Vector2(playerPosition).add(delta);
+        if (delta2.len() > teleportRangeWorld) {
+            delta2.nor().scl(teleportRangeWorld);
+            crosshairWorld = new Vector2(playerPosition).add(delta2);
         }
 
         // Revert to SCREEN coordinate
@@ -1830,39 +1918,54 @@ public class PlatformScene implements Screen, Telegraph {
             batch.setColor(prev);
         }
 
+        float iconSize = 120f;                         // size in pixels
+        float spacing  = 2f;                          // space between icons
+        float startX   = width - iconSize - 80f;                         // left margin
+        float startY   = height - iconSize - 20f;     // top margin (20px down from top edge)
+
+        for (int i = 0; i < totalShards; i++) {
+            // collected shards are fully opaque, others are faded
+            float alpha = (i < collectedShards) ? 1f : 0.25f;
+            Color prev  = batch.getColor();
+            batch.setColor(1f, 1f, 1f, alpha);
+            batch.draw(
+                shardTexture,
+                startX - i * (iconSize + spacing),
+                startY,
+                iconSize,
+                iconSize
+            );
+            batch.setColor(prev);
+        }
+
         if (fearMeterSprite != null && avatar != null) {
             batch.setColor(Color.WHITE);
             int fearLevel = avatar.getFearMeter();
             int maxFear   = avatar.getMaxFearMeter();
-            int totalFrames = 11;  // how many frames in the sprite sheet
+            int totalFrames = 50;  // how many frames in the sprite sheet
             int frameIndex = Math.round((fearLevel/(float)maxFear) * (totalFrames - 1));
-
             meterFrame = fearMeterSprite.getKeyFrame(frameIndex);
 
             // where to draw
-            float meterX = 40;
-            float meterY = 500;
+            float meterX =  -130;
+            float meterY =  520;
 
-            float meterWidth  = 7* meterFrame.getRegionWidth() / units;
-            float meterHeight = 7*meterFrame.getRegionHeight() / units;
+            float meterW = meterFrame.getRegionWidth();
+            float meterH = meterFrame.getRegionHeight();
 
-            // Draw it
-            batch.draw(
-                meterFrame,
-                meterX, meterY,
-                meterWidth, meterHeight
-            );
+            batch.draw(meterFrame, meterX, meterY, meterW, meterH);
+
             if (visibilityIndicatorTexture != null) {
                 float indicatorWidth  = visibilityIndicatorTexture.getWidth()  / units;
                 float indicatorHeight = visibilityIndicatorTexture.getHeight() / units;
-                float startX = meterX + 130;
-                float startY = meterY + 50;
+                float sX = meterX + 130;
+                float sY = meterY + 50;
 
                 for (int i = 0; i < enemiesAlerted; i++) {
-                    float x = startX + i * (indicatorWidth + 10);
+                    float x = sX + i * (indicatorWidth + 10);
                     batch.draw(
                         visibilityIndicatorTexture,
-                        x, startY,
+                        x, sY,
                         indicatorWidth * 3, indicatorHeight * 3
                     );
                 }
@@ -1873,6 +1976,12 @@ public class PlatformScene implements Screen, Telegraph {
             float alpha = MathUtils.clamp(1.8f * (float)Math.pow(0.5, avatar.getBlindProgress()*20), 0f, 1.0f);
             batch.setColor(1, 1, 1, alpha);
             batch.draw(Texture2D.getBlank(), 0, 0, width, height);
+            batch.setColor(Color.WHITE);
+        }
+
+        if (gateFadingIn || gateFadingOut) {
+            batch.setColor(0,0,0, gateFadeAlpha);
+            batch.draw(blankTexture, 0, 0, width, height);
             batch.setColor(Color.WHITE);
         }
 
@@ -1898,9 +2007,9 @@ public class PlatformScene implements Screen, Telegraph {
     }
 
     private void drawScareEffect() {
-        float u = 32;
-        float size = scareEffectTexture.getRegionWidth() * 0.5f;
-        float size2 = scareEffectTexture.getRegionHeight() * 0.5f;
+        float u = 128;
+        float size = scareEffectTexture.getRegionWidth() * 2;
+        float size2 = scareEffectTexture.getRegionHeight() * 2;
         batch.begin();
         batch.draw(scareEffectTexture, avatar.getObstacle().getX() * u - size * 0.42f, avatar.getObstacle().getY() * u - size2 *0.57f, size, size2);
         batch.end();
@@ -1994,7 +2103,7 @@ public class PlatformScene implements Screen, Telegraph {
                     position.y += (this.avatar.getObstacle().getY() * units - position.y) * lerp * delta;
                     camera.position.set(position);
                 }
-                camera.zoom = 0.6f;
+                camera.zoom = 2.5f;
                 clampCamera();
                 camera.update();
             }
@@ -2018,23 +2127,41 @@ public class PlatformScene implements Screen, Telegraph {
                 miniCam.position.set(defaultMiniCamPos);
             }
 
-            float parallaxFactor = 0.9f;
-            float scale = 0.7f;
-            float scaledWidth = backgroundTexture.getWidth() * scale;
-            float scaledHeight = backgroundTexture.getHeight() * scale;
 
-            float bgX = camera.position.x * parallaxFactor - scaledWidth / 2f;
-            float bgY = camera.position.y * parallaxFactor - scaledHeight / 2f;
+            float parallaxFactor = 0.8f;
+            float bgScale       = 0.7f;
+            float w             = backgroundTexture.getWidth()  * bgScale;
+            float h             = backgroundTexture.getHeight() * bgScale;
+
+            float ox = camera.position.x * parallaxFactor - w/2f;
+            float oy = camera.position.y * parallaxFactor - h/2.7f;
 
             batch.begin(camera);
-            batch.draw(backgroundTexture, bgX, bgY, scaledWidth, scaledHeight);
-
+            for (int i = 0; i < 4; i++) {
+                batch.draw(
+                    backgroundTexture,
+                    ox + i * w,
+                    oy,
+                    w, h
+                );
+            }
             batch.end();
+
 
 
             if (miniMapActive) {
                 sceneBuffer.begin();
                 ScreenUtils.clear(0.9f, 0.9f, 0.93f, 1.0f);
+                batch.begin(camera);
+                for (int i = 0; i < 4; i++) {
+                    batch.draw(
+                        backgroundTexture,
+                        ox + i * w,
+                        oy,
+                        w, h
+                    );
+                }
+                batch.end();
                 tiledRenderer.renderAllLayers(camera);
                 draw(delta);
                 sceneBuffer.end();

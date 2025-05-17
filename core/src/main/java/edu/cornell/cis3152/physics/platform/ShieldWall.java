@@ -30,6 +30,7 @@ public class ShieldWall extends ObstacleSprite {
 
     public ShieldWall(float units, JsonValue settings, Vector2 pos, float direction, Texture travelTex, Texture endTex) {
         float s = settings.getFloat( "size" );
+        s /= 2.3f;
         float radius = s * units / 2.0f;
         timeAlive = 0;
 
@@ -95,8 +96,8 @@ public class ShieldWall extends ObstacleSprite {
         float u = obstacle.getPhysicsUnits();
         float posX = obstacle.getX() * u;
         float posY = obstacle.getY() * u;
-        float drawWidth = frame.getRegionWidth()/5;
-        float drawHeight = frame.getRegionHeight()/5;
+        float drawWidth = frame.getRegionWidth()/1.1f;
+        float drawHeight = frame.getRegionHeight()/1.1f;
 
         float originX = drawWidth/1.1f;
         if(obstacle.getVX() > 0){
