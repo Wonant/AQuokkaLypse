@@ -130,8 +130,8 @@ public class CuriosityCritter extends Enemy {
         stunnedSprite = new Animator(texture, 8, 20, 0.06f, 149, 125, 148, false);
     }
 
-    public CuriosityCritter(float units, JsonValue data, float[] points, PlatformScene scene, MessageDispatcher dispatcher) {
-        super(dispatcher);
+    public CuriosityCritter(float units, JsonValue data, float[] points, PlatformScene scene) {
+        super();
         this.data = data;
         // Read initial position and overall size from JSON.
         float x = points[0];
@@ -502,13 +502,6 @@ public class CuriosityCritter extends Enemy {
                 playerInFollowRange = false;
             }
         }
-
-        if (!isAwareOfPlayer() && wasAware) {
-            dispatcher.dispatchMessage(null, scene, MessageType.CRITTER_LOST_PLAYER);
-        } else if (isAwareOfPlayer() && !wasAware) {
-            dispatcher.dispatchMessage(null, scene, MessageType.CRITTER_SEES_PLAYER);
-        }
-
         wasAware = isAwareOfPlayer();
 
         if (inStunAnimation) {

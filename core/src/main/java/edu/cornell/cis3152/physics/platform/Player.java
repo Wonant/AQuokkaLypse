@@ -429,7 +429,6 @@
          * @return true if CatDemon is actively harvesting.
          */
         public boolean isTeleporting() {
-            dispatcher.dispatchMessage(null, scene, MessageType.CRITTER_LOST_PLAYER);
             return isTeleporting && shroudMode && teleportCooldown <= 0;
 
         }

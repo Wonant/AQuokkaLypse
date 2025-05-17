@@ -179,8 +179,8 @@ public class MindMaintenance extends Enemy {
     }
 
 
-    public MindMaintenance(float units, JsonValue data, float[] points, PlatformScene scene, MessageDispatcher dispatcher) {
-        super(dispatcher);
+    public MindMaintenance(float units, JsonValue data, float[] points, PlatformScene scene) {
+        super();
         this.data = data;
         this.scene = scene;
 
@@ -604,12 +604,6 @@ public class MindMaintenance extends Enemy {
         }
 
         // message dispatch
-        if (isAware && !wasAware) {
-            dispatcher.dispatchMessage(null, scene, MessageType.MAINTENANCE_SEES_PLAYER);
-        } else if (!isAware && wasAware) {
-            dispatcher.dispatchMessage(null, scene, MessageType.MAINTENANCE_LOST_PLAYER);
-        }
-
         wasAware = isAware;
 
         playerRaycast.reset();

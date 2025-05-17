@@ -13,9 +13,6 @@
 package edu.cornell.cis3152.physics.platform;
 
 import com.badlogic.gdx.ai.GdxAI;
-import com.badlogic.gdx.ai.msg.MessageDispatcher;
-import com.badlogic.gdx.ai.msg.Telegram;
-import com.badlogic.gdx.ai.msg.Telegraph;
 import com.badlogic.gdx.graphics.g2d.Sprite;
 import com.badlogic.gdx.graphics.glutils.FrameBuffer;
 import com.badlogic.gdx.graphics.glutils.ShaderProgram;
@@ -63,7 +60,7 @@ import edu.cornell.gdiac.audio.SoundEffectManager;
  * interface. That is the method that is called upon collisions, giving us a
  * chance to define a response.
  */
-public class PlatformScene implements Screen, Telegraph {
+public class PlatformScene implements Screen {
     // SOME EXIT CODES FOR GDXROOT
     /** Exit code for quitting the game */
     public static final int EXIT_PAUSE = 0;
@@ -280,7 +277,6 @@ public class PlatformScene implements Screen, Telegraph {
 
 
     /** Telegraphing/event communication */
-    private final MessageDispatcher dispatcher = new MessageDispatcher();
 
     private float timeSinceStart = 0f;
     /** last time a “see” event arrived (in seconds) */
@@ -770,8 +766,6 @@ public class PlatformScene implements Screen, Telegraph {
         createAnimators(t,swirlTexture);
 
 
-        dispatcher.addListener(this, MessageType.CRITTER_SEES_PLAYER);
-        dispatcher.addListener(this, MessageType.CRITTER_LOST_PLAYER);
 
         samples = new AudioSource[1];
         samples[0] = directory.getEntry( "theme_level", AudioSource.class );
@@ -931,7 +925,7 @@ public class PlatformScene implements Screen, Telegraph {
                     playerSpawnPos.set(worldX, worldY);
                 }
                 if (o.getName().startsWith("curiosity critter")) {
-                    critter = new CuriosityCritter(units, constants.get("curiosity-critter"), new float[]{worldX,worldY}, this, dispatcher);
+                    critter = new CuriosityCritter(units, constants.get("curiosity-critter"), new float[]{worldX,worldY}, this);
                     critter.setTexture(critterTexture);
                     addSprite(critter);
 
@@ -960,7 +954,7 @@ public class PlatformScene implements Screen, Telegraph {
                     aiCManager.register(dreamDweller);
                 }
                 if (o.getName().startsWith("mind maintenance")) {
-                    maintenance = new MindMaintenance(units, constants.get("mind-maintenance"), new float[]{worldX, worldY}, this, dispatcher);
+                    maintenance = new MindMaintenance(units, constants.get("mind-maintenance"), new float[]{worldX, worldY}, this);
                     addSprite(maintenance);
                     maintenanceTexture = directory.getEntry( "maintenance-sprite-sheet", Texture.class);
                     maintenance.createAnimators(maintenanceTexture);
@@ -1189,7 +1183,6 @@ public class PlatformScene implements Screen, Telegraph {
      * @param dt    Number of seconds since last animation frame
      */
     public void update(float dt) {
-        dispatcher.update();
         InputController input = InputController.getInstance();
         aiManager.update(dt);
         aiCManager.update(dt);
@@ -2265,48 +2258,6 @@ public class PlatformScene implements Screen, Telegraph {
         newShard.setFilter();
         // record it in your internal lists
         shardPos.add(newShard.id, new Vector2(world.x, world.y));
-    }
-
-    //telegraph
-    @Override
-    public boolean handleMessage(Telegram msg) {
-        if (msg.message == MessageType.CRITTER_SEES_PLAYER) {
-            CuriosityCritter critter = (CuriosityCritter) msg.extraInfo;
-            onPlayerSpotted(critter);
-            return true;
-        }
-        if (msg.message == MessageType.CRITTER_LOST_PLAYER) {
-            CuriosityCritter critter = (CuriosityCritter) msg.extraInfo;
-            onPlayerLost(critter);
-            return true;
-        }
-        return false;
-    }
-
-    public void onPlayerSpotted(CuriosityCritter enemy) {
-        System.out.println("Message Dispatcher received - enemy raycast sees player");
-        enemiesAlerted++;
-        crittersAlerted++;
-        lastCritterSawTime = timeSinceStart;
-        // reset any previous slow (so repeated sees restart the 1s timer)
-        if (playerSlowed) {
-            avatar.resetMaxSpeed();
-            playerSlowed = false;
-        }
-    }
-
-    public void onPlayerLost(CuriosityCritter enemy) {
-        System.out.println("Message Dispatcher received - enemy raycast lost player");
-        enemiesAlerted--;
-        crittersAlerted--;
-        if (playerSlowed) {
-            avatar.resetMaxSpeed();
-            playerSlowed = false;
-        }
-        //last critter lost player
-        if (crittersAlerted == 0) {
-            lastCritterSawTime = -1f;
-        }
     }
 
     /**

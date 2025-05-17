@@ -27,6 +27,8 @@ allprojects {
   }
 }
 
+
+
 configure(subprojects) {
   apply plugin: 'java-library'
   sourceCompatibility = 11
@@ -55,6 +57,8 @@ configure(subprojects) {
     options.incremental = true
   }
 }
+
+
 
 subprojects {
   version = '$projectVersion'

@@ -49,15 +49,13 @@ public class Enemy extends ObstacleSprite {
     /**
      * event dispatcher
      */
-    protected final MessageDispatcher dispatcher;
 
 
-    public Enemy(MessageDispatcher dispatcher) {
+    public Enemy() {
         shardAwareness = 4.0f;
         this.awareOfPlayer = false;
         this.stunned = false;
         this.seesWall = false;
-        this.dispatcher = dispatcher;
     }
 
     public boolean isAwareOfPlayer() {

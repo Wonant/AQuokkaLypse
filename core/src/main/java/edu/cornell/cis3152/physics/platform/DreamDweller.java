@@ -85,7 +85,7 @@ public class DreamDweller extends Enemy {
 
 
     public DreamDweller(float units, JsonValue data, float[] points, PlatformScene scene) {
-        super(null);
+        super();
         this.data = data;
         this.scene = scene;
 
