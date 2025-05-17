@@ -537,6 +537,10 @@ public class CuriosityCritter extends Enemy {
     public void draw(SpriteBatch batch) {
         TextureRegion frame;
 
+        if (animationState == null)
+        {
+            return;
+        }
         switch (animationState) {
             case WALK:
                 frame = walkSprite.getCurrentFrame(Gdx.graphics.getDeltaTime());

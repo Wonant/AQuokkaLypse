@@ -484,6 +484,10 @@ public class MindMaintenance extends Enemy {
     @Override
     public void draw(SpriteBatch batch) {
         TextureRegion frame = new TextureRegion();
+        if (animationState == null)
+        {
+            return;
+        }
         switch (animationState) {
             case WALK:
                 frame = walkingSprite.getCurrentFrame(Gdx.graphics.getDeltaTime());
