@@ -113,7 +113,7 @@ public class Spear extends ObstacleSprite {
 
             Filter filter = fixture.getFilterData();
             filter.categoryBits = CATEGORY_ENEMY_PROJECTILE;
-            filter.maskBits = CATEGORY_PLAYER | CATEGORY_SCENERY;
+            filter.maskBits = CATEGORY_PLAYER;
             fixture.setFilterData(filter);
         }
         filterActivated = true;

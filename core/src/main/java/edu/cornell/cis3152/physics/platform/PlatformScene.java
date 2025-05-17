@@ -901,8 +901,12 @@ public class PlatformScene implements Screen, Telegraph {
                 }
                 if (o.getName().startsWith("dream dweller")) {
                     dreamDweller = new DreamDweller(units, constants.get("dream-dweller"), new float[]{worldX, worldY}, this);
-                    dreamDweller.setTexture(dwellerTexture);
                     addSprite(dreamDweller);
+                    Texture dwellerAttack = directory.getEntry("dweller-attack", Texture.class);
+                    Texture dwellerHover = directory.getEntry("dweller-hover", Texture.class);
+                    Texture dwellerStunned = directory.getEntry("dweller-stunned", Texture.class);
+                    Texture dwellerTurn = directory.getEntry("dweller-turn", Texture.class);
+                    dreamDweller.createAnimators(dwellerAttack, dwellerHover, dwellerStunned, dwellerTurn);
                     dreamDweller.setFilter();
                     dreamDweller.createSensor();
                     enemies.add(dreamDweller);
