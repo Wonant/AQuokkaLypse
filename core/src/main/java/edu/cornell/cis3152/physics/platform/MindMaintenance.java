@@ -102,7 +102,7 @@ public class MindMaintenance extends Enemy {
         alertSprite = new Animator(mindmaintenance, 10, 13, 0.08f, 130, 40,64);
         alertWalkSprite = new Animator(mindmaintenance, 10, 13, 0.05f, 130, 65,82);
         attackSprite = new Animator(mindmaintenance, 10, 13, 0.05f, 130, 83, 110);
-        stunnedSprite = new Animator(mindmaintenance, 10, 13, 0.08f, 130, 111, 129);
+        stunnedSprite = new Animator(mindmaintenance, 10, 13, 0.08f, 130, 111, 129, false);
 
     }
 
@@ -425,11 +425,14 @@ public class MindMaintenance extends Enemy {
             System.out.println("MM's seen a step");
         }
 
+        /*
         if(checkBehindForPlayer()){
             setSus(true);
             super.update(dt);
             return;
         }
+
+         */
 
         if (!canContinue()) {
             safeToWalk = false;
