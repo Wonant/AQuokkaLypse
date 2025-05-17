@@ -1177,7 +1177,6 @@ public class PlatformScene implements Screen, Telegraph {
             avatar.setTakingDamage(false);
         }
 
-
         if (avatar.isHarvesting())
         {
             drawScareEffect = true;
@@ -1243,7 +1242,8 @@ public class PlatformScene implements Screen, Telegraph {
                 System.out.println("absorbing shard...");
                 t += dt;
                 if (t >= 3f) {
-                    avatar.setFearMeter(avatar.getFearMeter() + 3);
+                    // fully replenish fear when player picks up shard
+                    avatar.rechargeFearMeter();
 
                     if (!s.getObstacle().isRemoved()) {
                         s.getObstacle().markRemoved(true);
