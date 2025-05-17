@@ -291,6 +291,7 @@ public class PlatformScene implements Screen, Telegraph {
     private float spearTimer = 0f;
     private int spearIndex = 0;
     private static final float SPEAR_FIRE_INTERVAL = 0.3f;
+    private boolean preparingSpears = false;
 
     // FADE CONSTANTS
     private float fadeAlpha = 0f;
