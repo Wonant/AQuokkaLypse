@@ -1139,10 +1139,7 @@ public class PlatformScene implements Screen, Telegraph {
             debug = !debug;
         }
 
-        // Handle resets
-        if (input.didReset()) {
-            reset();
-        }
+        // Handle resetsA
 
         // Now it is time to maybe switch screens.
         if (input.didExit()) {

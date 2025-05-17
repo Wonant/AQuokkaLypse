@@ -2,10 +2,12 @@
 <map version="1.10" tiledversion="1.11.2" orientation="orthogonal" renderorder="right-down" width="40" height="81" tilewidth="128" tileheight="128" infinite="0" nextlayerid="10" nextobjectid="47">
  <tileset firstgid="1" source="../tilesets/Temple Edges.tsx"/>
  <tileset firstgid="337" source="../tilesets/Temple Window.tsx"/>
+
  <tileset firstgid="611" source="../tilesets/Temple Gradient.tsx"/>
  <tileset firstgid="728" source="../tilesets/Temple L1 Stairs.tsx"/>
  <tileset firstgid="845" source="../tilesets/Doors.tsx"/>
  <tileset firstgid="1109" source="../tilesets/Temple L1.tsx"/>
+
  <group id="3" name="background">
   <layer id="1" name="image" width="40" height="81" parallaxx="0.9" parallaxy="0.9">
    <data encoding="csv">
