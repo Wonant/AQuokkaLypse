@@ -339,7 +339,10 @@ public class AIControllerManager {
             if (data.state != DwellerFSM.STUNNED) {
                 transitionDwellerState(data, DwellerFSM.STUNNED);
             }
+            data.dweller.setMovement(0);
+            data.dweller.applyForce();
             data.dweller.getObstacle().setVX(0);
+
 
             if (data.stateTimer > data.stateDuration) {
                 System.out.println("Maintenance stun wears off");
