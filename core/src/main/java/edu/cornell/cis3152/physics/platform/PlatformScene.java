@@ -787,6 +787,7 @@ public class PlatformScene implements Screen, Telegraph {
     }
 
 
+
     /**
      * Updates the music volume based on AudioManager settings
      */
@@ -921,6 +922,7 @@ public class PlatformScene implements Screen, Telegraph {
                     gates.add(gate);
                     addSprite(gate);
                     gate.setFilter();
+                }
                 if (o.getName().startsWith("dialouge")) {
                     String message = o.getProperties().get("text", String.class);
                     DialougeDetector d = new DialougeDetector(x,y,message);
