@@ -1349,7 +1349,9 @@ public class PlatformScene implements Screen, Telegraph {
 
         if (avatar.isStunning() && avatar.getFearMeter() > STUN_COST) {
             createBullet();
-            avatar.setFearMeter(avatar.getFearMeter() - STUN_COST);
+            if(!isLevelSelect) {
+                avatar.setFearMeter(avatar.getFearMeter() - STUN_COST);
+            }
             // also turn avatar to direction of cursor
             Vector2 crosshairScreen = input.getMouse();
 

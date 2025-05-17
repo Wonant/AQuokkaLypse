@@ -58,7 +58,6 @@ public class StunnedActionTask extends LeafTask<Enemy> {
 
                 // Remain stunned: no movement
                 d.setMovement(0);
-                d.applyForce(); // So velocity gets updated
 
                 // Track elapsed time
                 dt = GdxAI.getTimepiece().getDeltaTime();

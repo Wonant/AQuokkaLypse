@@ -336,6 +336,7 @@ public class AIControllerManager {
 
         // if the enemy is stunned, transition to the stunned state
         if (isStunned) {
+            data.dweller.setMovement(0);
             if (data.state != DwellerFSM.STUNNED) {
                 transitionDwellerState(data, DwellerFSM.STUNNED);
             }
