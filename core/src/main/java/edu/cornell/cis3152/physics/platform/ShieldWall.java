@@ -23,6 +23,8 @@ public class ShieldWall extends ObstacleSprite {
     private float maxAge = 1.5f;
     private boolean dead = false;
     private TextureRegion currentFrame;
+    Texture travel;
+    Texture end;
     private Animator travelSprite;
     private Animator endSprite;
 
