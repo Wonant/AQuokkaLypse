@@ -9,7 +9,6 @@
  <tileset firstgid="1535" source="../tilesets/Temple Gradient.tsx"/>
  <tileset firstgid="1652" source="../maps/Final_Pilar_Contrast_ 2.tsx"/>
  <tileset firstgid="1805" source="../tilesets/Temple Edges pt 2.tsx"/>
- <tileset firstgid="1922" source="../maps/Tutorial 2.tsx"/>
  <tileset firstgid="2242" source="../maps/tutorial p1.tsx"/>
  <tileset firstgid="2340" source="../maps/shift+space.tsx"/>
  <group id="6" name="Background">

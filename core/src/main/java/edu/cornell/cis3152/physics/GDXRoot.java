@@ -152,7 +152,7 @@ public class GDXRoot extends Game implements ScreenListener {
             controllers = new PlatformScene[maps.length];
             boolean isLevelSelect = false;
             for (int i = 0; i < maps.length; i++) {
-                if(i == 2){
+                if(i == 1){
                     isLevelSelect = true;
                 }
                 System.out.println(maps[i]);
@@ -192,6 +192,7 @@ public class GDXRoot extends Game implements ScreenListener {
         }
         else if (screen instanceof PlatformScene) {
             if (exitCode == PlatformScene.EXIT_NEXT) {
+                System.out.println("LEAVING " + controllers[current] + ", GOING TO " + controllers[(current + 1) % controllers.length]);
                 current = (current + 1) % controllers.length;
                 setScreen(controllers[current]);
             } else if (exitCode == PlatformScene.EXIT_PREV) {

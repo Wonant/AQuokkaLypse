@@ -518,7 +518,7 @@
   </object>
   <object id="45" name="door" x="535.912" y="7294.81" width="327.946" height="511.916">
    <properties>
-    <property name="level" type="int" value="0"/>
+    <property name="level" type="int" value="1"/>
    </properties>
   </object>
   <object id="46" name="dream dweller" x="3564" y="2273.33">

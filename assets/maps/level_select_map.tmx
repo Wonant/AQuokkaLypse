@@ -7,7 +7,6 @@
  <tileset firstgid="2722" source="../tilesets/DRAFT _ Pillar Variations.tsx"/>
  <tileset firstgid="2875" source="../tilesets/Temple Roof L1.tsx"/>
  <tileset firstgid="2992" source="../tilesets/ends.tsx"/>
- <tileset firstgid="3145" source="../maps/Tutorial 2.tsx"/>
  <tileset firstgid="4745" source="../maps/tutorial p1.tsx"/>
  <group id="3" name="background">
   <group id="13" name="parallax">
