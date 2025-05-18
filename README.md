@@ -7,9 +7,11 @@ Golden Master:
 
 Launch Notes: If on Mac, you may need to run the following commands to get "permission" to run the game:
 
-sudo chmod +x /PATH_TO_APP/DreamWalker.app/Contents/MacOS/DreamWalker
+sudo chmod +x /PATH_TO_APP/Dreamwalker.app/Contents/MacOS/Dreamwalker
 
-xattr -c DreamWalker.app
+xattr -c Dreamwalker.app
+
+On Macs, the app will say that it is damaged and cannot be opened. Go to system settings->privacy and security, and then click "open anyway" and the game will launch. 
 
 Upon launching the game, the goal is for the player to reach the red "dream shard" without depleting their "fear meter," which serves as both a health bar and player action resource bar. If the player's fear meter is completely depleted or if the player falls off the map, the player will lose the level. 
 
